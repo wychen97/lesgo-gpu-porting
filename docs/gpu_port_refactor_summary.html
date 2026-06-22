@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LESGO GPU Port Refactor Summary</title>
+  <style>
+    :root {
+      --blue: #002d72;
+      --blue2: #005eb8;
+      --ink: #172033;
+      --muted: #5b667a;
+      --line: #d9e2ef;
+      --bg: #f6f9fd;
+      --ok: #087f5b;
+      --warn: #a15c00;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.55;
+    }
+    header {
+      background: linear-gradient(135deg, var(--blue), var(--blue2));
+      color: white;
+      padding: 36px 44px;
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 30px 24px 56px;
+    }
+    h1, h2, h3 { margin-top: 0; }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    h2 {
+      color: var(--blue);
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 8px;
+      margin-top: 34px;
+    }
+    code {
+      background: #eef3fb;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin: 16px 0;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      margin: 12px 0 22px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      vertical-align: top;
+    }
+    th {
+      background: #e9f1fb;
+      color: var(--blue);
+      text-align: left;
+    }
+    .ok { color: var(--ok); font-weight: bold; }
+    .warn { color: var(--warn); font-weight: bold; }
+    .muted { color: var(--muted); }
+    pre {
+      background: #0f172a;
+      color: #e5eefb;
+      border-radius: 6px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+    pre code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>LESGO GPU Port Refactor Summary</h1>
+    <p class="muted">Build, validation, and case-running guidance for the public GPU-porting package.</p>
+    <p>Branch prepared from the verified Derecho worktree on 2026-06-06.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Purpose</h2>
+      <p>
+        This branch captures the current verified GPU-port refactor of LESGO.
+        The work keeps timestep data resident on the GPU, reduces managed-memory
+        migration, uses persistent device buffers, and validates each major
+        module change against short controlled LESGO runs.
+      </p>
+    </section>
+
+    <section>
+      <h2>Current Build State</h2>
+      <table>
+        <tr><th>Item</th><th>Status</th></tr>
+        <tr><td>Experimental GPU build option</td><td><code>USE_LES_GPU=ON</code></td></tr>
+        <tr><td>Experimental executable</td><td><code>lesgo-mpi-ATM-lesgpu</code></td></tr>
+        <tr><td>Default CPU/CUDA-managed executable</td><td><code>lesgo-mpi-ATM</code> still builds</td></tr>
+        <tr><td>Compiler route used on Derecho</td><td>NVHPC with CUDA Fortran, cuFFT/cuSolver/cuBLAS, and OpenACC for explicit-residency sections</td></tr>
+        <tr><td>Managed-memory behavior</td><td>Active-path managed-memory traffic reduced; the build keeps <code>-gpu=mem:managed</code> for compatibility with remaining legacy paths.</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>Main Refactor Themes</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Explicit Device Residency</h3>
+          <p>Added device-resident mirrors and shadow arrays for hot ATM data so active kernels can avoid repeatedly dereferencing managed derived-type components.</p>
+        </div>
+        <div class="card">
+          <h3>GPU-Aware Communication</h3>
+          <p>Preserved CUDA-aware MPI paths and moved selected pack/unpack operations onto persistent device buffers.</p>
+        </div>
+        <div class="card">
+          <h3>Compatibility Paths</h3>
+          <p>Kept the legacy CPU/CUDA-managed routes available so existing LESGO users can compare against familiar behavior.</p>
+        </div>
+        <div class="card">
+          <h3>Validation First</h3>
+          <p>After each accepted slice, the branch was rebuilt and checked with short 1-GPU and 2-GPU ATM validation jobs.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Major Source Changes</h2>
+      <table>
+        <tr><th>File</th><th>Summary</th></tr>
+        <tr>
+          <td><code>CMakeLists.txt</code></td>
+          <td>Added <code>USE_LES_GPU</code>, GPU module sources, <code>PPLES_GPU</code> feature definitions, and OpenACC flags for the experimental explicit-residency route.</td>
+        </tr>
+        <tr>
+          <td><code>atm_lesgo_interface.f90</code></td>
+          <td>Added force-field shadow arrays, blade point/force device mirrors, device mirror pack/unpack for gather, explicit device scratch for nacelle output, and PPLES_GPU paths for active ATM forcing.</td>
+        </tr>
+        <tr>
+          <td><code>forcing.f90</code>, <code>main.f90</code>, <code>initialize.f90</code>, <code>inflow.f90</code></td>
+          <td>Added explicit-residency scaffolding and OpenACC/CUDA data movement boundaries for core timestep arrays.</td>
+        </tr>
+        <tr>
+          <td><code>sgs_param.f90</code>, <code>sim_param.f90</code>, <code>test_filtermodule.f90</code></td>
+          <td>Added SGS/core data-residency hooks, diagnostics, and test scaffolding used during active SGS performance attribution.</td>
+        </tr>
+        <tr>
+          <td><code>*_gpu.f90</code> modules</td>
+          <td>Added experimental GPU-side helper modules for FFT, tridiagonal solve, pressure, convection, derivatives, Lagrangian SGS, and SGS kernels.</td>
+        </tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>Latest Verified ATM Residency Work</h2>
+      <ul>
+        <li>Flattened force-field metadata into persistent GPU shadow arrays.</li>
+        <li>Added explicit device mirrors for <code>bladePoints</code> and <code>bladeForces</code>.</li>
+        <li>Changed force convolution and apply kernels to consume device mirrors/shadows in the PPLES_GPU path.</li>
+        <li>Changed the normal slim GPU gather to pack and unpack blade forces using <code>atm_bladeForces_d</code>.</li>
+        <li>Changed point-owner LB force pack/unpack to use <code>atm_bladeForces_d</code> when available.</li>
+        <li>Changed <code>atm_nacelle_tmp</code> from managed scratch to explicit device scratch in the PPLES_GPU path.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Validation Record</h2>
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>Experimental build</td><td class="ok"><code>build_acc_residency</code> passed</td></tr>
+        <tr><td>Default build</td><td class="ok"><code>build_codex_default</code> passed</td></tr>
+        <tr><td>1 GPU short validation</td><td class="ok">PBS job <code>6372611</code>, <code>MPI_EXIT_STATUS=0</code></td></tr>
+        <tr><td>2 GPU short validation</td><td class="ok">PBS job <code>6372612</code>, <code>MPI_EXIT_STATUS=0</code></td></tr>
+        <tr><td>Divergence</td><td><code>0.1466988E-03</code></td></tr>
+        <tr><td>Kinetic energy</td><td><code>0.4999399E+00</code></td></tr>
+        <tr><td>Bottom wall stress</td><td><code>0.2316200E-05</code></td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>Case Build And Submission</h2>
+      <p>Each public case has one compile-only file and one run-only PBS file:</p>
+      <pre><code>cd test-cases/channel_flow
+./compile_derecho.sh
+qsub submit_derecho.pbs</code></pre>
+
+      <p>The GPU count is controlled by the PBS resource line, the MPI launch
+      variables, and <code>nproc</code> in <code>lesgo.conf</code>.</p>
+      <table>
+        <tr><th>Target</th><th>PBS resource line</th><th>MPI launch values</th><th><code>lesgo.conf</code></th></tr>
+        <tr><td>1 A100 GPU</td><td><code>#PBS -l select=1:ncpus=32:mpiprocs=1:ngpus=1:mem=120gb:gpu_type=a100</code></td><td><code>MPI_RANKS=1</code>, <code>MPI_PPN=1</code></td><td><code>nproc=1</code></td></tr>
+        <tr><td>8 A100 GPUs</td><td><code>#PBS -l select=2:ncpus=32:mpiprocs=4:ngpus=4:mem=220gb:gpu_type=a100</code></td><td><code>MPI_RANKS=8</code>, <code>MPI_PPN=4</code></td><td><code>nproc=8</code></td></tr>
+        <tr><td>16 A100 GPUs</td><td><code>#PBS -l select=4:ncpus=32:mpiprocs=4:ngpus=4:mem=220gb:gpu_type=a100</code></td><td><code>MPI_RANKS=16</code>, <code>MPI_PPN=4</code></td><td><code>nproc=16</code></td></tr>
+      </table>
+
+      <pre><code># 16-A100 Derecho launch inside submit_derecho.pbs
+MPI_RANKS=16
+MPI_PPN=4
+mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" set_gpu_rank ./lesgo-run-exe</code></pre>
+    </section>
+  </main>
+</body>
+</html>

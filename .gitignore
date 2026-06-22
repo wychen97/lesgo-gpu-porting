@@ -1,0 +1,66 @@
+# Build products
+bld-*/
+build*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.mod
+*.o
+*.obj
+*.a
+*.so
+*.exe
+lesgo-mpi-ATM
+
+# Runtime output and benchmark data
+runs/
+output/
+restart/
+checkpoints/
+derecho_results/
+*.out
+*.err
+*.log
+*.o[0-9]*
+core.*
+total_time.dat
+check_ke.out
+grid.out
+vel.out.c*
+tavg.out.c*
+turbineOutput/
+lesgo-run-exe
+lesgo-mpi*
+
+# Local porting / handoff scratch files
+/PORT_METADATA.txt
+/fix_*.patch
+/patch_*.diff
+/uv*
+
+# Large-windfarm benchmark staging artifacts.  Keep the canonical README and
+# tracked case inputs, but do not commit per-cluster job files, local monitors,
+# binaries, or submitted-job records from exploratory runs.
+/test-cases/large_windfarm_3072x384x400_60turbines/README_DERECHO_READY_*.md
+/test-cases/large_windfarm_3072x384x400_60turbines/cpu_scaling_jobs/
+/test-cases/large_windfarm_3072x384x400_60turbines/job_cpu80_*.pbs
+/test-cases/large_windfarm_3072x384x400_60turbines/job_gpu8_*_mem*.pbs
+/test-cases/large_windfarm_3072x384x400_60turbines/job_status_monitor/
+/test-cases/large_windfarm_3072x384x400_60turbines/lesgo-wf60-gpu
+/test-cases/large_windfarm_3072x384x400_60turbines/lesgo_wf60_*.o*
+/test-cases/large_windfarm_3072x384x400_60turbines/monitor_derecho_lesgo_jobs.sh
+/test-cases/large_windfarm_3072x384x400_60turbines/submitted_jobs_*.txt
+/test-cases/presentation_progression/*_report.html
+
+# Local/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+__pycache__/
+
+# Temporary backups
+*.bak
+*.backup
+*.before_*
+cleanup_backups/

@@ -1,0 +1,76 @@
+!*******************************************************************************
+module turbines_gpu
+!*******************************************************************************
+! GPU helper module for the actuator-disk turbine path in turbines.f90.
+!
+! Ownership map:
+!   - turbines_cuda_enabled: compile-time/runtime availability query
+!   - turbines_interp_w_to_uv_gpu: interpolate w-grid velocity onto uv nodes
+!     for turbine sampling
+!
+! This is separate from the actuator-line/ATM GPU path, which lives in
+! actuator_turbine_model.f90 and atm_lesgo_interface.f90.
+use types, only : rprec
+use param, only : ld, ny, nz, lbz
+#ifdef PPMPI
+use param, only : coord, nproc
+#endif
+#ifdef ENABLE_CUDA
+use cudafor
+#endif
+implicit none
+
+private
+public :: turbines_cuda_enabled, turbines_interp_w_to_uv_gpu
+
+contains
+
+!*******************************************************************************
+logical function turbines_cuda_enabled()
+!*******************************************************************************
+implicit none
+
+#ifdef ENABLE_CUDA
+turbines_cuda_enabled = .true.
+#else
+turbines_cuda_enabled = .false.
+#endif
+
+end function turbines_cuda_enabled
+
+!*******************************************************************************
+subroutine turbines_interp_w_to_uv_gpu(w, w_uv)
+!*******************************************************************************
+real(rprec), intent(in) :: w(ld,ny,lbz:nz)
+real(rprec), intent(out) :: w_uv(ld,ny,lbz:nz)
+
+#ifdef ENABLE_CUDA
+attributes(device) :: w, w_uv
+integer :: i, j, k
+
+!$cuf kernel do(3) <<<*, *>>>
+do k = 1, nz-1
+    do j = 1, ny
+        do i = 1, ld
+            w_uv(i,j,k) = 0.5_rprec * (w(i,j,k+1) + w(i,j,k))
+        enddo
+    enddo
+enddo
+
+#ifdef PPMPI
+if (coord == nproc - 1) then
+#endif
+    !$cuf kernel do(2) <<<*, *>>>
+    do j = 1, ny
+        do i = 1, ld
+            w_uv(i,j,nz) = w_uv(i,j,nz-1)
+        enddo
+    enddo
+#ifdef PPMPI
+endif
+#endif
+#endif
+
+end subroutine turbines_interp_w_to_uv_gpu
+
+end module turbines_gpu

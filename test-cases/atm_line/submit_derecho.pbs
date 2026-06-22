@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+# Derecho PBS job script for the ATM line-model GPU case.
+#
+# Compile first:
+#   ./compile_derecho.sh
+#
+# Submit from this directory:
+#   qsub submit_derecho.pbs
+#
+# This file does not compile the code. It only cleans old outputs and runs the
+# already-built ./lesgo-run-exe executable.
+
+# Change this account to your Derecho allocation.
+#PBS -A ujhb0028
+#PBS -N lesgo_atm_gpu
+#PBS -q main
+
+# Resource sizing. Keep these four items consistent:
+#   1. the PBS select line below;
+#   2. MPI_RANKS below;
+#   3. MPI_PPN below;
+#   4. nproc in lesgo.conf.
+#
+# PBS select syntax used here:
+#   select=1   -> reserve 1 node
+#   mpiprocs=1 -> run 1 MPI rank on that node
+#   ngpus=1    -> reserve 1 GPU on that node
+#
+# Total MPI ranks = select * mpiprocs = 1.
+# Total GPUs      = select * ngpus    = 1.
+#
+# To run 2 GPUs on one Derecho node:
+#   change mpiprocs=2 and ngpus=2 in the PBS line;
+#   set MPI_RANKS=2 and MPI_PPN=2 below;
+#   set nproc=2 in lesgo.conf.
+#
+# To run 4 GPUs on one Derecho node, use 4 for those same values.
+# On another cluster, translate select/mpiprocs/ngpus to that scheduler's
+# node/task/GPU syntax, but keep one MPI rank per GPU unless the code is
+# deliberately being tested in a different layout.
+#PBS -l select=1:ncpus=32:mpiprocs=1:ngpus=1:mem=120gb:gpu_type=a100
+#PBS -l walltime=00:30:00
+#PBS -l place=scatter
+#PBS -j oe
+
+# Bash safety options:
+#   -e: stop if any command fails.
+#   -u: stop if an undefined variable is used.
+#   -o pipefail: stop if any command inside a pipeline fails.
+set -euo pipefail
+
+cd "${PBS_O_WORKDIR}"
+
+# Runtime module stack. Keep this consistent with compile_derecho.sh.
+# On another cluster, replace this with that site's runtime modules.
+module reset
+module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10
+export MPICH_GPU_SUPPORT_ENABLED=1
+export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
+
+# Must match the PBS line and lesgo.conf nproc.
+MPI_RANKS=1
+MPI_PPN=1
+
+if [[ ! -x ./lesgo-run-exe ]]; then
+  echo "ERROR: ./lesgo-run-exe is missing. Run ./compile_derecho.sh first." >&2
+  exit 2
+fi
+
+# Clean output from older runs.
+rm -rf output turbineOutput
+rm -f total_time.dat check_ke.out grid.out vel.out.c* tavg.out.c* lesgo_param.out
+
+echo "Running atm_line on Derecho"
+date
+
+# Derecho provides set_gpu_rank to bind each MPI rank to one GPU.
+# On another cluster, replace this with the recommended mpiexec/srun command.
+if command -v set_gpu_rank >/dev/null 2>&1; then
+  mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" set_gpu_rank ./lesgo-run-exe
+else
+  mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" ./lesgo-run-exe
+fi
+
+date
+echo "Simulation finished"

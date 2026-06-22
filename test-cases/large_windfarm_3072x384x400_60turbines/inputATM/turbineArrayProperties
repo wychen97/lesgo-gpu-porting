@@ -1,0 +1,1390 @@
+! Static 60-turbine layout for the public GPU-porting benchmark case
+! Layout: aligned streamwise rows x spanwise columns
+! Domain [m]: Lx=28224, Ly=3780
+! Rotor diameter [m]: D=126
+! Spacing [m]: streamwise=882 (7D), spanwise=630 (5D)
+! Counts: streamwise=10, spanwise=6
+
+numberOfTurbines        60
+outputInterval          1000000
+updateInterval          1
+
+TURBINE_R01_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            1764, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R01_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            1764, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R01_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            1764, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R01_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            1764, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R01_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            1764, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R01_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            1764, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R02_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            2646, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R02_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            2646, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R02_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            2646, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R02_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            2646, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R02_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            2646, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R02_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            2646, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R03_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            3528, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R03_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            3528, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R03_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            3528, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R03_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            3528, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R03_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            3528, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R03_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            3528, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R04_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            4410, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R04_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            4410, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R04_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            4410, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R04_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            4410, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R04_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            4410, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R04_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            4410, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R05_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            5292, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R05_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            5292, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R05_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            5292, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R05_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            5292, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R05_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            5292, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R05_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            5292, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R06_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            6174, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R06_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            6174, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R06_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            6174, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R06_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            6174, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R06_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            6174, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R06_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            6174, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R07_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            7056, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R07_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            7056, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R07_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            7056, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R07_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            7056, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R07_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            7056, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R07_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            7056, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R08_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            7938, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R08_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            7938, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R08_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            7938, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R08_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            7938, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R08_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            7938, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R08_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            7938, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R09_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            8820, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R09_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            8820, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R09_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            8820, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R09_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            8820, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R09_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            8820, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R09_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            8820, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R10_C01 {
+turbineType             "NREL5MWRef"
+baseLocation            9702, 315, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R10_C02 {
+turbineType             "NREL5MWRef"
+baseLocation            9702, 945, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R10_C03 {
+turbineType             "NREL5MWRef"
+baseLocation            9702, 1575, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R10_C04 {
+turbineType             "NREL5MWRef"
+baseLocation            9702, 2205, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R10_C05 {
+turbineType             "NREL5MWRef"
+baseLocation            9702, 2835, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}
+
+TURBINE_R10_C06 {
+turbineType             "NREL5MWRef"
+baseLocation            9702, 3465, 0
+numBladePoints          60
+epsilon                 16
+sampling                "atPoint"
+rotationDir             "cw"
+Azimuth                 0
+RotSpeed                9.155
+Pitch                   0
+NacYaw                  0
+fluidDensity            1.225
+numAnnulusSections      1
+annulusSectionAngle     0
+nacelleFlag             false
+nacelleCd               1
+nacelleEpsilon          16
+TSR                     7.55
+tipALMCorrection        .true.
+rootALMCorrection       .true.
+optimalEpsilonChord     0.25
+}

@@ -1,0 +1,40 @@
+# Keep the shared LESGO source tree stable across Windows, WSL, and HPC clones.
+# Source, docs, scripts, CMake, and case input files are reviewed as LF text.
+
+* text=auto
+
+*.f text eol=lf
+*.F text eol=lf
+*.f90 text eol=lf
+*.F90 text eol=lf
+*.c text eol=lf
+*.h text eol=lf
+*.cmake text eol=lf
+CMakeLists.txt text eol=lf
+
+*.md text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.pbs text eol=lf
+*.sbatch text eol=lf
+*.conf text eol=lf
+*.txt text eol=lf
+*.dat text eol=lf
+*.csv text eol=lf
+*.html text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+test-cases/**/runfile* text eol=lf
+test-cases/**/inputATM/** text eol=lf
+
+# Generated numerical data and visual artifacts should not be line-normalized.
+*.bin binary
+*.out binary
+*.npz binary
+*.npy binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.pptx binary
