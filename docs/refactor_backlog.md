@@ -15,7 +15,7 @@ structure, but they should be split only when a clean ownership boundary exists.
 | 3 | `actuator_turbine_model.f90` | 148,441 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
 | 4 | `lagrange_Sdep_gpu.f90` | 93,203 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
 | 5 | `scalars.f90` | 92,395 bytes | Separate CPU scalar transport, GPU scalar transport, halo handling, and timing diagnostics. |
-| 6 | `press_stag_array.f90` | 86,582 bytes | Separate pressure RHS assembly, halo policy, tridiagonal solve orchestration, and diagnostics. |
+| 6 | `press_stag_array.f90` | 86,608 bytes | Separate pressure RHS assembly, halo policy, tridiagonal solve orchestration, and diagnostics. |
 | 7 | `tridag_array.f90` | 81,504 bytes | Separate CPU tridiagonal path, GPU-aware MPI path, host-staged fallback path, and replicated validation path. |
 | 8 | `iwmles.f90` | 72,768 bytes | Separate CPU/OpenACC/CUDA wall-model paths after preserving identical `(i,j)` surface-field semantics. |
 

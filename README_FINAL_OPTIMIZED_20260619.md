@@ -12,6 +12,14 @@ docs/code_organization.md
 docs/build_profiles.md
 docs/cluster_scripts.md
 docs/gpu_module_contracts.md
+docs/gpu_port_coverage_audit.md
+docs/gpu_static_full_inventory.md
+docs/gpu_static_candidate_review.md
+docs/gpu_validation_matrix.md
+docs/gpu_validation_runbook.md
+docs/gpu_release_objective_status.md
+docs/lesgo_conf_gpu_validation_map.json
+docs/lesgo_conf_key_validation_coverage.md
 docs/source_file_inventory.md
 docs/gpu_development_guidelines.md
 docs/environment_switches.md
@@ -122,9 +130,13 @@ python3 tools/check_active_source_comment_quality.py
 python3 tools/check_cluster_script_docs.py
 python3 tools/check_cluster_script_headers.py
 python3 tools/check_test_case_script_docs.py
+python3 tools/check_p0_paired_case_scripts.py
 python3 tools/check_contributing_readiness_docs.py
 python3 tools/check_handoff_readme.py
 python3 tools/check_environment_switch_docs.py
+python3 tools/check_lesgo_conf_coverage_docs.py
+python3 tools/check_lesgo_conf_validation_map.py
+python3 tools/check_lesgo_conf_key_validation_report.py
 python3 tools/check_source_comment_hygiene.py
 python3 tools/check_source_inventory.py
 python3 tools/check_sgs_model_constants.py
@@ -134,6 +146,18 @@ python3 tools/check_iwm_surface_indexing.py
 python3 tools/check_gpu_comment_labels.py
 python3 tools/check_gpu_headers.py
 python3 tools/check_gpu_contract_source_groups.py
+python3 tools/check_gpu_validation_matrix.py
+python3 tools/check_gpu_benchmark_manifest.py
+python3 tools/check_gpu_validation_plan.py
+python3 tools/check_gpu_validation_evidence.py
+python3 tools/check_gpu_timing_audit_consistency.py
+python3 tools/check_gpu_validation_import_tools.py
+python3 tools/check_p0_archived_evidence_importer.py
+python3 tools/check_gpu_validation_runbook.py
+python3 tools/check_gpu_release_objective_status_report.py
+python3 tools/check_gpu_static_review.py
+python3 tools/check_gpu_static_full_inventory_report.py
+python3 tools/check_gpu_static_candidate_review_report.py
 python3 tools/check_doc_paths.py
 python3 tools/check_doc_source_refs.py
 python3 tools/check_docs_index.py
@@ -158,6 +182,8 @@ The CMake source-group check keeps root Fortran source files covered by exactly
 one named `*_SOURCES` group in `CMakeLists.txt`.
 The environment-switch check also requires every source `LESGO_*` switch to
 appear in exactly one classified table row.
+The lesgo.conf coverage check keeps `docs/gpu_port_coverage_audit.md`
+synchronized with the non-LVLSET parser keys in `input_util.f90`.
 The source-comment hygiene check keeps production source comments free of
 stale personal tags, misspellings, and ad-hoc checkpoint wording.
 The production-profile documentation check keeps the canonical production
@@ -193,6 +219,11 @@ The GPU-header check requires GPU-specific Fortran files to explain ownership
 or their data-movement/device-residency contract near the top of the file.
 The GPU contract source-group check keeps `docs/gpu_module_contracts.md`
 aligned with the named CMake `*_SOURCES` groups.
+The GPU validation matrix check keeps `docs/gpu_validation_matrix.md`
+explicit about which non-LVLSET paths have paired CPU/GPU speed evidence and
+which still need benchmarks.
+The GPU benchmark manifest check keeps `docs/gpu_benchmark_manifest.json`
+aligned with the validation matrix and public test-case paths.
 The documentation path check catches stale `docs/...` and `tools/...`
 references in Markdown handoff files.
 The documented-source check catches stale Fortran source filenames in Markdown

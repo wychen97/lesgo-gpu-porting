@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "scope": "non-LVLSET GPU validation benchmark plan",
+  "evidence_rule": "A speed claim requires paired CPU and GPU runs from the same source tree, grid, compiler family, runtime settings, and output cadence. Single GPU runs prove execution only.",
+  "cases": [
+    {
+      "id": "les_core_channel",
+      "status": "needs_paired_cpu_gpu",
+      "public_case": "test-cases/channel_flow",
+      "base_grid": "240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_TURBINES=OFF", "USE_ATM=OFF", "USE_CPS=OFF", "USE_SCALARS=OFF"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_TURBINES=OFF", "USE_ATM=OFF", "USE_CPS=OFF", "USE_SCALARS=OFF"],
+      "runtime": ["sgs=.true.", "sgs_model=5", "inflow_type=1", "coriolis_forcing=.false."],
+      "required_evidence": ["cpu_log", "gpu_log", "divergence", "kinetic_energy", "late_step_timing", "cumulative_average"]
+    },
+    {
+      "id": "adm_disk",
+      "status": "needs_paired_cpu_gpu",
+      "public_case": "test-cases/adm_disk",
+      "base_grid": "240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_TURBINES=ON", "USE_ATM=OFF"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_TURBINES=ON", "USE_ATM=OFF"],
+      "runtime": ["sgs=.true.", "sgs_model=5", "dynamic ADM controls off"],
+      "required_evidence": ["cpu_log", "gpu_log", "turbine_forcing_output", "power_or_disk_velocity", "late_step_timing", "cumulative_average"]
+    },
+    {
+      "id": "atm_line",
+      "status": "needs_paired_cpu_gpu",
+      "public_case": "test-cases/atm_line",
+      "base_grid": "240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_ATM=ON", "USE_TURBINES=OFF"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_ATM=ON", "USE_TURBINES=OFF"],
+      "runtime": ["sgs=.true.", "sgs_model=5", "structure off and structure on variants"],
+      "required_evidence": ["cpu_log", "gpu_log", "turbine_power", "structure_on_off_comparison", "late_step_timing", "cumulative_average"]
+    },
+    {
+      "id": "large_windfarm",
+      "status": "needs_current_cpu_gpu_reference",
+      "public_case": "test-cases/large_windfarm_3072x384x400_60turbines",
+      "base_grid": "3072x384x400",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_ATM=ON", "USE_TURBINES=OFF"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_ATM=ON", "USE_TURBINES=OFF"],
+      "runtime": ["60 turbines", "sgs=.true.", "sgs_model=5", "same nsteps/output cadence for CPU and GPU"],
+      "required_evidence": ["cpu_log_or_immutable_reference", "gpu_log", "turbine_power_count", "late_step_timing", "cumulative_average"]
+    },
+    {
+      "id": "sgs_disabled",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "128^3 or 240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF"],
+      "runtime": ["sgs=.false.", "same wall and inflow settings as channel_flow"],
+      "required_evidence": ["cpu_log", "gpu_log", "divergence", "kinetic_energy", "late_step_timing"]
+    },
+    {
+      "id": "sgs_models_1_5",
+      "status": "needs_new_case_matrix",
+      "public_case": null,
+      "base_grid": "128^3 or 240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF"],
+      "runtime": ["sgs_model=1", "sgs_model=2", "sgs_model=3", "sgs_model=4", "sgs_model=5", "separate regular and cs_count update steps"],
+      "required_evidence": ["cpu_log_per_model", "gpu_log_per_model", "divergence", "kinetic_energy", "regular_step_timing", "sgs_update_step_timing"]
+    },
+    {
+      "id": "dyn_tn",
+      "status": "needs_new_case_matrix",
+      "public_case": null,
+      "base_grid": "128^3 or 240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_DYN_TN=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_DYN_TN=ON"],
+      "runtime": ["sgs_model=4", "sgs_model=5"],
+      "required_evidence": ["cpu_log_per_model", "gpu_log_per_model", "divergence", "kinetic_energy", "sgs_update_step_timing"]
+    },
+    {
+      "id": "iwm_wall_model",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "production-enough wall-model grid",
+      "gpu_cmake": ["USE_LES_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF"],
+      "runtime": ["lbc_mom/ubc_mom settings that activate IWM-heavy work"],
+      "required_evidence": ["cpu_log", "gpu_log", "wall_stress_diagnostics", "divergence", "late_step_timing"]
+    },
+    {
+      "id": "scalar_passive",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "128^3 and 240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_SCALARS=ON", "USE_SCALARS_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_SCALARS=ON", "USE_SCALARS_GPU=OFF"],
+      "runtime": ["passive_scalar=.true."],
+      "required_evidence": ["cpu_log", "gpu_log", "scalar_field_comparison", "scalar_stage_timing", "late_step_timing"]
+    },
+    {
+      "id": "scalar_active",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "128^3 and 240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_SCALARS=ON", "USE_SCALARS_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_SCALARS=ON", "USE_SCALARS_GPU=OFF"],
+      "runtime": ["passive_scalar=.false.", "active buoyancy/stability settings"],
+      "required_evidence": ["cpu_log", "gpu_log", "scalar_field_comparison", "buoyancy_response", "scalar_stage_timing"]
+    },
+    {
+      "id": "cps_velocity",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "240^3 multi-rank",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_CPS=ON", "USE_SCALARS=OFF"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_CPS=ON", "USE_SCALARS=OFF"],
+      "runtime": ["two-color CPS", "scalar off"],
+      "required_evidence": ["cpu_log", "gpu_log", "cps_stage_timing", "fringe_velocity_sanity"]
+    },
+    {
+      "id": "cps_scalar",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "240^3 multi-rank",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_CPS=ON", "USE_SCALARS=ON", "USE_SCALARS_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_CPS=ON", "USE_SCALARS=ON", "USE_SCALARS_GPU=OFF"],
+      "runtime": ["two-color CPS", "scalar coupling on"],
+      "required_evidence": ["cpu_log", "gpu_log", "cps_stage_timing", "scalar_stage_timing", "fringe_scalar_sanity"]
+    },
+    {
+      "id": "hit_inflow",
+      "status": "needs_public_evidence_copy_or_rerun",
+      "public_case": null,
+      "base_grid": "64^3 correctness and 128^3 timing",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_HIT=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_HIT=ON"],
+      "runtime": ["inflow_type=2", "same HIT files for CPU and GPU"],
+      "required_evidence": ["cpu_log", "gpu_log", "field_difference", "speedup_table"]
+    },
+    {
+      "id": "shifted_inflow",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "128^3 or 240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF"],
+      "runtime": ["shifted inflow settings", "same input field"],
+      "required_evidence": ["cpu_log", "gpu_log", "inflow_plane_sanity", "late_step_timing"]
+    },
+    {
+      "id": "sponge_coriolis",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "128^3 or 240^3",
+      "gpu_cmake": ["USE_LES_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF"],
+      "runtime": ["use_sponge=.true.", "coriolis_forcing enabled variant"],
+      "required_evidence": ["cpu_log", "gpu_log", "forcing_diagnostics", "divergence", "late_step_timing"]
+    },
+    {
+      "id": "adm_dynamic_controls",
+      "status": "needs_new_case",
+      "public_case": null,
+      "base_grid": "240^3 ADM",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_TURBINES=ON", "USE_ATM=OFF"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_TURBINES=ON", "USE_ATM=OFF"],
+      "runtime": ["dynamic yaw/Ct/rotation/correction controls enabled one at a time"],
+      "required_evidence": ["cpu_log", "gpu_log", "disk_control_outputs", "late_step_timing"]
+    },
+    {
+      "id": "diagnostics_output",
+      "status": "host_boundary_compatibility",
+      "public_case": null,
+      "base_grid": "small compatibility grid",
+      "gpu_cmake": ["USE_LES_GPU=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF"],
+      "runtime": ["checkpoint_data=.true.", "tavg_calc=.true.", "domain/plane output variants"],
+      "required_evidence": ["output_files_exist", "restart_readback", "diagnostic_overhead_report"]
+    },
+    {
+      "id": "cgns_output",
+      "status": "host_boundary_compatibility",
+      "public_case": null,
+      "base_grid": "small compatibility grid",
+      "gpu_cmake": ["USE_LES_GPU=ON", "USE_CGNS=ON"],
+      "cpu_cmake": ["USE_CPU_BUILD=ON", "USE_LES_GPU=OFF", "USE_CGNS=ON"],
+      "runtime": ["CGNS output enabled"],
+      "required_evidence": ["cgns_files_exist", "cgns_readback_if_available"]
+    },
+    {
+      "id": "lvlset",
+      "status": "excluded",
+      "public_case": null,
+      "base_grid": null,
+      "gpu_cmake": ["USE_LVLSET=ON"],
+      "cpu_cmake": [],
+      "runtime": ["excluded from this non-LVLSET audit"],
+      "required_evidence": []
+    }
+  ]
+}

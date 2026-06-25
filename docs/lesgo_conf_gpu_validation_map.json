@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "scope": "non-LVLSET lesgo.conf parser groups mapped to GPU validation rows",
+  "rule": "Every non-LVLSET parser group from input_util.f90 must map to one or more validation rows. A mapped row means the row is responsible for correctness and timing evidence for that runtime surface, not that evidence already exists.",
+  "parser_groups": [
+    {
+      "group": "DOMAIN",
+      "validation_rows": ["les_core_channel", "large_windfarm"],
+      "notes": "Domain size, nproc, and grid spacing affect all hot paths. Use channel flow for compact proof and the large wind-farm row for production memory/MPI behavior."
+    },
+    {
+      "group": "MODEL",
+      "validation_rows": [
+        "sgs_disabled",
+        "sgs_models_1_5",
+        "dyn_tn",
+        "iwm_wall_model"
+      ],
+      "notes": "MODEL owns SGS enable/disable, SGS model selection, dynamic update cadence, filtering, wall damping, and related wall-model sensitivity."
+    },
+    {
+      "group": "CORIOLIS",
+      "validation_rows": ["sponge_coriolis"],
+      "notes": "Coriolis forcing is a targeted optional-forcing validation row because the public presentation cases do not isolate it."
+    },
+    {
+      "group": "FLOW_COND",
+      "validation_rows": [
+        "les_core_channel",
+        "iwm_wall_model",
+        "shifted_inflow",
+        "sponge_coriolis"
+      ],
+      "notes": "Flow-condition keys cover common channel inflow/wall settings plus shifted inflow, sponge, pressure-force, and wall-model variants."
+    },
+    {
+      "group": "OUTPUT",
+      "validation_rows": ["diagnostics_output"],
+      "notes": "Output, restart, statistics, and plane/domain diagnostics are host-boundary compatibility checks, not GPU hot-path speed claims."
+    },
+    {
+      "group": "TURBINES",
+      "validation_rows": [
+        "adm_disk",
+        "atm_line",
+        "large_windfarm",
+        "adm_dynamic_controls"
+      ],
+      "notes": "Turbine parser keys cover ADM layout, disk controls, and turbine output surfaces. ATM input files are separate from lesgo.conf but share turbine validation rows."
+    },
+    {
+      "group": "SCALARS",
+      "validation_rows": ["scalar_passive", "scalar_active", "cps_scalar"],
+      "notes": "Scalar keys must be checked with USE_SCALARS and, for GPU speed evidence, USE_SCALARS_GPU."
+    },
+    {
+      "group": "HIT",
+      "validation_rows": ["hit_inflow"],
+      "notes": "HIT keys are parsed from the FLOW_COND block but split out because they require USE_HIT and external HIT files."
+    }
+  ],
+  "cross_cutting_rows": [
+    {
+      "id": "cps_velocity",
+      "reason": "CPS is a build/runtime coupling surface rather than a direct input_util.f90 parser group."
+    },
+    {
+      "id": "cgns_output",
+      "reason": "CGNS is controlled by USE_CGNS and host I/O compatibility, not a normal lesgo.conf parser group."
+    },
+    {
+      "id": "lvlset",
+      "reason": "Excluded from the current non-LVLSET validation scope."
+    }
+  ]
+}

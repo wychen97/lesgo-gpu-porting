@@ -45,12 +45,28 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_doc_source_refs.py` | Verifies documented Fortran source references point to tracked files. |
 | `tools/check_docs_index.py` | Verifies `docs/README.md` indexes tracked collaborator docs. |
 | `tools/check_environment_switch_docs.py` | Verifies `LESGO_*` runtime switches used in source are documented. |
+| `tools/check_gpu_benchmark_manifest.py` | Verifies the benchmark manifest covers every GPU validation matrix row and uses valid, internally consistent CMake build settings. |
 | `tools/check_gpu_comment_labels.py` | Verifies production GPU source comments do not use stale internal optimization labels. |
 | `tools/check_gpu_contract_source_groups.py` | Verifies GPU contracts document every named CMake source group. |
 | `tools/check_gpu_headers.py` | Verifies GPU-specific Fortran files explain ownership or data movement near the file header. |
+| `tools/check_gpu_static_candidate_review_report.py` | Verifies the generated full static GPU candidate review report is current. |
+| `tools/check_gpu_static_full_inventory_report.py` | Verifies the generated full static GPU subprogram inventory report is current. |
+| `tools/check_gpu_release_objective_status_report.py` | Verifies the generated release-objective status report is current. |
+| `tools/check_gpu_static_review.py` | Verifies static GPU review bucket counts and bucket-to-validation-row mappings in the audit match the scanner output. |
+| `tools/check_gpu_validation_evidence.py` | Verifies the GPU validation evidence ledger is consistent and does not imply unsupported speedup claims. |
+| `tools/check_gpu_validation_import_tools.py` | Smoke-tests parsing and importing LESGO timing logs into a temporary evidence ledger. |
+| `tools/check_gpu_validation_matrix.py` | Verifies the non-LVLSET GPU validation matrix has required rows and status labels. |
+| `tools/check_gpu_validation_plan.py` | Verifies the generated CPU/GPU validation run plan covers open benchmark rows. |
+| `tools/check_gpu_validation_runbook.py` | Verifies the GPU validation runbook covers every benchmark-manifest row. |
+| `tools/check_gpu_timing_audit_consistency.py` | Verifies timing numbers in the GPU coverage audit match the validation evidence ledger. |
 | `tools/check_handoff_readme.py` | Verifies the top-level handoff README points to the current doc entrypoints. |
 | `tools/check_iwm_surface_indexing.py` | Verifies IWM wall-surface arrays keep point-local `(iwm_i, iwm_j)` indexing. |
+| `tools/check_lesgo_conf_coverage_docs.py` | Verifies the GPU coverage audit tracks non-LVLSET `lesgo.conf` parser keys. |
+| `tools/check_lesgo_conf_key_validation_report.py` | Verifies the generated key-level `lesgo.conf` validation coverage report is current. |
+| `tools/check_lesgo_conf_validation_map.py` | Verifies parsed `lesgo.conf` groups are mapped to GPU validation rows. |
 | `tools/check_navigation_maps.py` | Verifies large active Fortran modules have a header-level navigation map. |
+| `tools/check_p0_archived_evidence_importer.py` | Smoke-tests importing archived public p0 CPU/GPU logs into a temporary validation evidence ledger. |
+| `tools/check_p0_paired_case_scripts.py` | Verifies the public p0 cases preserve clean paired CPU/GPU build and submit profiles, including executable names derived from root CMake target suffixes. |
 | `tools/check_production_profile_docs.py` | Verifies canonical production `USE_*` settings match across build and organization docs. |
 | `tools/check_production_wording.py` | Verifies validated production paths are not described as experimental. |
 | `tools/check_refactor_backlog.py` | Verifies `docs/refactor_backlog.md` lists the current non-LVLSET source-size hotspots. |
@@ -69,8 +85,25 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | --- | --- |
 | `tools/cmake_metadata.py` | Shared root CMake option/cache-variable parsers for readiness checks. |
 | `tools/fortran_inventory.py` | Shared tracked Fortran-source discovery helpers for readiness checks. |
+| `tools/gpu_validation_plan.py` | Expands the benchmark manifest and evidence ledger into concrete paired CPU/GPU run tasks, import commands, and public-case Derecho submit templates. |
+| `tools/import_lesgo_timing_evidence.py` | Imports a standard LESGO timing log into one validation evidence row or a named runtime variant; speedup claims require explicit correctness checks. |
+| `tools/import_lesgo_timing_pair.py` | Imports matched CPU/GPU LESGO logs and records a faster or not-faster paired result; `--compare-diagnostics` stores parsed MPI/divergence/kinetic-energy checks, and faster claims require explicit correctness checks plus `--evidence-item` coverage for manifest requirements. |
+| `tools/import_p0_archived_evidence.py` | Imports archived public p0 CPU/GPU runs from `run-archives/<label>/lesgo_<label>.log` into the paired validation evidence ledger. |
+| `tools/parse_lesgo_timing.py` | Parses LESGO stdout/stderr timing blocks into JSON for validation evidence import. |
+| `tools/compare_scalar_checkpoint.py` | Compares CPU/GPU `scal.out.c*` scalar checkpoints and reports scalar-field differences. |
+| `tools/prepare_sgs_matrix_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for `sgs=false`, `sgs_model=1..5`, and optional `USE_DYN_TN=ON` validation. |
+| `tools/prepare_scalar_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for passive and active scalar validation. |
 | `tools/readiness_manifest.py` | Shared parser for the readiness wrapper's `PYTHON_CHECKS` manifest. |
+| `tools/report_lesgo_conf_key_validation.py` | Generates the key-level `lesgo.conf` validation coverage report from source parser keys and evidence state. |
+| `tools/report_gpu_matrix_status_updates.py` | Suggests validation-matrix status updates implied by the evidence ledger. |
+| `tools/report_gpu_release_objective_status.py` | Generates the release-objective status report tying static source coverage to validation evidence. |
+| `tools/report_gpu_static_candidate_review.py` | Generates the full static unmarked-candidate GPU review report. |
+| `tools/report_gpu_static_full_inventory.py` | Generates the full static GPU classification inventory for every tracked non-LVLSET subprogram. |
 | `tools/script_inventory.py` | Shared tracked-script discovery helpers for readiness checks. |
+| `tools/report_gpu_static_inventory.py` | Reports static non-LVLSET Fortran subprogram GPU-marker coverage and review buckets for audits. |
+| `tools/report_gpu_validation_gaps.py` | Reports open GPU validation and paired-speedup evidence gaps by runbook batch. |
+| `tools/update_gpu_validation_evidence.py` | Updates one CPU or GPU timing row in the validation evidence ledger. |
+| `tools/require_gpu_release_objective.py` | Strict release gate that fails until every non-LVLSET validation surface has paired correctness evidence and an acceptable GPU-faster result. |
 | `tools/validate_filt_da_cufft.F90` | Small CUDA Fortran validation source for `filt_da`/cuFFT behavior. |
 
 ## Maintenance Rule

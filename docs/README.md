@@ -30,25 +30,63 @@ branch.  Read these files before changing solver code.
    - CPU/GPU boundary rules;
    - validation expectations by change area.
 
-6. `source_file_inventory.md`
+6. `gpu_port_coverage_audit.md`
+   - current GPU-port coverage by build/runtime path;
+   - validation strength for each non-LVLSET module;
+   - remaining optional-path benchmark targets.
+
+7. `gpu_static_full_inventory.md`
+   - generated full static classification of every tracked non-LVLSET
+     Fortran subprogram;
+   - separates GPU-marked, host-boundary, host/diagnostic, and candidate code.
+
+8. `gpu_static_candidate_review.md`
+   - generated full list of static unmarked runtime candidates;
+   - maps each candidate to a review bucket and responsible validation rows.
+
+9. `gpu_validation_matrix.md`
+   - release-facing non-LVLSET validation checklist;
+   - separates source coverage, correctness, and CPU/GPU speedup claims;
+   - tracks which paths still need paired benchmark evidence.
+
+10. `gpu_validation_runbook.md`
+   - benchmark batches for closing missing evidence rows;
+   - minimum evidence fields for paired CPU/GPU speedup claims;
+   - completion rule for updating validation status.
+
+11. `gpu_release_objective_status.md`
+   - generated status tying the static function inventory to the validation
+     evidence ledger;
+   - explicit release-objective pass/fail state for the non-LVLSET GPU port.
+
+12. `lesgo_conf_gpu_validation_map.json`
+   - machine-readable map from parsed `lesgo.conf` groups to validation rows;
+   - bridge between runtime configuration surface and benchmark evidence.
+
+13. `lesgo_conf_key_validation_coverage.md`
+   - generated key-level expansion of the `lesgo.conf` validation map;
+   - shows responsible validation rows and current evidence state for each
+     parsed non-LVLSET key.
+
+14. `source_file_inventory.md`
    - every tracked Fortran source file;
    - build-option grouping;
    - source-tree entry points for optional modules.
 
-7. `gpu_development_guidelines.md`
+15. `gpu_development_guidelines.md`
    - rules for GPU changes;
    - synchronization and data-residency expectations;
    - review checklist for GPU kernels and MPI paths.
 
-8. `environment_switches.md`
+16. `environment_switches.md`
    - documented `LESGO_*` runtime switches;
    - production, diagnostic, and benchmark-only switch classification.
 
-9. `refactor_backlog.md`
+17. `refactor_backlog.md`
    - safe order for future readability refactors;
    - work intentionally deferred from the published source branch.
 
-10. `collaboration_readiness_status.md`
+18. `collaboration_readiness_status.md`
    - current readability/readiness guard summary;
    - production-scope and deferred-work status;
    - editing rule for readability-only versus solver changes.

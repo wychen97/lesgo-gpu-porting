@@ -179,24 +179,33 @@ LES arrays.  The practical ownership rules are:
 
 ## Current Optimization Status
 
-Optimized and validated for the production non-LVLSET path:
+Use `docs/gpu_port_coverage_audit.md` for the detailed status matrix.  In
+short, the validated production non-LVLSET hot path includes:
 
-- LES GPU residency and GPU-aware MPI pressure pipeline.
-- Convection, derivatives, pressure, SGS runtime models 1 through 5, scalar
-  GPU transport, CPS, and ATM/turbine hot paths.
-- SGS disabled path and supported non-5 SGS runtime values.
+- LES GPU residency and the GPU-aware MPI pressure pipeline;
+- convection, derivatives, pressure, and SGS runtime values `1..5`;
+- the SGS disabled path;
+- ADM and ATM turbine paths used by the published benchmark cases.
 
-Available as opt-in non-production paths:
+Implemented paths that still need broader production-size validation before
+being used as broad speedup evidence:
 
-- HIT inflow with a GPU helper module for plane interpolation and fringe
-  application.
+- scalar transport with `USE_SCALARS_GPU=ON`;
+- CPS/concurrent precursor, especially with scalar coupling;
+- IWM-heavy wall-model cases;
+- optional `USE_DYN_TN=ON` Lagrangian SGS timescale update;
+- shifted inflow, sponge, and Coriolis forcing configurations.
 
-Deferred or experimental:
+Available as an opt-in non-production path:
+
+- HIT inflow with GPU-assisted plane interpolation and fringe application.
+
+Deferred:
 
 - LVLSET GPU optimization.
 - ATM reduce-to-operating-ranks load balancing as a default behavior.  The
-  implementation exists as an experiment but should remain off until a larger
-  multi-rank/multi-turbine case shows robust benefit.
+  implementation exists but should remain off until a larger multi-rank,
+  multi-turbine case shows robust benefit.
 
 ## Validation Expectations
 

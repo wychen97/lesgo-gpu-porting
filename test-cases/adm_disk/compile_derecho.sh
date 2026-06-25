@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 
-# Compile-only script for the Derecho A100 GPU build.
+# Compile-only script for the Derecho CPU or A100 GPU build.
 # This script does not submit or run a job. It only builds the executable and
-# installs it in this case directory as:
+# installs it in this case directory as one of:
 #
-#   ./lesgo-run-exe
+#   ./lesgo-run-exe-cpu
+#   ./lesgo-run-exe-gpu
 #
 # If using another cluster, edit the module load line and FC compiler wrapper.
+# Usage:
+#   ./compile_derecho.sh gpu
+#   ./compile_derecho.sh cpu
+#
+# The default profile is gpu for backward compatibility.
 
 # Bash safety options:
 #   -e: stop if any command fails.
@@ -16,8 +22,28 @@ set -euo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd "${CASE_DIR}/../.." && pwd -P)"
-BUILD_DIR="${CASE_DIR}/build-derecho-gpu"
+BUILD_PROFILE="${1:-${BUILD_PROFILE:-gpu}}"
+BUILD_DIR="${CASE_DIR}/build-derecho-${BUILD_PROFILE}"
 BUILD_JOBS="${BUILD_JOBS:-8}"
+
+case "${BUILD_PROFILE}" in
+  gpu)
+    USE_CPU_BUILD=OFF
+    USE_LES_GPU=ON
+    USE_GPU_AWARE_MPI=AUTO
+    EXE_NAME=lesgo-mpi-turbines-lesgpu
+    ;;
+  cpu)
+    USE_CPU_BUILD=ON
+    USE_LES_GPU=OFF
+    USE_GPU_AWARE_MPI=OFF
+    EXE_NAME=lesgo-mpi-turbines
+    ;;
+  *)
+    echo "Usage: $0 [gpu|cpu]" >&2
+    exit 2
+    ;;
+esac
 
 cd "${CASE_DIR}"
 
@@ -43,9 +69,9 @@ export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
 FC="${FC:-ftn}" cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}" \
   -Dhostname=derecho \
   -DUSE_MPI=ON \
-  -DUSE_CPU_BUILD=OFF \
-  -DUSE_LES_GPU=ON \
-  -DUSE_GPU_AWARE_MPI=AUTO \
+  -DUSE_CPU_BUILD="${USE_CPU_BUILD}" \
+  -DUSE_LES_GPU="${USE_LES_GPU}" \
+  -DUSE_GPU_AWARE_MPI="${USE_GPU_AWARE_MPI}" \
   -DUSE_TURBINES=ON \
   -DUSE_ATM=OFF \
   -DUSE_CPS=OFF \
@@ -58,8 +84,11 @@ FC="${FC:-ftn}" cmake -S "${ROOT_DIR}" -B "${BUILD_DIR}" \
 
 cmake --build "${BUILD_DIR}" -j "${BUILD_JOBS}"
 
-# ADM build name from the root CMakeLists.txt:
-#   lesgo + mpi + turbines + lesgpu -> lesgo-mpi-turbines-lesgpu
-install -m 0755 "${BUILD_DIR}/lesgo-mpi-turbines-lesgpu" "${CASE_DIR}/lesgo-run-exe"
+# ADM build names from the root CMakeLists.txt:
+#   GPU: lesgo + mpi + turbines + lesgpu -> lesgo-mpi-turbines-lesgpu
+#   CPU: lesgo + mpi + turbines          -> lesgo-mpi-turbines
+install -m 0755 "${BUILD_DIR}/${EXE_NAME}" "${CASE_DIR}/lesgo-run-exe-${BUILD_PROFILE}"
+cp "${CASE_DIR}/lesgo-run-exe-${BUILD_PROFILE}" "${CASE_DIR}/lesgo-run-exe"
 
-echo "Built ${CASE_DIR}/lesgo-run-exe"
+echo "Built ${CASE_DIR}/lesgo-run-exe-${BUILD_PROFILE}"
+echo "Updated compatibility copy ${CASE_DIR}/lesgo-run-exe"

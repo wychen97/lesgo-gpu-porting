@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
 
-# Derecho PBS job script for the 3072 x 384 x 400 / 60-turbine GPU case.
+# Derecho PBS job script for the 3072 x 384 x 400 / 60-turbine CPU or GPU case.
 #
 # Compile first:
-#   ./compile_derecho.sh
+#   ./compile_derecho.sh gpu
+#   ./compile_derecho.sh cpu
 #
-# Submit from this directory:
+# Submit the default 16-GPU run from this directory:
 #   qsub submit_derecho.pbs
 #
+# Submit a CPU baseline with matching `nproc = 16`:
+#   qsub -N lesgo_wf60_cpu16 -v RUN_PROFILE=cpu,RUN_LABEL=cpu16 \
+#        -l select=1:ncpus=32:mpiprocs=16:mem=220gb submit_derecho.pbs
+#
+# For larger CPU baselines, edit `nproc` in `lesgo.conf` and keep the qsub
+# `select * mpiprocs`, `MPI_RANKS`, and `MPI_PPN` values consistent.
+#
 # This file does not compile the code. It only cleans old outputs and runs the
-# already-built ./lesgo-run-exe executable.
+# already-built profile executable.
 
 # Change this account to your Derecho allocation.
 #PBS -A ujhb0028
@@ -53,19 +61,41 @@ set -euo pipefail
 
 cd "${PBS_O_WORKDIR}"
 
+# Must match the PBS line and lesgo.conf nproc.
+MPI_RANKS="${MPI_RANKS:-16}"
+MPI_PPN="${MPI_PPN:-4}"
+RUN_PROFILE="${RUN_PROFILE:-gpu}"
+RUN_LABEL="${RUN_LABEL:-${RUN_PROFILE}}"
+ARCHIVE_ROOT="${ARCHIVE_ROOT:-run-archives}"
+
+case "${RUN_PROFILE}" in
+  gpu)
+    RUN_EXE=./lesgo-run-exe-gpu
+    ;;
+  cpu)
+    RUN_EXE=./lesgo-run-exe-cpu
+    ;;
+  *)
+    echo "ERROR: RUN_PROFILE must be gpu or cpu, got ${RUN_PROFILE}" >&2
+    exit 2
+    ;;
+esac
+
 # Runtime module stack. Keep this consistent with compile_derecho.sh.
 # On another cluster, replace this with that site's runtime modules.
 module reset
-module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10
-export MPICH_GPU_SUPPORT_ENABLED=1
-export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
+if [[ "${RUN_PROFILE}" == "gpu" ]]; then
+  module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10
+  export MPICH_GPU_SUPPORT_ENABLED=1
+  export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
+else
+  module load nvhpc/25.9 cray-mpich/8.1.32 fftw/3.3.10
+  unset MPICH_GPU_SUPPORT_ENABLED
+  unset MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED
+fi
 
-# Must match the PBS line and lesgo.conf nproc.
-MPI_RANKS=16
-MPI_PPN=4
-
-if [[ ! -x ./lesgo-run-exe ]]; then
-  echo "ERROR: ./lesgo-run-exe is missing. Run ./compile_derecho.sh first." >&2
+if [[ ! -x "${RUN_EXE}" ]]; then
+  echo "ERROR: ${RUN_EXE} is missing. Run ./compile_derecho.sh ${RUN_PROFILE} first." >&2
   exit 2
 fi
 
@@ -73,15 +103,41 @@ fi
 rm -rf output turbineOutput
 rm -f total_time.dat check_ke.out grid.out vel.out.c* tavg.out.c* lesgo_param.out
 
-echo "Running 60-turbine wind-farm case on Derecho"
+echo "Running 60-turbine wind-farm ${RUN_PROFILE} case on Derecho"
 date
 
 # Derecho provides set_gpu_rank to bind each MPI rank to one GPU.
 # On another cluster, replace this with the recommended mpiexec/srun command.
-if command -v set_gpu_rank >/dev/null 2>&1; then
-  mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" set_gpu_rank ./lesgo-run-exe
+LOG_FILE="lesgo_${RUN_LABEL}.log"
+set +e
+if [[ "${RUN_PROFILE}" == "gpu" ]] && command -v set_gpu_rank >/dev/null 2>&1; then
+  mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" set_gpu_rank "${RUN_EXE}" 2>&1 | tee "${LOG_FILE}"
+  MPI_STATUS=${PIPESTATUS[0]}
 else
-  mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" ./lesgo-run-exe
+  mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" "${RUN_EXE}" 2>&1 | tee "${LOG_FILE}"
+  MPI_STATUS=${PIPESTATUS[0]}
+fi
+set -e
+echo "MPI_EXIT_STATUS=${MPI_STATUS}" | tee -a "${LOG_FILE}"
+
+ARCHIVE_DIR="${ARCHIVE_ROOT}/${RUN_LABEL}"
+rm -rf "${ARCHIVE_DIR}"
+mkdir -p "${ARCHIVE_DIR}"
+for item in "${LOG_FILE}" output turbineOutput total_time.dat check_ke.out grid.out lesgo_param.out; do
+  if [[ -e "${item}" ]]; then
+    cp -a "${item}" "${ARCHIVE_DIR}/"
+  fi
+done
+shopt -s nullglob
+for item in vel.out.c* tavg.out.c*; do
+  cp -a "${item}" "${ARCHIVE_DIR}/"
+done
+shopt -u nullglob
+echo "Archived run evidence to ${ARCHIVE_DIR}"
+
+if [[ "${MPI_STATUS}" -ne 0 ]]; then
+  echo "ERROR: LESGO exited with status ${MPI_STATUS}" >&2
+  exit "${MPI_STATUS}"
 fi
 
 date

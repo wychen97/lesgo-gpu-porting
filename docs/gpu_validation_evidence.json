@@ -1,0 +1,2755 @@
+{
+  "schema_version": 1,
+  "scope": "non-LVLSET GPU validation evidence ledger",
+  "rule": "Do not claim speedup unless a row has paired CPU and GPU timing from the same source tree, grid, compiler family, runtime settings, and output cadence.",
+  "cases": [
+    {
+      "id": "les_core_channel",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "Derecho p0 paired run in /glade/work/wchen/lesgo_versions/publish_validation/lesgo_gpu_porting_p0gate_20260624, jobs 6553687/6553793 channel, 6553690/6553796 ADM, 6553689/6553792 ATM off, 6553794/6553795 ATM on",
+      "gpu_runtime": {
+        "grid": "240^3",
+        "nsteps": 200,
+        "cumulative_seconds": 11.92148,
+        "cumulative_average_s_per_step": 0.059607400000000005,
+        "final_printed_s_per_step": 0.1150396
+      },
+      "cpu_runtime": {
+        "grid": "240^3",
+        "nsteps": 200,
+        "cumulative_seconds": 948.8529,
+        "cumulative_average_s_per_step": 4.7442645,
+        "final_printed_s_per_step": 13.24014
+      },
+      "speedup_claim": {
+        "speedup": 79.59187114351573,
+        "basis": "cumulative_average_s_per_step"
+      },
+      "notes": "GPU run proves execution only. Add paired CPU run before claiming speedup.",
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 200,
+          "last_iteration_wall_s": 13.24014,
+          "cumulative_wall_s": 948.8529,
+          "cumulative_average_s_per_step": 4.7442645,
+          "final_wall_s": 949.8771,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.001302061,
+            "dimensional_time": 32.81222,
+            "cfl": 0.06250001,
+            "divergence": 4.091585e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.4931687,
+            "derivatives_xy_filter": 0.4614226,
+            "derivatives_z": 0.03174507,
+            "sgs_and_stresses": 10.75665,
+            "sgs_model_stress_build": 9.704799,
+            "sgs_tzz_halo": 2.709999e-07,
+            "sgs_divstress_uv": 0.6865457,
+            "sgs_divstress_w": 0.3653068,
+            "convection": 1.460899,
+            "pressure_solver": 0.3760863,
+            "projection": 0.03726819,
+            "other": 0.1160637
+          },
+          "forcing_wall_s": 2.310001e-07,
+          "cumulative_forcing_s": 5.6594e-05
+        },
+        "gpu": {
+          "last_iteration": 200,
+          "last_iteration_wall_s": 0.1150396,
+          "cumulative_wall_s": 11.92148,
+          "cumulative_average_s_per_step": 0.059607400000000005,
+          "final_wall_s": 12.97971,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.001302061,
+            "dimensional_time": 32.81222,
+            "cfl": 0.06250001,
+            "divergence": 4.091585e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000122618,
+            "derivatives_xy_filter": 9.1937e-05,
+            "derivatives_z": 3.0479e-05,
+            "sgs_and_stresses": 0.0832826,
+            "sgs_model_stress_build": 0.07502269,
+            "sgs_tzz_halo": 1.0039e-05,
+            "sgs_divstress_uv": 0.005257839,
+            "sgs_divstress_w": 0.002991726,
+            "convection": 0.000159408,
+            "pressure_solver": 0.02876448,
+            "projection": 0.001612328,
+            "other": 0.001098053
+          },
+          "forcing_wall_s": 6.000005e-08,
+          "cumulative_forcing_s": 1.9151e-05
+        }
+      },
+      "correctness": {
+        "status": "passed",
+        "checks": [
+          "MPI exit status matched: cpu=0, gpu=0",
+          "divergence matched: cpu=4.091585e-08, gpu=4.091585e-08, abs_diff=0, tolerance=4.09e-10",
+          "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+        ],
+        "source": "Derecho p0 paired run in /glade/work/wchen/lesgo_versions/publish_validation/lesgo_gpu_porting_p0gate_20260624, jobs 6553687/6553793 channel, 6553690/6553796 ADM, 6553689/6553792 ATM off, 6553794/6553795 ATM on",
+        "evidence_items": [
+          "cpu_log",
+          "gpu_log",
+          "divergence",
+          "kinetic_energy",
+          "late_step_timing",
+          "cumulative_average"
+        ]
+      },
+      "pair_result": {
+        "speedup": 79.59187114351573,
+        "outcome": "gpu_faster",
+        "basis": "cumulative_average_s_per_step"
+      }
+    },
+    {
+      "id": "adm_disk",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "Derecho p0 paired run in /glade/work/wchen/lesgo_versions/publish_validation/lesgo_gpu_porting_p0gate_20260624, jobs 6553687/6553793 channel, 6553690/6553796 ADM, 6553689/6553792 ATM off, 6553794/6553795 ATM on",
+      "gpu_runtime": {
+        "grid": "240^3",
+        "nsteps": 200,
+        "cumulative_seconds": 12.22882,
+        "cumulative_average_s_per_step": 0.06114410000000001,
+        "final_printed_s_per_step": 0.1164596
+      },
+      "cpu_runtime": {
+        "grid": "240^3",
+        "nsteps": 200,
+        "cumulative_seconds": 824.7738,
+        "cumulative_average_s_per_step": 4.123869,
+        "final_printed_s_per_step": 12.27129
+      },
+      "speedup_claim": {
+        "speedup": 67.44508464430746,
+        "basis": "cumulative_average_s_per_step"
+      },
+      "notes": "GPU run proves execution only. Add paired CPU run before claiming ADM speedup.",
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 200,
+          "last_iteration_wall_s": 12.27129,
+          "cumulative_wall_s": 824.7738,
+          "cumulative_average_s_per_step": 4.123869,
+          "final_wall_s": 825.7031,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.001302061,
+            "dimensional_time": 32.81222,
+            "cfl": 0.06250001,
+            "divergence": 4.091585e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.4774754,
+            "derivatives_xy_filter": 0.4481492,
+            "derivatives_z": 0.02932553,
+            "sgs_and_stresses": 9.834972,
+            "sgs_model_stress_build": 9.2758,
+            "sgs_tzz_halo": 2.81e-07,
+            "sgs_divstress_uv": 0.3612235,
+            "sgs_divstress_w": 0.1979464,
+            "convection": 1.398231,
+            "pressure_solver": 0.3304854,
+            "projection": 0.03653408,
+            "other": 0.1350747
+          },
+          "forcing_wall_s": 0.0585168,
+          "cumulative_forcing_s": 11.80022
+        },
+        "gpu": {
+          "last_iteration": 200,
+          "last_iteration_wall_s": 0.1164596,
+          "cumulative_wall_s": 12.22882,
+          "cumulative_average_s_per_step": 0.06114410000000001,
+          "final_wall_s": 13.28305,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.001302061,
+            "dimensional_time": 32.81222,
+            "cfl": 0.06250001,
+            "divergence": 4.091585e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000122266,
+            "derivatives_xy_filter": 9.2038e-05,
+            "derivatives_z": 3.0028e-05,
+            "sgs_and_stresses": 0.08335355,
+            "sgs_model_stress_build": 0.07508994,
+            "sgs_tzz_halo": 1.0761e-05,
+            "sgs_divstress_uv": 0.005260977,
+            "sgs_divstress_w": 0.002991295,
+            "convection": 0.000159428,
+            "pressure_solver": 0.02292808,
+            "projection": 0.001614317,
+            "other": 0.001081899
+          },
+          "forcing_wall_s": 0.007200091,
+          "cumulative_forcing_s": 1.518084
+        }
+      },
+      "correctness": {
+        "status": "passed",
+        "checks": [
+          "turbine forcing output and disk-model velocity diagnostics matched CPU reference logs",
+          "MPI exit status matched: cpu=0, gpu=0",
+          "divergence matched: cpu=4.091585e-08, gpu=4.091585e-08, abs_diff=0, tolerance=4.09e-10",
+          "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+        ],
+        "source": "Derecho p0 paired run in /glade/work/wchen/lesgo_versions/publish_validation/lesgo_gpu_porting_p0gate_20260624, jobs 6553687/6553793 channel, 6553690/6553796 ADM, 6553689/6553792 ATM off, 6553794/6553795 ATM on",
+        "evidence_items": [
+          "cpu_log",
+          "gpu_log",
+          "turbine_forcing_output",
+          "power_or_disk_velocity",
+          "late_step_timing",
+          "cumulative_average",
+          "divergence",
+          "kinetic_energy"
+        ]
+      },
+      "pair_result": {
+        "speedup": 67.44508464430746,
+        "outcome": "gpu_faster",
+        "basis": "cumulative_average_s_per_step"
+      }
+    },
+    {
+      "id": "atm_line",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "Derecho p0 paired run in /glade/work/wchen/lesgo_versions/publish_validation/lesgo_gpu_porting_p0gate_20260624, jobs 6553687/6553793 channel, 6553690/6553796 ADM, 6553689/6553792 ATM off, 6553794/6553795 ATM on",
+      "gpu_runtime": {
+        "grid": "240^3",
+        "nsteps": 200,
+        "cumulative_seconds": 15.91372,
+        "cumulative_average_s_per_step": 0.07957,
+        "final_printed_s_per_step": 0.1194032
+      },
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "ATM has paired CPU/GPU evidence in variant_runtimes for structure_off and structure_on; use variant speedup claims rather than the legacy top-level GPU-only runtime.",
+      "variant_runtimes": {
+        "structure_off": {
+          "cpu_runtime": {
+            "grid": "240^3",
+            "nsteps": 200,
+            "cumulative_seconds": 924.2051,
+            "cumulative_average_s_per_step": 4.6210255,
+            "final_printed_s_per_step": 12.78578
+          },
+          "gpu_runtime": {
+            "grid": "240^3",
+            "nsteps": 200,
+            "cumulative_seconds": 16.7627,
+            "cumulative_average_s_per_step": 0.0838135,
+            "final_printed_s_per_step": 0.1193347
+          }
+        },
+        "structure_on": {
+          "cpu_runtime": {
+            "grid": "240^3",
+            "nsteps": 200,
+            "cumulative_seconds": 1076.585,
+            "cumulative_average_s_per_step": 5.382925,
+            "final_printed_s_per_step": 13.85342
+          },
+          "gpu_runtime": {
+            "grid": "240^3",
+            "nsteps": 200,
+            "cumulative_seconds": 16.21464,
+            "cumulative_average_s_per_step": 0.0810732,
+            "final_printed_s_per_step": 0.1203832
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 200,
+          "last_iteration_wall_s": 13.85342,
+          "cumulative_wall_s": 1076.585,
+          "cumulative_average_s_per_step": 5.382925,
+          "final_wall_s": 1077.578,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.0005928332,
+            "dimensional_time": 17.61022,
+            "cfl": 0.06254095,
+            "divergence": 0.0002321508,
+            "kinetic_energy": 0.5024224
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.4861571,
+            "derivatives_xy_filter": 0.4566516,
+            "derivatives_z": 0.02950375,
+            "sgs_and_stresses": 10.77854,
+            "sgs_model_stress_build": 9.725509,
+            "sgs_tzz_halo": 4.200001e-07,
+            "sgs_divstress_uv": 0.6886336,
+            "sgs_divstress_w": 0.3643919,
+            "convection": 1.460575,
+            "pressure_solver": 0.3726714,
+            "projection": 0.03590122,
+            "other": 0.1421859
+          },
+          "forcing_wall_s": 0.5773938,
+          "cumulative_forcing_s": 120.6094,
+          "atm_measured_subtotal_s": 118.9597
+        },
+        "gpu": {
+          "last_iteration": 200,
+          "last_iteration_wall_s": 0.1203832,
+          "cumulative_wall_s": 16.21464,
+          "cumulative_average_s_per_step": 0.0810732,
+          "final_wall_s": 17.20243,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.0005928332,
+            "dimensional_time": 17.61022,
+            "cfl": 0.06254095,
+            "divergence": 0.0002321508,
+            "kinetic_energy": 0.5024224
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000126714,
+            "derivatives_xy_filter": 9.4753e-05,
+            "derivatives_z": 3.1751e-05,
+            "sgs_and_stresses": 0.0827287,
+            "sgs_model_stress_build": 0.07446172,
+            "sgs_tzz_halo": 1.1292e-05,
+            "sgs_divstress_uv": 0.005262256,
+            "sgs_divstress_w": 0.002993045,
+            "convection": 0.000162823,
+            "pressure_solver": 0.01050052,
+            "projection": 0.001611393,
+            "other": 0.01993489
+          },
+          "forcing_wall_s": 0.005318125,
+          "cumulative_forcing_s": 7.932683,
+          "atm_measured_subtotal_s": 7.727705
+        }
+      },
+      "variant_correctness": {
+        "structure_off": {
+          "status": "passed",
+          "checks": [
+            "turbine power and structure-off ATM output diagnostics matched CPU reference logs",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=0.0002321508, gpu=0.0002321508, abs_diff=0, tolerance=2.32e-06",
+            "kinetic energy matched: cpu=0.5024224, gpu=0.5024224, abs_diff=0, tolerance=5.02e-07"
+          ],
+          "source": "Derecho p0 paired run in /glade/work/wchen/lesgo_versions/publish_validation/lesgo_gpu_porting_p0gate_20260624, jobs 6553687/6553793 channel, 6553690/6553796 ADM, 6553689/6553792 ATM off, 6553794/6553795 ATM on",
+          "evidence_items": [
+            "cpu_log",
+            "gpu_log",
+            "turbine_power",
+            "structure_on_off_comparison",
+            "late_step_timing",
+            "cumulative_average",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "structure_on": {
+          "status": "passed",
+          "checks": [
+            "turbine power, structure-on activation, and ATM output diagnostics matched CPU reference logs",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=0.0002321508, gpu=0.0002321508, abs_diff=0, tolerance=2.32e-06",
+            "kinetic energy matched: cpu=0.5024224, gpu=0.5024224, abs_diff=0, tolerance=5.02e-07"
+          ],
+          "source": "Derecho p0 paired run in /glade/work/wchen/lesgo_versions/publish_validation/lesgo_gpu_porting_p0gate_20260624, jobs 6553687/6553793 channel, 6553690/6553796 ADM, 6553689/6553792 ATM off, 6553794/6553795 ATM on",
+          "evidence_items": [
+            "cpu_log",
+            "gpu_log",
+            "turbine_power",
+            "structure_on_off_comparison",
+            "late_step_timing",
+            "cumulative_average",
+            "divergence",
+            "kinetic_energy"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "structure_off": {
+          "speedup": 55.134620317729244,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "structure_on": {
+          "speedup": 66.39586201112081,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "structure_off": {
+          "speedup": 55.134620317729244,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "structure_on": {
+          "speedup": 66.39586201112081,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      }
+    },
+    {
+      "id": "large_windfarm",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "Derecho current-source large wind-farm pair, CPU50 develop job 6557700 and GPU16 A100 job 6557309, run root /glade/work/wchen/lesgo_versions/benchmarks/08_large_windfarm_current_pair_3072x384x400_60turbines_n50_20260624",
+      "gpu_runtime": {
+        "grid": "3072x384x400",
+        "nsteps": 50,
+        "cumulative_seconds": 13.95664,
+        "cumulative_average_s_per_step": 0.2791328,
+        "final_printed_s_per_step": 0.1574879
+      },
+      "cpu_runtime": {
+        "grid": "3072x384x400",
+        "nsteps": 50,
+        "cumulative_seconds": 1167.194,
+        "cumulative_average_s_per_step": 23.34388,
+        "final_printed_s_per_step": 23.6375
+      },
+      "speedup_claim": {
+        "speedup": 83.63001410081509,
+        "basis": "cumulative_average_s_per_step"
+      },
+      "notes": "Current-source 60-turbine large case. CPU baseline uses 50 MPI ranks on 2 cpudev nodes; GPU baseline uses 16 A100 ranks on 4 GPU nodes. One-node CPU16/CPU20 attempts failed due memory and are not used as evidence.",
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 50,
+          "last_iteration_wall_s": 23.6375,
+          "cumulative_wall_s": 1167.194,
+          "cumulative_average_s_per_step": 23.34388,
+          "final_wall_s": 1170.011,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 2.16848e-05,
+            "dimensional_time": 1.074934,
+            "cfl": 0.06244652,
+            "divergence": 6.248576e-09,
+            "kinetic_energy": 251.8167
+          },
+          "component_cumulative_s": {
+            "derivatives": 3.65851,
+            "derivatives_xy_filter": 3.423302,
+            "derivatives_z": 0.2352011,
+            "sgs_and_stresses": 7.396718,
+            "sgs_model_stress_build": 0.827809,
+            "sgs_tzz_halo": 0.007562866,
+            "sgs_divstress_uv": 4.911485,
+            "sgs_divstress_w": 1.64985,
+            "convection": 7.953377,
+            "pressure_solver": 2.149569,
+            "projection": 0.07876371,
+            "other": 0.0
+          },
+          "forcing_wall_s": 12.09868,
+          "cumulative_forcing_s": 608.6934,
+          "atm_measured_subtotal_s": 637.4577
+        },
+        "gpu": {
+          "last_iteration": 50,
+          "last_iteration_wall_s": 0.1574879,
+          "cumulative_wall_s": 13.95664,
+          "cumulative_average_s_per_step": 0.2791328,
+          "final_wall_s": 16.37684,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 2.185844e-05,
+            "dimensional_time": 1.074189,
+            "cfl": 0.06256003,
+            "divergence": 6.210272e-09,
+            "kinetic_energy": 251.8165
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000204756,
+            "derivatives_xy_filter": 0.000174317,
+            "derivatives_z": 3.0238e-05,
+            "sgs_and_stresses": 0.0586273,
+            "sgs_model_stress_build": 0.03353076,
+            "sgs_tzz_halo": 0.000186831,
+            "sgs_divstress_uv": 0.0159173,
+            "sgs_divstress_w": 0.008992097,
+            "convection": 0.000290432,
+            "pressure_solver": 0.0498471,
+            "projection": 0.005034665,
+            "other": 0.03670469
+          },
+          "forcing_wall_s": 0.006778928,
+          "cumulative_forcing_s": 2.533995,
+          "atm_measured_subtotal_s": 3.12855
+        }
+      },
+      "correctness": {
+        "status": "passed",
+        "checks": [
+          "CPU and GPU both completed with MPI_EXIT_STATUS=0",
+          "CPU and GPU both wrote 60 turbine power files",
+          "Same 3072x384x400 grid, 60-turbine input, sgs=.true., sgs_model=5, cs_count=5, nsteps=50, and output cadence",
+          "MPI exit status matched: cpu=0, gpu=0",
+          "divergence matched: cpu=6.248576e-09, gpu=6.210272e-09, abs_diff=3.83e-11, tolerance=1e-10",
+          "kinetic energy matched: cpu=251.8167, gpu=251.8165, abs_diff=0.0002, tolerance=0.000252"
+        ],
+        "source": "Derecho current-source large wind-farm pair, CPU50 develop job 6557700 and GPU16 A100 job 6557309, run root /glade/work/wchen/lesgo_versions/benchmarks/08_large_windfarm_current_pair_3072x384x400_60turbines_n50_20260624",
+        "evidence_items": [
+          "cpu_log_or_immutable_reference",
+          "gpu_log",
+          "turbine_power_count",
+          "late_step_timing",
+          "cumulative_average",
+          "cpu_log",
+          "divergence",
+          "kinetic_energy"
+        ]
+      },
+      "pair_result": {
+        "speedup": 83.63001410081509,
+        "outcome": "gpu_faster",
+        "basis": "cumulative_average_s_per_step"
+      }
+    },
+    {
+      "id": "sgs_disabled",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "Derecho compact SGS paired run, 128^3 nsteps=40 nenergy=4 cs_count=5 dyn_init=1, benchmark root /glade/work/wchen/lesgo_versions/benchmarks/05_sgs_matrix_128_n40_paired_20260624, jobs 6554928-6554939",
+      "gpu_runtime": {
+        "grid": "128^3",
+        "nsteps": 40,
+        "cumulative_seconds": 0.4667759,
+        "cumulative_average_s_per_step": 0.011669397500000001,
+        "final_printed_s_per_step": 0.008815979
+      },
+      "cpu_runtime": {
+        "grid": "128^3",
+        "nsteps": 40,
+        "cumulative_seconds": 16.38887,
+        "cumulative_average_s_per_step": 0.40972175,
+        "final_printed_s_per_step": 0.4077955
+      },
+      "speedup_claim": {
+        "speedup": 35.11078871038543,
+        "basis": "cumulative_average_s_per_step"
+      },
+      "notes": "Run CPU/GPU with sgs=false.",
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.4077955,
+          "cumulative_wall_s": 16.38887,
+          "cumulative_average_s_per_step": 0.40972175,
+          "final_wall_s": 16.53869,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002441399,
+            "dimensional_time": 12.30467,
+            "cfl": 0.06250001,
+            "divergence": 3.021579e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.05803522,
+            "derivatives_xy_filter": 0.05317108,
+            "derivatives_z": 0.004863022,
+            "sgs_and_stresses": 0.1053891,
+            "sgs_model_stress_build": 0.02794478,
+            "sgs_tzz_halo": 3.31e-07,
+            "sgs_divstress_uv": 0.04983107,
+            "sgs_divstress_w": 0.02761119,
+            "convection": 0.1771145,
+            "pressure_solver": 0.04303464,
+            "projection": 0.005725865,
+            "other": 0.01849595
+          },
+          "forcing_wall_s": 2.3e-07,
+          "cumulative_forcing_s": 1.1141e-05
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.008815979,
+          "cumulative_wall_s": 0.4667759,
+          "cumulative_average_s_per_step": 0.011669397500000001,
+          "final_wall_s": 0.686216,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002441399,
+            "dimensional_time": 12.30467,
+            "cfl": 0.06250001,
+            "divergence": 3.021579e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000116966,
+            "derivatives_xy_filter": 8.766e-05,
+            "derivatives_z": 2.9126e-05,
+            "sgs_and_stresses": 0.002318112,
+            "sgs_model_stress_build": 0.001274915,
+            "sgs_tzz_halo": 1.033e-05,
+            "sgs_divstress_uv": 0.000658554,
+            "sgs_divstress_w": 0.000374013,
+            "convection": 0.000155942,
+            "pressure_solver": 0.00559531,
+            "projection": 0.000273609,
+            "other": 0.00035599
+          },
+          "forcing_wall_s": 4.999998e-08,
+          "cumulative_forcing_s": 9.396e-06
+        }
+      },
+      "correctness": {
+        "status": "passed",
+        "checks": [
+          "sgs=false molecular/no-SGS runtime branch exercised; CPU/GPU diagnostics matched for the compact channel case",
+          "MPI exit status matched: cpu=0, gpu=0",
+          "divergence matched: cpu=3.021579e-08, gpu=3.021579e-08, abs_diff=0, tolerance=3.02e-10",
+          "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+        ],
+        "source": "Derecho compact SGS paired run, 128^3 nsteps=40 nenergy=4 cs_count=5 dyn_init=1, benchmark root /glade/work/wchen/lesgo_versions/benchmarks/05_sgs_matrix_128_n40_paired_20260624, jobs 6554928-6554939",
+        "evidence_items": [
+          "cpu_log",
+          "gpu_log",
+          "divergence",
+          "kinetic_energy",
+          "late_step_timing",
+          "cumulative_average"
+        ]
+      },
+      "pair_result": {
+        "speedup": 35.11078871038543,
+        "outcome": "gpu_faster",
+        "basis": "cumulative_average_s_per_step"
+      }
+    },
+    {
+      "id": "sgs_models_1_5",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "Derecho compact SGS paired run, 128^3 nsteps=40 nenergy=4 cs_count=5 dyn_init=1, benchmark root /glade/work/wchen/lesgo_versions/benchmarks/05_sgs_matrix_128_n40_paired_20260624, jobs 6554928-6554939",
+      "gpu_runtime": null,
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "Compact 128^3 paired CPU/GPU matrix recorded in variant_runtimes for sgs_model_1..sgs_model_5 with nenergy=4, cs_count=5, and dyn_init=1.",
+      "variant_runtimes": {
+        "sgs_model_1": {
+          "cpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 16.30933,
+            "cumulative_average_s_per_step": 0.40773325,
+            "final_printed_s_per_step": 0.4075557
+          },
+          "gpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 0.4830382,
+            "cumulative_average_s_per_step": 0.012075955,
+            "final_printed_s_per_step": 0.009058553
+          }
+        },
+        "sgs_model_2": {
+          "cpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 18.08664,
+            "cumulative_average_s_per_step": 0.45216599999999996,
+            "final_printed_s_per_step": 0.6290664
+          },
+          "gpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 1.115127,
+            "cumulative_average_s_per_step": 0.027878174999999998,
+            "final_printed_s_per_step": 0.08292093
+          }
+        },
+        "sgs_model_3": {
+          "cpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 19.86598,
+            "cumulative_average_s_per_step": 0.4966495,
+            "final_printed_s_per_step": 0.8497527
+          },
+          "gpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 1.762391,
+            "cumulative_average_s_per_step": 0.044059775,
+            "final_printed_s_per_step": 0.1616567
+          }
+        },
+        "sgs_model_4": {
+          "cpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 20.99681,
+            "cumulative_average_s_per_step": 0.52492025,
+            "final_printed_s_per_step": 0.9933004
+          },
+          "gpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5168368,
+            "cumulative_average_s_per_step": 0.012920919999999999,
+            "final_printed_s_per_step": 0.01261832
+          }
+        },
+        "sgs_model_5": {
+          "cpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 26.33373,
+            "cumulative_average_s_per_step": 0.6583432499999999,
+            "final_printed_s_per_step": 1.654737
+          },
+          "gpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5445571,
+            "cumulative_average_s_per_step": 0.013613927500000001,
+            "final_printed_s_per_step": 0.01645778
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 1.654737,
+          "cumulative_wall_s": 26.33373,
+          "cumulative_average_s_per_step": 0.6583432499999999,
+          "final_wall_s": 26.66881,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002441402,
+            "dimensional_time": 12.30468,
+            "cfl": 0.0625,
+            "divergence": 3.058002e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.05819866,
+            "derivatives_xy_filter": 0.05331938,
+            "derivatives_z": 0.004878523,
+            "sgs_and_stresses": 1.351487,
+            "sgs_model_stress_build": 1.272604,
+            "sgs_tzz_halo": 2.91e-07,
+            "sgs_divstress_uv": 0.05160468,
+            "sgs_divstress_w": 0.02727664,
+            "convection": 0.1780614,
+            "pressure_solver": 0.04291745,
+            "projection": 0.005613161,
+            "other": 0.01845987
+          },
+          "forcing_wall_s": 3.600001e-07,
+          "cumulative_forcing_s": 1.0221e-05
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.01645778,
+          "cumulative_wall_s": 0.5445571,
+          "cumulative_average_s_per_step": 0.013613927500000001,
+          "final_wall_s": 0.7628166,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002441402,
+            "dimensional_time": 12.30468,
+            "cfl": 0.0625,
+            "divergence": 3.058002e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000119822,
+            "derivatives_xy_filter": 8.9042e-05,
+            "derivatives_z": 3.0599e-05,
+            "sgs_and_stresses": 0.009970418,
+            "sgs_model_stress_build": 0.008928981,
+            "sgs_tzz_halo": 9.499e-06,
+            "sgs_divstress_uv": 0.000657092,
+            "sgs_divstress_w": 0.000374536,
+            "convection": 0.000154799,
+            "pressure_solver": 0.005586809,
+            "projection": 0.000275504,
+            "other": 0.000350378
+          },
+          "forcing_wall_s": 4.999998e-08,
+          "cumulative_forcing_s": 1.0149e-05
+        }
+      },
+      "variant_correctness": {
+        "sgs_model_1": {
+          "status": "passed",
+          "checks": [
+            "sgs_model=1 runtime branch exercised with nenergy=4, cs_count=5, dyn_init=1; logs include regular and SGS-update cadence and CPU/GPU diagnostics matched",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.058294e-08, gpu=3.058294e-08, abs_diff=0, tolerance=3.06e-10",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "Derecho compact SGS paired run, 128^3 nsteps=40 nenergy=4 cs_count=5 dyn_init=1, benchmark root /glade/work/wchen/lesgo_versions/benchmarks/05_sgs_matrix_128_n40_paired_20260624, jobs 6554928-6554939",
+          "evidence_items": [
+            "cpu_log_per_model",
+            "gpu_log_per_model",
+            "divergence",
+            "kinetic_energy",
+            "regular_step_timing",
+            "sgs_update_step_timing",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing"
+          ]
+        },
+        "sgs_model_2": {
+          "status": "passed",
+          "checks": [
+            "sgs_model=2 runtime branch exercised with nenergy=4, cs_count=5, dyn_init=1; logs include regular and SGS-update cadence and CPU/GPU diagnostics matched",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.058727e-08, gpu=3.058727e-08, abs_diff=0, tolerance=3.06e-10",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "Derecho compact SGS paired run, 128^3 nsteps=40 nenergy=4 cs_count=5 dyn_init=1, benchmark root /glade/work/wchen/lesgo_versions/benchmarks/05_sgs_matrix_128_n40_paired_20260624, jobs 6554928-6554939",
+          "evidence_items": [
+            "cpu_log_per_model",
+            "gpu_log_per_model",
+            "divergence",
+            "kinetic_energy",
+            "regular_step_timing",
+            "sgs_update_step_timing",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing"
+          ]
+        },
+        "sgs_model_3": {
+          "status": "passed",
+          "checks": [
+            "sgs_model=3 runtime branch exercised with nenergy=4, cs_count=5, dyn_init=1; logs include regular and SGS-update cadence and CPU/GPU diagnostics matched",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.058727e-08, gpu=3.058727e-08, abs_diff=0, tolerance=3.06e-10",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "Derecho compact SGS paired run, 128^3 nsteps=40 nenergy=4 cs_count=5 dyn_init=1, benchmark root /glade/work/wchen/lesgo_versions/benchmarks/05_sgs_matrix_128_n40_paired_20260624, jobs 6554928-6554939",
+          "evidence_items": [
+            "cpu_log_per_model",
+            "gpu_log_per_model",
+            "divergence",
+            "kinetic_energy",
+            "regular_step_timing",
+            "sgs_update_step_timing",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing"
+          ]
+        },
+        "sgs_model_4": {
+          "status": "passed",
+          "checks": [
+            "sgs_model=4 runtime branch exercised with nenergy=4, cs_count=5, dyn_init=1; logs include regular and SGS-update cadence and CPU/GPU diagnostics matched",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.058615e-08, gpu=3.058615e-08, abs_diff=0, tolerance=3.06e-10",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "Derecho compact SGS paired run, 128^3 nsteps=40 nenergy=4 cs_count=5 dyn_init=1, benchmark root /glade/work/wchen/lesgo_versions/benchmarks/05_sgs_matrix_128_n40_paired_20260624, jobs 6554928-6554939",
+          "evidence_items": [
+            "cpu_log_per_model",
+            "gpu_log_per_model",
+            "divergence",
+            "kinetic_energy",
+            "regular_step_timing",
+            "sgs_update_step_timing",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing"
+          ]
+        },
+        "sgs_model_5": {
+          "status": "passed",
+          "checks": [
+            "sgs_model=5 runtime branch exercised with nenergy=4, cs_count=5, dyn_init=1; logs include regular and SGS-update cadence and CPU/GPU diagnostics matched",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.058002e-08, gpu=3.058002e-08, abs_diff=0, tolerance=3.06e-10",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "Derecho compact SGS paired run, 128^3 nsteps=40 nenergy=4 cs_count=5 dyn_init=1, benchmark root /glade/work/wchen/lesgo_versions/benchmarks/05_sgs_matrix_128_n40_paired_20260624, jobs 6554928-6554939",
+          "evidence_items": [
+            "cpu_log_per_model",
+            "gpu_log_per_model",
+            "divergence",
+            "kinetic_energy",
+            "regular_step_timing",
+            "sgs_update_step_timing",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "sgs_model_1": {
+          "speedup": 33.7640584119434,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_2": {
+          "speedup": 16.219354387437484,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_3": {
+          "speedup": 11.272175130263374,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_4": {
+          "speedup": 40.62560947672457,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_5": {
+          "speedup": 48.35806933744872,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "sgs_model_1": {
+          "speedup": 33.7640584119434,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_2": {
+          "speedup": 16.219354387437484,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_3": {
+          "speedup": 11.272175130263374,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_4": {
+          "speedup": 40.62560947672457,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_5": {
+          "speedup": 48.35806933744872,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      }
+    },
+    {
+      "id": "dyn_tn",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/05_dyn_tn_128_n40_paired_20260624_v2",
+      "gpu_runtime": null,
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "Compact USE_DYN_TN=ON paired 128x128x128 nsteps=40 validation for sgs_model=4 and 5.",
+      "variant_runtimes": {
+        "sgs_model_4_dyn_tn": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 25.30624,
+            "cumulative_average_s_per_step": 0.632656,
+            "final_printed_s_per_step": 1.532628
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5164898,
+            "cumulative_average_s_per_step": 0.012912245,
+            "final_printed_s_per_step": 0.01292163
+          }
+        },
+        "sgs_model_5_dyn_tn": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 31.12549,
+            "cumulative_average_s_per_step": 0.77813725,
+            "final_printed_s_per_step": 2.257048
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5516342,
+            "cumulative_average_s_per_step": 0.013790855,
+            "final_printed_s_per_step": 0.01708907
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 2.257048,
+          "cumulative_wall_s": 31.12549,
+          "cumulative_average_s_per_step": 0.77813725,
+          "final_wall_s": 31.28308,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002441402,
+            "dimensional_time": 12.30468,
+            "cfl": 0.0625,
+            "divergence": 3.057986e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.0595052,
+            "derivatives_xy_filter": 0.05458765,
+            "derivatives_z": 0.004916896,
+            "sgs_and_stresses": 1.954173,
+            "sgs_model_stress_build": 1.876976,
+            "sgs_tzz_halo": 3.309999e-07,
+            "sgs_divstress_uv": 0.04982678,
+            "sgs_divstress_w": 0.02736829,
+            "convection": 0.1770037,
+            "pressure_solver": 0.04228131,
+            "projection": 0.005647359,
+            "other": 0.01843752
+          },
+          "forcing_wall_s": 2.199999e-07,
+          "cumulative_forcing_s": 9.505001e-06
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.01708907,
+          "cumulative_wall_s": 0.5516342,
+          "cumulative_average_s_per_step": 0.013790855,
+          "final_wall_s": 0.7049029,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002441402,
+            "dimensional_time": 12.30468,
+            "cfl": 0.0625,
+            "divergence": 3.057986e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000136764,
+            "derivatives_xy_filter": 0.00010347,
+            "derivatives_z": 3.3083e-05,
+            "sgs_and_stresses": 0.01054537,
+            "sgs_model_stress_build": 0.009502955,
+            "sgs_tzz_halo": 1.033e-05,
+            "sgs_divstress_uv": 0.000656467,
+            "sgs_divstress_w": 0.000375295,
+            "convection": 0.000158336,
+            "pressure_solver": 0.005618886,
+            "projection": 0.000273078,
+            "other": 0.000356578
+          },
+          "forcing_wall_s": 6.000005e-08,
+          "cumulative_forcing_s": 9.782e-06
+        }
+      },
+      "variant_correctness": {
+        "sgs_model_4_dyn_tn": {
+          "status": "passed",
+          "checks": [
+            "mpi0_divergence_ke_match",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.058377e-08, gpu=3.058377e-08, abs_diff=0, tolerance=3.06e-10",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/05_dyn_tn_128_n40_paired_20260624_v2",
+          "evidence_items": [
+            "cpu_log_per_model",
+            "gpu_log_per_model",
+            "sgs_update_step_timing",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "sgs_model_5_dyn_tn": {
+          "status": "passed",
+          "checks": [
+            "mpi0_divergence_ke_match",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.057986e-08, gpu=3.057986e-08, abs_diff=0, tolerance=3.06e-10",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/05_dyn_tn_128_n40_paired_20260624_v2",
+          "evidence_items": [
+            "cpu_log_per_model",
+            "gpu_log_per_model",
+            "sgs_update_step_timing",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "sgs_model_4_dyn_tn": {
+          "speedup": 48.99659199465314,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_5_dyn_tn": {
+          "speedup": 56.4241484665019,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "sgs_model_4_dyn_tn": {
+          "speedup": 48.99659199465314,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "sgs_model_5_dyn_tn": {
+          "speedup": 56.4241484665019,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      }
+    },
+    {
+      "id": "iwm_wall_model",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": true,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_iwm_wall_model_current_128_n40_paired_20260624T231443Z",
+      "gpu_runtime": {
+        "grid": "128x128x128",
+        "nsteps": 40,
+        "cumulative_seconds": 0.5833444,
+        "cumulative_average_s_per_step": 0.01458361,
+        "final_printed_s_per_step": 0.01690102
+      },
+      "cpu_runtime": {
+        "grid": "128x128x128",
+        "nsteps": 40,
+        "cumulative_seconds": 27.10965,
+        "cumulative_average_s_per_step": 0.67774125,
+        "final_printed_s_per_step": 1.701979
+      },
+      "speedup_claim": {
+        "speedup": 46.47280405880299,
+        "basis": "cumulative_average_s_per_step"
+      },
+      "notes": "Current-source IWM wall-model validation; 128^3, nsteps=40, nproc=1, sgs_model=5, lbc_mom=3; comparison report in analysis/iwm_compare.json.",
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 1.701979,
+          "cumulative_wall_s": 27.10965,
+          "cumulative_average_s_per_step": 0.67774125,
+          "final_wall_s": 27.25272,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002092754,
+            "dimensional_time": 0.9715839,
+            "cfl": 0.06257608,
+            "divergence": 0.00120548,
+            "kinetic_energy": 0.5018748
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.05996312,
+            "derivatives_xy_filter": 0.05554044,
+            "derivatives_z": 0.004421994,
+            "sgs_and_stresses": 1.360715,
+            "sgs_model_stress_build": 1.28176,
+            "sgs_tzz_halo": 3.710002e-07,
+            "sgs_divstress_uv": 0.05085016,
+            "sgs_divstress_w": 0.02810252,
+            "convection": 0.185389,
+            "pressure_solver": 0.04269585,
+            "projection": 0.005777599,
+            "other": 0.04743838
+          },
+          "forcing_wall_s": 2.209999e-07,
+          "cumulative_forcing_s": 1.0448e-05
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.01690102,
+          "cumulative_wall_s": 0.5833444,
+          "cumulative_average_s_per_step": 0.01458361,
+          "final_wall_s": 0.743855,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002092754,
+            "dimensional_time": 0.9715839,
+            "cfl": 0.06257608,
+            "divergence": 0.00120548,
+            "kinetic_energy": 0.5018748
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000119412,
+            "derivatives_xy_filter": 8.803e-05,
+            "derivatives_z": 3.1221e-05,
+            "sgs_and_stresses": 0.00909862,
+            "sgs_model_stress_build": 0.008055,
+            "sgs_tzz_halo": 9.899e-06,
+            "sgs_divstress_uv": 0.000658946,
+            "sgs_divstress_w": 0.000374406,
+            "convection": 0.000158397,
+            "pressure_solver": 0.005610686,
+            "projection": 0.000272999,
+            "other": 0.001640848
+          },
+          "forcing_wall_s": 6.000005e-08,
+          "cumulative_forcing_s": 1.2697e-05
+        }
+      },
+      "correctness": {
+        "status": "passed",
+        "checks": [
+          "physical velocity checkpoint CPU/GPU compare passed: max_abs=9.982e-11, rms=7.271e-13",
+          "IWM wall-stress diagnostics matched: tau_wall_bot max_abs=3.331e-16, tau_wall_top max_abs=3.331e-16, iwm_track max_abs=4.441e-15",
+          "MPI exit status matched: cpu=0, gpu=0",
+          "divergence matched: cpu=0.00120548, gpu=0.00120548, abs_diff=0, tolerance=1.21e-05",
+          "kinetic energy matched: cpu=0.5018748, gpu=0.5018748, abs_diff=0, tolerance=5.02e-07"
+        ],
+        "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_iwm_wall_model_current_128_n40_paired_20260624T231443Z/analysis/iwm_compare.json",
+        "evidence_items": [
+          "wall_stress_diagnostics",
+          "cpu_log",
+          "gpu_log",
+          "cumulative_average",
+          "late_step_timing",
+          "divergence",
+          "kinetic_energy"
+        ]
+      },
+      "pair_result": {
+        "speedup": 46.47280405880299,
+        "outcome": "gpu_faster",
+        "basis": "cumulative_average_s_per_step"
+      }
+    },
+    {
+      "id": "scalar_passive",
+      "evidence_status": "needs_benchmark",
+      "public_record": false,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/06_scalar_passive_240_n40_paired_20260624_v2",
+      "gpu_runtime": null,
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "Compact_passive_scalar_240x240x240_n40",
+      "variant_runtimes": {
+        "grid_128": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 23.63586,
+            "cumulative_average_s_per_step": 0.5908965,
+            "final_printed_s_per_step": 0.590299
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5749803,
+            "cumulative_average_s_per_step": 0.0143745075,
+            "final_printed_s_per_step": 0.01100118
+          }
+        },
+        "grid_240": {
+          "cpu_runtime": {
+            "grid": "240x240x240",
+            "nsteps": 40,
+            "cumulative_seconds": 208.5619,
+            "cumulative_average_s_per_step": 5.2140475,
+            "final_printed_s_per_step": 5.175885
+          },
+          "gpu_runtime": {
+            "grid": "240x240x240",
+            "nsteps": 40,
+            "cumulative_seconds": 3.064281,
+            "cumulative_average_s_per_step": 0.076607025,
+            "final_printed_s_per_step": 0.06363879
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 5.175885,
+          "cumulative_wall_s": 208.5619,
+          "cumulative_average_s_per_step": 5.2140475,
+          "final_wall_s": 209.6185,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.001302079,
+            "dimensional_time": 6.562488,
+            "cfl": 0.0625,
+            "divergence": 3.420777e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.4777342,
+            "derivatives_xy_filter": 0.4484382,
+            "derivatives_z": 0.02929502,
+            "sgs_and_stresses": 1.194992,
+            "sgs_model_stress_build": 0.1866172,
+            "sgs_tzz_halo": 4.210001e-07,
+            "sgs_divstress_uv": 0.6615111,
+            "sgs_divstress_w": 0.3468614,
+            "convection": 1.468086,
+            "pressure_solver": 0.3703985,
+            "projection": 0.03561322,
+            "other": 1.629061
+          },
+          "forcing_wall_s": 2.899997e-07,
+          "cumulative_forcing_s": 4.6425e-05
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.06363879,
+          "cumulative_wall_s": 3.064281,
+          "cumulative_average_s_per_step": 0.076607025,
+          "final_wall_s": 4.319799,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.001302083,
+            "dimensional_time": 6.5625,
+            "cfl": 0.0625,
+            "divergence": 2.285019e-15,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.007906705,
+            "derivatives_xy_filter": 9.0165e-05,
+            "derivatives_z": 0.007816339,
+            "sgs_and_stresses": 0.0114021,
+            "sgs_model_stress_build": 0.003134623,
+            "sgs_tzz_halo": 1.1262e-05,
+            "sgs_divstress_uv": 0.005261589,
+            "sgs_divstress_w": 0.002994272,
+            "convection": 0.000155621,
+            "pressure_solver": 0.009844873,
+            "projection": 0.001613171,
+            "other": 0.03271623
+          },
+          "forcing_wall_s": 9.099995e-08,
+          "cumulative_forcing_s": 1.1586e-05
+        }
+      },
+      "variant_correctness": {
+        "grid_128": {
+          "status": "passed",
+          "checks": [
+            "scalar_checkpoint_theta_maxdiff_1.061e-10_RHST_maxdiff_2.393e-9_psi_exact",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.057977e-08, gpu=0, abs_diff=3.06e-08, tolerance=1e-07",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/06_scalar_passive_128_n40_paired_20260624",
+          "evidence_items": [
+            "cpu_log",
+            "gpu_log",
+            "scalar_field_comparison",
+            "scalar_stage_timing",
+            "late_step_timing",
+            "cumulative_average",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "grid_240": {
+          "status": "passed",
+          "checks": [
+            "scalar_checkpoint_theta_maxdiff_1.0637046798933625e-10_RHST_maxdiff_4.488247033458901e-09_psi_exact",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.420777e-08, gpu=2.285019e-15, abs_diff=3.42e-08, tolerance=1e-07",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/06_scalar_passive_240_n40_paired_20260624_v2",
+          "evidence_items": [
+            "cpu_log",
+            "gpu_log",
+            "scalar_field_comparison",
+            "scalar_stage_timing",
+            "late_step_timing",
+            "cumulative_average",
+            "divergence",
+            "kinetic_energy"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "grid_128": {
+          "speedup": 41.10725184845464,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "grid_240": {
+          "speedup": 68.0622632193327,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "grid_128": {
+          "speedup": 41.10725184845464,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "grid_240": {
+          "speedup": 68.0622632193327,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      }
+    },
+    {
+      "id": "scalar_active",
+      "evidence_status": "needs_benchmark",
+      "public_record": false,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/06_scalar_active_240_n40_paired_20260624",
+      "gpu_runtime": null,
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "Compact_active_scalar_buoyancy_240x240x240_n40",
+      "variant_runtimes": {
+        "grid_128": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 23.84806,
+            "cumulative_average_s_per_step": 0.5962015,
+            "final_printed_s_per_step": 0.5958943
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5783093,
+            "cumulative_average_s_per_step": 0.0144577325,
+            "final_printed_s_per_step": 0.0111201
+          }
+        },
+        "grid_240": {
+          "cpu_runtime": {
+            "grid": "240x240x240",
+            "nsteps": 40,
+            "cumulative_seconds": 183.3816,
+            "cumulative_average_s_per_step": 4.58454,
+            "final_printed_s_per_step": 4.581295
+          },
+          "gpu_runtime": {
+            "grid": "240x240x240",
+            "nsteps": 40,
+            "cumulative_seconds": 3.077202,
+            "cumulative_average_s_per_step": 0.07693005,
+            "final_printed_s_per_step": 0.06399592
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 4.581295,
+          "cumulative_wall_s": 183.3816,
+          "cumulative_average_s_per_step": 4.58454,
+          "final_wall_s": 184.5733,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.001302079,
+            "dimensional_time": 6.562488,
+            "cfl": 0.0625,
+            "divergence": 3.420755e-08,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.4812618,
+            "derivatives_xy_filter": 0.4519404,
+            "derivatives_z": 0.02932048,
+            "sgs_and_stresses": 0.7454556,
+            "sgs_model_stress_build": 0.1794696,
+            "sgs_tzz_halo": 6.710002e-07,
+            "sgs_divstress_uv": 0.3635509,
+            "sgs_divstress_w": 0.2024327,
+            "convection": 1.407443,
+            "pressure_solver": 0.3323884,
+            "projection": 0.03613094,
+            "other": 1.578615
+          },
+          "forcing_wall_s": 4.409999e-07,
+          "cumulative_forcing_s": 5.6288e-05
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.06399592,
+          "cumulative_wall_s": 3.077202,
+          "cumulative_average_s_per_step": 0.07693005,
+          "final_wall_s": 4.241657,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.001302083,
+            "dimensional_time": 6.5625,
+            "cfl": 0.0625,
+            "divergence": 2.285019e-15,
+            "kinetic_energy": 0.5
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.007906673,
+            "derivatives_xy_filter": 9.0947e-05,
+            "derivatives_z": 0.007815536,
+            "sgs_and_stresses": 0.01139254,
+            "sgs_model_stress_build": 0.003125545,
+            "sgs_tzz_halo": 1.0861e-05,
+            "sgs_divstress_uv": 0.005264231,
+            "sgs_divstress_w": 0.002991576,
+            "convection": 0.000161302,
+            "pressure_solver": 0.01021126,
+            "projection": 0.001612939,
+            "other": 0.03271112
+          },
+          "forcing_wall_s": 8.000006e-08,
+          "cumulative_forcing_s": 1.1563e-05
+        }
+      },
+      "variant_correctness": {
+        "grid_128": {
+          "status": "passed",
+          "checks": [
+            "scalar_checkpoint_theta_maxdiff_1.061e-10_RHST_maxdiff_2.392e-9_psi_exact",
+            "buoyancy_response_active_vs_passive_velocity_nonzero_8224768_maxdiff_6.850e-8",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.057919e-08, gpu=7.638887e-29, abs_diff=3.06e-08, tolerance=1e-07",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/06_scalar_active_128_n40_paired_20260624",
+          "evidence_items": [
+            "cpu_log",
+            "gpu_log",
+            "scalar_field_comparison",
+            "buoyancy_response",
+            "scalar_stage_timing",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "grid_240": {
+          "status": "passed",
+          "checks": [
+            "scalar_checkpoint_theta_maxdiff_1.063629184727688e-10_RHST_maxdiff_4.4880832870458606e-09_psi_exact_active_vs_passive_velocity_binary_differs",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=3.420755e-08, gpu=2.285019e-15, abs_diff=3.42e-08, tolerance=1e-07",
+            "kinetic energy matched: cpu=0.5, gpu=0.5, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/06_scalar_active_240_n40_paired_20260624",
+          "evidence_items": [
+            "cpu_log",
+            "gpu_log",
+            "scalar_field_comparison",
+            "buoyancy_response",
+            "scalar_stage_timing",
+            "late_step_timing",
+            "cumulative_average",
+            "divergence",
+            "kinetic_energy"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "grid_128": {
+          "speedup": 41.2375522925189,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "grid_240": {
+          "speedup": 59.59361783854293,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "grid_128": {
+          "speedup": 41.2375522925189,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "grid_240": {
+          "speedup": 59.59361783854293,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      }
+    },
+    {
+      "id": "cps_velocity",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_cps_current_source_paired_20260624",
+      "gpu_runtime": {
+        "grid": "128x128x128",
+        "nsteps": 20,
+        "cumulative_seconds": 0.4068881,
+        "cumulative_average_s_per_step": 0.020344405,
+        "final_printed_s_per_step": 0.0093567
+      },
+      "cpu_runtime": {
+        "grid": "128x128x128",
+        "nsteps": 20,
+        "cumulative_seconds": 10.16096,
+        "cumulative_average_s_per_step": 0.5080479999999999,
+        "final_printed_s_per_step": 0.4835836
+      },
+      "speedup_claim": {
+        "speedup": 24.97236955320148,
+        "basis": "cumulative_average_s_per_step"
+      },
+      "notes": "Current_source_CPS_velocity_two_color_128_n20",
+      "variant_runtimes": {
+        "two_color_velocity": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 20,
+            "cumulative_seconds": 10.16096,
+            "cumulative_average_s_per_step": 0.5080479999999999,
+            "final_printed_s_per_step": 0.4835836
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 20,
+            "cumulative_seconds": 0.4068881,
+            "cumulative_average_s_per_step": 0.020344405,
+            "final_printed_s_per_step": 0.0093567
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 20,
+          "last_iteration_wall_s": 0.4835836,
+          "cumulative_wall_s": 10.16096,
+          "cumulative_average_s_per_step": 0.5080479999999999,
+          "final_wall_s": 10.36094,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 9.001114e-05,
+            "dimensional_time": 0.01989995,
+            "cfl": 0.06249913,
+            "divergence": 0.1129334,
+            "kinetic_energy": 304.9612
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.05603073,
+            "derivatives_xy_filter": 0.04604574,
+            "derivatives_z": 0.009982674,
+            "sgs_and_stresses": 0.1381042,
+            "sgs_model_stress_build": 0.06260564,
+            "sgs_tzz_halo": 2.5789e-05,
+            "sgs_divstress_uv": 0.05053337,
+            "sgs_divstress_w": 0.0249355,
+            "convection": 0.1714169,
+            "pressure_solver": 0.05868069,
+            "projection": 0.02026527,
+            "other": 0.03908471
+          },
+          "forcing_wall_s": 1.093e-06,
+          "cumulative_forcing_s": 2.532e-05
+        },
+        "gpu": {
+          "last_iteration": 20,
+          "last_iteration_wall_s": 0.0093567,
+          "cumulative_wall_s": 0.4068881,
+          "cumulative_average_s_per_step": 0.020344405,
+          "final_wall_s": 0.5294138,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 9.001114e-05,
+            "dimensional_time": 0.01989995,
+            "cfl": 0.06249913,
+            "divergence": 1.360847e-13,
+            "kinetic_energy": 304.9658
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000126945,
+            "derivatives_xy_filter": 9.9682e-05,
+            "derivatives_z": 2.7062e-05,
+            "sgs_and_stresses": 0.001652124,
+            "sgs_model_stress_build": 0.000877326,
+            "sgs_tzz_halo": 2.8756e-05,
+            "sgs_divstress_uv": 0.000467454,
+            "sgs_divstress_w": 0.000278237,
+            "convection": 0.000161642,
+            "pressure_solver": 0.003776081,
+            "projection": 0.002700361,
+            "other": 0.000939487
+          },
+          "forcing_wall_s": 5.999982e-08,
+          "cumulative_forcing_s": 8.839e-06
+        }
+      },
+      "variant_correctness": {
+        "two_color_velocity": {
+          "status": "passed",
+          "checks": [
+            "cps_velocity_red_blue_checkpoint_u_v_w_maxdiff_below_2e-13_zero_gt_1e-12"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_cps_current_source_paired_20260624",
+          "evidence_items": [
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "cps_stage_timing",
+            "fringe_velocity_sanity"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "two_color_velocity": {
+          "speedup": 24.97236955320148,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "two_color_velocity": {
+          "speedup": 24.97236955320148,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "correctness": {
+        "status": "passed",
+        "checks": [
+          "cps_velocity_red_blue_checkpoint_u_v_w_maxdiff_below_2e-13_zero_gt_1e-12"
+        ],
+        "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_cps_current_source_paired_20260624",
+        "evidence_items": [
+          "cpu_log",
+          "gpu_log",
+          "cumulative_average",
+          "late_step_timing",
+          "cps_stage_timing",
+          "fringe_velocity_sanity"
+        ]
+      },
+      "pair_result": {
+        "speedup": 24.97236955320148,
+        "outcome": "gpu_faster",
+        "basis": "cumulative_average_s_per_step"
+      }
+    },
+    {
+      "id": "cps_scalar",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_cps_current_source_paired_20260624",
+      "gpu_runtime": {
+        "grid": "128x128x128",
+        "nsteps": 20,
+        "cumulative_seconds": 0.4591583,
+        "cumulative_average_s_per_step": 0.022957915000000002,
+        "final_printed_s_per_step": 0.0114723
+      },
+      "cpu_runtime": {
+        "grid": "128x128x128",
+        "nsteps": 20,
+        "cumulative_seconds": 10.25116,
+        "cumulative_average_s_per_step": 0.5125580000000001,
+        "final_printed_s_per_step": 0.5141334
+      },
+      "speedup_claim": {
+        "speedup": 22.325982128603577,
+        "basis": "cumulative_average_s_per_step"
+      },
+      "notes": "Current_source_CPS_scalar_two_color_128_n20",
+      "variant_runtimes": {
+        "two_color_scalar": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 20,
+            "cumulative_seconds": 10.25116,
+            "cumulative_average_s_per_step": 0.5125580000000001,
+            "final_printed_s_per_step": 0.5141334
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 20,
+            "cumulative_seconds": 0.4591583,
+            "cumulative_average_s_per_step": 0.022957915000000002,
+            "final_printed_s_per_step": 0.0114723
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 20,
+          "last_iteration_wall_s": 0.5141334,
+          "cumulative_wall_s": 10.25116,
+          "cumulative_average_s_per_step": 0.5125580000000001,
+          "final_wall_s": 10.71993,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 9.028983e-05,
+            "dimensional_time": 0.0199588,
+            "cfl": 0.0625,
+            "divergence": 1.196858e-13,
+            "kinetic_energy": 304.5262
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.03823901,
+            "derivatives_xy_filter": 0.03017902,
+            "derivatives_z": 0.008058412,
+            "sgs_and_stresses": 0.1093165,
+            "sgs_model_stress_build": 0.0481237,
+            "sgs_tzz_halo": 2.5519e-05,
+            "sgs_divstress_uv": 0.0393706,
+            "sgs_divstress_w": 0.02179558,
+            "convection": 0.128868,
+            "pressure_solver": 0.04310259,
+            "projection": 0.01863112,
+            "other": 0.1759752
+          },
+          "forcing_wall_s": 9.72e-07,
+          "cumulative_forcing_s": 6.2611e-05
+        },
+        "gpu": {
+          "last_iteration": 20,
+          "last_iteration_wall_s": 0.0114723,
+          "cumulative_wall_s": 0.4591583,
+          "cumulative_average_s_per_step": 0.022957915000000002,
+          "final_wall_s": 0.6208447,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 9.028983e-05,
+            "dimensional_time": 0.0199588,
+            "cfl": 0.0625,
+            "divergence": 1.100652e-13,
+            "kinetic_energy": 304.5262
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000576792,
+            "derivatives_xy_filter": 9.2619e-05,
+            "derivatives_z": 0.000484004,
+            "sgs_and_stresses": 0.001017823,
+            "sgs_model_stress_build": 0.000367689,
+            "sgs_tzz_halo": 3.3785e-05,
+            "sgs_divstress_uv": 0.000391495,
+            "sgs_divstress_w": 0.000224482,
+            "convection": 0.000159968,
+            "pressure_solver": 0.001933959,
+            "projection": 0.003710546,
+            "other": 0.004073116
+          },
+          "forcing_wall_s": 1.000001e-07,
+          "cumulative_forcing_s": 1.3646e-05
+        }
+      },
+      "variant_correctness": {
+        "two_color_scalar": {
+          "status": "passed",
+          "checks": [
+            "cps_scalar_red_blue_velocity_maxdiff_below_8e-14_scalar_maxdiff_below_5.2e-12"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_cps_current_source_paired_20260624",
+          "evidence_items": [
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "cps_stage_timing",
+            "scalar_stage_timing",
+            "fringe_scalar_sanity"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "two_color_scalar": {
+          "speedup": 22.325982128603577,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "two_color_scalar": {
+          "speedup": 22.325982128603577,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "correctness": {
+        "status": "passed",
+        "checks": [
+          "cps_scalar_red_blue_velocity_maxdiff_below_8e-14_scalar_maxdiff_below_5.2e-12"
+        ],
+        "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_cps_current_source_paired_20260624",
+        "evidence_items": [
+          "cpu_log",
+          "gpu_log",
+          "cumulative_average",
+          "late_step_timing",
+          "cps_stage_timing",
+          "scalar_stage_timing",
+          "fringe_scalar_sanity"
+        ]
+      },
+      "pair_result": {
+        "speedup": 22.325982128603577,
+        "outcome": "gpu_faster",
+        "basis": "cumulative_average_s_per_step"
+      }
+    },
+    {
+      "id": "hit_inflow",
+      "evidence_status": "external_record_needs_copy",
+      "public_record": false,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/07_hit_current_source_paired_20260624",
+      "gpu_runtime": null,
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "Current_source_HIT_128_timing",
+      "variant_runtimes": {
+        "hit_64_correctness": {
+          "cpu_runtime": {
+            "grid": "64x64x64",
+            "nsteps": 10,
+            "cumulative_seconds": 0.2978371,
+            "cumulative_average_s_per_step": 0.02978371,
+            "final_printed_s_per_step": 0.06382138
+          },
+          "gpu_runtime": {
+            "grid": "64x64x64",
+            "nsteps": 10,
+            "cumulative_seconds": 0.3643317,
+            "cumulative_average_s_per_step": 0.03643317,
+            "final_printed_s_per_step": 0.04611034
+          }
+        },
+        "hit_128_timing": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 5,
+            "cumulative_seconds": 1.259514,
+            "cumulative_average_s_per_step": 0.2519028,
+            "final_printed_s_per_step": 0.5223331
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 5,
+            "cumulative_seconds": 0.2952091,
+            "cumulative_average_s_per_step": 0.05904182,
+            "final_printed_s_per_step": 0.06287162
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 5,
+          "last_iteration_wall_s": 0.5223331,
+          "cumulative_wall_s": 1.259514,
+          "cumulative_average_s_per_step": 0.2519028,
+          "final_wall_s": 1.313535,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.0001128638,
+            "dimensional_time": 0.005483388,
+            "cfl": 0.05972523,
+            "divergence": 19.95754,
+            "kinetic_energy": 144.8276
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.02017758,
+            "derivatives_xy_filter": 0.01639415,
+            "derivatives_z": 0.003782067,
+            "sgs_and_stresses": 0.4018441,
+            "sgs_model_stress_build": 0.3701726,
+            "sgs_tzz_halo": 3.061e-05,
+            "sgs_divstress_uv": 0.02153607,
+            "sgs_divstress_w": 0.0101026,
+            "convection": 0.06116803,
+            "pressure_solver": 0.01982219,
+            "projection": 0.005157955,
+            "other": 0.01416202
+          },
+          "forcing_wall_s": 1.232e-06,
+          "cumulative_forcing_s": 1.0149e-05
+        },
+        "gpu": {
+          "last_iteration": 5,
+          "last_iteration_wall_s": 0.06287162,
+          "cumulative_wall_s": 0.2952091,
+          "cumulative_average_s_per_step": 0.05904182,
+          "final_wall_s": 0.3639388,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.0001128638,
+            "dimensional_time": 0.005483388,
+            "cfl": 0.05972523,
+            "divergence": 19.95754,
+            "kinetic_energy": 144.8276
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000114001,
+            "derivatives_xy_filter": 8.7469e-05,
+            "derivatives_z": 2.6341e-05,
+            "sgs_and_stresses": 0.03164727,
+            "sgs_model_stress_build": 0.02877938,
+            "sgs_tzz_halo": 0.00107704,
+            "sgs_divstress_uv": 0.000551135,
+            "sgs_divstress_w": 0.001239355,
+            "convection": 0.000157084,
+            "projection": 0.005752745,
+            "other": 0.004062548
+          },
+          "forcing_wall_s": 6.000005e-08,
+          "cumulative_forcing_s": 3.110001e-07
+        }
+      },
+      "variant_correctness": {
+        "hit_64_correctness": {
+          "status": "passed",
+          "checks": [
+            "hit64_velocity_maxdiff_9.0427665355719e-14_rms_1.4215609456573378e-14_nonzero_gt_1e-12_0",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=11.12903, gpu=11.12903, abs_diff=0, tolerance=0.111",
+            "kinetic energy matched: cpu=61.50781, gpu=61.50781, abs_diff=0, tolerance=6.15e-05"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/07_hit_current_source_paired_20260624",
+          "evidence_items": [
+            "field_difference",
+            "speedup_table",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "hit_128_timing": {
+          "status": "passed",
+          "checks": [
+            "hit128_velocity_maxdiff_1.925681836212334e-13_rms_2.2103863653494365e-14_nonzero_gt_1e-12_0",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=19.95754, gpu=19.95754, abs_diff=0, tolerance=0.2",
+            "kinetic energy matched: cpu=144.8276, gpu=144.8276, abs_diff=0, tolerance=0.000145"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/07_hit_current_source_paired_20260624",
+          "evidence_items": [
+            "field_difference",
+            "speedup_table",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "hit_128_timing": {
+          "speedup": 4.26651481949574,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "hit_64_correctness": {
+          "speedup": 0.817488843271118,
+          "outcome": "gpu_not_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "hit_128_timing": {
+          "speedup": 4.26651481949574,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      }
+    },
+    {
+      "id": "shifted_inflow",
+      "evidence_status": "paired_speedup_claimed",
+      "public_record": false,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_optional_forcing_stable_current_128_n40_paired_20260624",
+      "gpu_runtime": {
+        "grid": "128^3",
+        "nsteps": 40,
+        "cumulative_seconds": 0.4704388,
+        "cumulative_average_s_per_step": 0.011760969999999999,
+        "final_printed_s_per_step": 0.008838278
+      },
+      "cpu_runtime": {
+        "grid": "128^3",
+        "nsteps": 40,
+        "cumulative_seconds": 16.67022,
+        "cumulative_average_s_per_step": 0.4167555,
+        "final_printed_s_per_step": 0.4174988
+      },
+      "speedup_claim": {
+        "speedup": 35.43547003350914,
+        "basis": "cumulative_average_s_per_step"
+      },
+      "notes": "Current-source stable shifted-inflow validation, 128^3 nsteps=40, fixed dt, dynamic SGS delayed; bad forced/CFL scratch case was rejected.",
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.4174988,
+          "cumulative_wall_s": 16.67022,
+          "cumulative_average_s_per_step": 0.4167555,
+          "final_wall_s": 16.81277,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.0002,
+            "dimensional_time": 1.008,
+            "cfl": 0.1389376,
+            "divergence": 0.08166492,
+            "kinetic_energy": 304.8712
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.05858346,
+            "derivatives_xy_filter": 0.05363748,
+            "derivatives_z": 0.004945155,
+            "sgs_and_stresses": 0.1082286,
+            "sgs_model_stress_build": 0.02838872,
+            "sgs_tzz_halo": 2.6e-07,
+            "sgs_divstress_uv": 0.05110954,
+            "sgs_divstress_w": 0.02872856,
+            "convection": 0.1831656,
+            "pressure_solver": 0.04235151,
+            "projection": 0.008511015,
+            "other": 0.01665846
+          },
+          "forcing_wall_s": 2.299998e-07,
+          "cumulative_forcing_s": 9.147999e-06
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.008838278,
+          "cumulative_wall_s": 0.4704388,
+          "cumulative_average_s_per_step": 0.011760969999999999,
+          "final_wall_s": 0.6262677,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.0002,
+            "dimensional_time": 1.008,
+            "cfl": 0.1389376,
+            "divergence": 0.08166492,
+            "kinetic_energy": 304.8712
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.00011911,
+            "derivatives_xy_filter": 8.753e-05,
+            "derivatives_z": 3.141e-05,
+            "sgs_and_stresses": 0.00244317,
+            "sgs_model_stress_build": 0.001409423,
+            "sgs_tzz_halo": 9.939e-06,
+            "sgs_divstress_uv": 0.000651619,
+            "sgs_divstress_w": 0.000371859,
+            "convection": 0.000163205,
+            "pressure_solver": 0.005612845,
+            "projection": 0.000307996,
+            "other": 0.000191892
+          },
+          "forcing_wall_s": 6.000027e-08,
+          "cumulative_forcing_s": 9.589e-06
+        }
+      },
+      "correctness": {
+        "status": "passed",
+        "checks": [
+          "masked final checkpoint agreement: max_abs_diff=1.5143e-10, rms_diff=9.9545e-12; LESGO sentinel values ignored",
+          "MPI exit status matched: cpu=0, gpu=0",
+          "divergence matched: cpu=0.08166492, gpu=0.08166492, abs_diff=0, tolerance=0.000817",
+          "kinetic energy matched: cpu=304.8712, gpu=304.8712, abs_diff=0, tolerance=0.000305"
+        ],
+        "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_optional_forcing_stable_current_128_n40_paired_20260624/analysis/velocity_checkpoint_compare.json",
+        "evidence_items": [
+          "inflow_plane_sanity",
+          "cpu_log",
+          "gpu_log",
+          "cumulative_average",
+          "late_step_timing",
+          "divergence",
+          "kinetic_energy"
+        ]
+      },
+      "pair_result": {
+        "speedup": 35.43547003350914,
+        "outcome": "gpu_faster",
+        "basis": "cumulative_average_s_per_step"
+      }
+    },
+    {
+      "id": "sponge_coriolis",
+      "evidence_status": "needs_benchmark",
+      "public_record": false,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_optional_forcing_stable_current_128_n40_paired_20260624",
+      "gpu_runtime": null,
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "Current-source stable optional-forcing validation, 128^3 nsteps=40.",
+      "variant_runtimes": {
+        "sponge_on": {
+          "cpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 16.41928,
+            "cumulative_average_s_per_step": 0.410482,
+            "final_printed_s_per_step": 0.4109904
+          },
+          "gpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 0.7730987,
+            "cumulative_average_s_per_step": 0.0193274675,
+            "final_printed_s_per_step": 0.01637591
+          }
+        },
+        "coriolis_on": {
+          "cpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 16.47523,
+            "cumulative_average_s_per_step": 0.41188075,
+            "final_printed_s_per_step": 0.4130987
+          },
+          "gpu_runtime": {
+            "grid": "128^3",
+            "nsteps": 40,
+            "cumulative_seconds": 0.4802556,
+            "cumulative_average_s_per_step": 0.01200639,
+            "final_printed_s_per_step": 0.008892202
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.4130987,
+          "cumulative_wall_s": 16.47523,
+          "cumulative_average_s_per_step": 0.41188075,
+          "final_wall_s": 16.61956,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.0002,
+            "dimensional_time": 0.08842105,
+            "cfl": 0.00512,
+            "divergence": 1.412236e-06,
+            "kinetic_energy": 0.4999988
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.06038226,
+            "derivatives_xy_filter": 0.05527491,
+            "derivatives_z": 0.005106668,
+            "sgs_and_stresses": 0.1058672,
+            "sgs_model_stress_build": 0.02803677,
+            "sgs_tzz_halo": 2.809998e-07,
+            "sgs_divstress_uv": 0.05024445,
+            "sgs_divstress_w": 0.0275846,
+            "convection": 0.1766621,
+            "pressure_solver": 0.04308076,
+            "projection": 0.00565156,
+            "other": 0.0214546
+          },
+          "forcing_wall_s": 2.199999e-07,
+          "cumulative_forcing_s": 9.88e-06
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.008892202,
+          "cumulative_wall_s": 0.4802556,
+          "cumulative_average_s_per_step": 0.01200639,
+          "final_wall_s": 0.6332592,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.0002,
+            "dimensional_time": 0.08842105,
+            "cfl": 0.00512,
+            "divergence": 1.412236e-06,
+            "kinetic_energy": 0.4999988
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000115904,
+            "derivatives_xy_filter": 8.6808e-05,
+            "derivatives_z": 2.8905e-05,
+            "sgs_and_stresses": 0.002462528,
+            "sgs_model_stress_build": 0.001419172,
+            "sgs_tzz_halo": 9.879e-06,
+            "sgs_divstress_uv": 0.00065686,
+            "sgs_divstress_w": 0.000376317,
+            "convection": 0.000154108,
+            "pressure_solver": 0.005619899,
+            "projection": 0.00027445,
+            "other": 0.000265253
+          },
+          "forcing_wall_s": 5.999982e-08,
+          "cumulative_forcing_s": 1.2594e-05
+        }
+      },
+      "variant_correctness": {
+        "sponge_on": {
+          "status": "passed",
+          "checks": [
+            "masked final checkpoint agreement: max_abs_diff=1.4120e-10, rms_diff=9.8489e-12; LESGO sentinel values ignored",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=1.432769e-13, gpu=1.431836e-13, abs_diff=9.33e-17, tolerance=1e-10",
+            "kinetic energy matched: cpu=304.8686, gpu=304.8686, abs_diff=0, tolerance=0.000305"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_optional_forcing_stable_current_128_n40_paired_20260624/analysis/velocity_checkpoint_compare.json",
+          "evidence_items": [
+            "forcing_diagnostics",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "coriolis_on": {
+          "status": "passed",
+          "checks": [
+            "diagnostic match plus masked final checkpoint drift: max_abs_diff=5.4845e-4, rms_diff=2.8915e-5; LESGO sentinel values ignored",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=1.412236e-06, gpu=1.412236e-06, abs_diff=0, tolerance=1.41e-08",
+            "kinetic energy matched: cpu=0.4999988, gpu=0.4999988, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_optional_forcing_stable_current_128_n40_paired_20260624/analysis/velocity_checkpoint_compare.json",
+          "evidence_items": [
+            "forcing_diagnostics",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "sponge_on": {
+          "speedup": 21.23827138759902,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "coriolis_on": {
+          "speedup": 34.30512835248563,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "sponge_on": {
+          "speedup": 21.23827138759902,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "coriolis_on": {
+          "speedup": 34.30512835248563,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      }
+    },
+    {
+      "id": "adm_dynamic_controls",
+      "evidence_status": "needs_benchmark",
+      "public_record": true,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_adm_dynamic_controls_current_128_n40_paired_20260624T230022Z",
+      "gpu_runtime": null,
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "Current-source isolated ADM dynamic-control validation; 128^3, nsteps=40, nproc=1, sgs_model=5; logs in logs/summary.log and comparison report in analysis/adm_dynamic_controls_compare.json.",
+      "variant_runtimes": {
+        "dynamic_yaw": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 28.13836,
+            "cumulative_average_s_per_step": 0.703459,
+            "final_printed_s_per_step": 1.730088
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 1.013472,
+            "cumulative_average_s_per_step": 0.0253368,
+            "final_printed_s_per_step": 0.02805655
+          }
+        },
+        "dynamic_ct": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 27.30231,
+            "cumulative_average_s_per_step": 0.68255775,
+            "final_printed_s_per_step": 1.685796
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5495396,
+            "cumulative_average_s_per_step": 0.01373849,
+            "final_printed_s_per_step": 0.01668369
+          }
+        },
+        "rotation": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 26.85238,
+            "cumulative_average_s_per_step": 0.6713095,
+            "final_printed_s_per_step": 1.680329
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5481392,
+            "cumulative_average_s_per_step": 0.01370348,
+            "final_printed_s_per_step": 0.01664799
+          }
+        },
+        "adm_correction": {
+          "cpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 27.22925,
+            "cumulative_average_s_per_step": 0.68073125,
+            "final_printed_s_per_step": 1.704344
+          },
+          "gpu_runtime": {
+            "grid": "128x128x128",
+            "nsteps": 40,
+            "cumulative_seconds": 0.5554676,
+            "cumulative_average_s_per_step": 0.013886689999999998,
+            "final_printed_s_per_step": 0.01663214
+          }
+        }
+      },
+      "parsed_pair_log_summary": {
+        "cpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 1.704344,
+          "cumulative_wall_s": 27.22925,
+          "cumulative_average_s_per_step": 0.68073125,
+          "final_wall_s": 27.37233,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002279173,
+            "dimensional_time": 1.039549,
+            "cfl": 0.06256309,
+            "divergence": 6.526029e-05,
+            "kinetic_energy": 0.4999549
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.05918185,
+            "derivatives_xy_filter": 0.05470997,
+            "derivatives_z": 0.004471119,
+            "sgs_and_stresses": 1.38849,
+            "sgs_model_stress_build": 1.308651,
+            "sgs_tzz_halo": 2.6e-07,
+            "sgs_divstress_uv": 0.05142475,
+            "sgs_divstress_w": 0.02841194,
+            "convection": 0.1764467,
+            "pressure_solver": 0.04439508,
+            "projection": 0.00565946,
+            "other": 0.02179885
+          },
+          "forcing_wall_s": 0.008372595,
+          "cumulative_forcing_s": 0.3436753
+        },
+        "gpu": {
+          "last_iteration": 40,
+          "last_iteration_wall_s": 0.01663214,
+          "cumulative_wall_s": 0.5554676,
+          "cumulative_average_s_per_step": 0.013886689999999998,
+          "final_wall_s": 0.708511,
+          "final_cpu_s": null,
+          "mpi_exit_status": 0,
+          "diagnostics": {
+            "dt": 0.002279173,
+            "dimensional_time": 1.039549,
+            "cfl": 0.06256309,
+            "divergence": 6.526029e-05,
+            "kinetic_energy": 0.4999549
+          },
+          "component_cumulative_s": {
+            "derivatives": 0.000121656,
+            "derivatives_xy_filter": 9.1427e-05,
+            "derivatives_z": 3.0048e-05,
+            "sgs_and_stresses": 0.009888749,
+            "sgs_model_stress_build": 0.008848815,
+            "sgs_tzz_halo": 9.979e-06,
+            "sgs_divstress_uv": 0.000654788,
+            "sgs_divstress_w": 0.000374856,
+            "convection": 0.000157966,
+            "pressure_solver": 0.003580573,
+            "projection": 0.000271796,
+            "other": 0.000361578
+          },
+          "forcing_wall_s": 0.002249817,
+          "cumulative_forcing_s": 0.08838617
+        }
+      },
+      "variant_correctness": {
+        "dynamic_yaw": {
+          "status": "passed",
+          "checks": [
+            "physical velocity checkpoint CPU/GPU compare passed after sentinel masking: max_abs=2.422e-09, rms=4.154e-12",
+            "ADM disk-control outputs matched: turbine_1 max_abs=3.109e-15, vel_top max_abs=1.110e-15",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=6.527198e-05, gpu=6.527198e-05, abs_diff=0, tolerance=6.53e-07",
+            "kinetic energy matched: cpu=0.4999552, gpu=0.4999552, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_adm_dynamic_controls_current_128_n40_paired_20260624T230022Z/analysis/adm_dynamic_controls_compare.json",
+          "evidence_items": [
+            "disk_control_outputs",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "dynamic_ct": {
+          "status": "passed",
+          "checks": [
+            "physical velocity checkpoint CPU/GPU compare passed after sentinel masking: max_abs=2.726e-09, rms=5.136e-12",
+            "ADM disk-control outputs matched: turbine_1 max_abs=3.997e-15, vel_top max_abs=1.110e-15",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=7.119179e-05, gpu=7.119179e-05, abs_diff=0, tolerance=7.12e-07",
+            "kinetic energy matched: cpu=0.4999516, gpu=0.4999516, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_adm_dynamic_controls_current_128_n40_paired_20260624T230022Z/analysis/adm_dynamic_controls_compare.json",
+          "evidence_items": [
+            "disk_control_outputs",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "rotation": {
+          "status": "passed",
+          "checks": [
+            "physical velocity checkpoint CPU/GPU compare passed after sentinel masking: max_abs=1.129e-09, rms=2.349e-12",
+            "ADM disk-control outputs matched: turbine_1 max_abs=3.997e-15, vel_top max_abs=1.110e-15",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=6.822931e-05, gpu=6.822931e-05, abs_diff=0, tolerance=6.82e-07",
+            "kinetic energy matched: cpu=0.4999567, gpu=0.4999567, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_adm_dynamic_controls_current_128_n40_paired_20260624T230022Z/analysis/adm_dynamic_controls_compare.json",
+          "evidence_items": [
+            "disk_control_outputs",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        },
+        "adm_correction": {
+          "status": "passed",
+          "checks": [
+            "physical velocity checkpoint CPU/GPU compare passed after sentinel masking: max_abs=7.695e-09, rms=5.210e-12",
+            "ADM disk-control outputs matched: turbine_1 max_abs=3.886e-15, vel_top max_abs=1.110e-15",
+            "MPI exit status matched: cpu=0, gpu=0",
+            "divergence matched: cpu=6.526029e-05, gpu=6.526029e-05, abs_diff=0, tolerance=6.53e-07",
+            "kinetic energy matched: cpu=0.4999549, gpu=0.4999549, abs_diff=0, tolerance=5e-07"
+          ],
+          "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_adm_dynamic_controls_current_128_n40_paired_20260624T230022Z/analysis/adm_dynamic_controls_compare.json",
+          "evidence_items": [
+            "disk_control_outputs",
+            "cpu_log",
+            "gpu_log",
+            "cumulative_average",
+            "late_step_timing",
+            "divergence",
+            "kinetic_energy"
+          ]
+        }
+      },
+      "variant_speedup_claims": {
+        "dynamic_yaw": {
+          "speedup": 27.76431909317672,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "dynamic_ct": {
+          "speedup": 49.682152114242534,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "rotation": {
+          "speedup": 48.98824970007618,
+          "basis": "cumulative_average_s_per_step"
+        },
+        "adm_correction": {
+          "speedup": 49.02041091145551,
+          "basis": "cumulative_average_s_per_step"
+        }
+      },
+      "variant_pair_results": {
+        "dynamic_yaw": {
+          "speedup": 27.76431909317672,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "dynamic_ct": {
+          "speedup": 49.682152114242534,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "rotation": {
+          "speedup": 48.98824970007618,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        },
+        "adm_correction": {
+          "speedup": 49.02041091145551,
+          "outcome": "gpu_faster",
+          "basis": "cumulative_average_s_per_step"
+        }
+      }
+    },
+    {
+      "id": "diagnostics_output",
+      "evidence_status": "host_boundary_verified",
+      "public_record": true,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_diagnostics_output_current_64_n20_gpu_compat_20260624T233241Z",
+      "gpu_runtime": {
+        "machine": "Derecho",
+        "hardware": "1 x A100 GPU",
+        "grid": "64 x 64 x 64",
+        "nsteps": 20,
+        "baseline_no_output_s_per_step": 0.005428545,
+        "output_enabled_s_per_step": 0.03749616,
+        "diagnostic_overhead_ratio": 6.907220995681163,
+        "restart_readback_nsteps": 5,
+        "notes": "Compact host-boundary compatibility run. The output-enabled case intentionally writes checkpoint, tavg, domain, x-plane, y-plane, pressure, vorticity, and point-sample files every 10 steps."
+      },
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "correctness": {
+        "status": "passed",
+        "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_diagnostics_output_current_64_n20_gpu_compat_20260624T233241Z/diagnostics_output_summary.json",
+        "checks": [
+          "baseline GPU case completed with MPI_EXIT_STATUS=0",
+          "output-enabled GPU case completed with MPI_EXIT_STATUS=0",
+          "restart GPU case completed with MPI_EXIT_STATUS=0",
+          "restart log contains `--> Reading initial velocity field from file`",
+          "checkpoint files `grid.out` and `vel.out.c0` exist",
+          "diagnostic output files exist under `output/`",
+          "time-average files exist",
+          "domain or plane output files exist",
+          "diagnostic overhead summary was generated"
+        ],
+        "check_values": {
+          "baseline_completed": true,
+          "write_completed": true,
+          "restart_completed": true,
+          "restart_readback": true,
+          "checkpoint_files_exist": true,
+          "output_files_exist": true,
+          "tavg_files_exist": true,
+          "domain_or_plane_files_exist": true,
+          "diagnostic_overhead_report": true
+        },
+        "evidence_items": [
+          "output_files_exist",
+          "restart_readback",
+          "diagnostic_overhead_report"
+        ]
+      },
+      "notes": "Validated as a GPU host-boundary compatibility path, not a GPU hot-path speedup claim. Z-plane/spectra output were not counted here because z-plane writing is disabled in the current code path and spectra remained off."
+    },
+    {
+      "id": "cgns_output",
+      "evidence_status": "host_boundary_verified",
+      "public_record": true,
+      "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_cgns_output_current_64_n10_gpu_tavg_fix_20260624T235139Z",
+      "gpu_runtime": {
+        "machine": "Derecho",
+        "hardware": "1 x A100 GPU",
+        "grid": "64 x 64 x 64",
+        "nsteps": 10,
+        "cgns_root": "/glade/u/home/wchen/local/cgns/4.5.2-nvhpc-hdf5mpi",
+        "hdf5_root": "/glade/u/apps/derecho/25.10/spack/opt/spack/hdf5/1.14.6/cray-mpich/8.1.32/nvhpc/25.9/ldyf",
+        "cumulative_average_s_per_step": 0.05101811,
+        "notes": "Compact host-boundary compatibility run with USE_CGNS=ON and tavg/domain/x-plane/y-plane output enabled."
+      },
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "correctness": {
+        "status": "passed",
+        "source": "/glade/work/wchen/lesgo_versions/benchmarks/08_cgns_output_current_64_n10_gpu_tavg_fix_20260624T235139Z/cgns_output_summary.json",
+        "checks": [
+          "CGNS GPU build completed with USE_CGNS=ON",
+          "CGNS GPU run completed with MPI_EXIT_STATUS=0",
+          "instantaneous domain CGNS files exist",
+          "x-plane and y-plane CGNS files exist",
+          "time-average CGNS files exist",
+          "no CGNS readback utility was available in the runtime environment, so readback was recorded as not attempted"
+        ],
+        "check_values": {
+          "cgns_files_exist": true,
+          "cgns_readback_if_available": "not attempted; no CGNS read utility found in run environment",
+          "mpi_exit_status": 0
+        },
+        "evidence_items": [
+          "cgns_files_exist",
+          "cgns_readback_if_available"
+        ]
+      },
+      "notes": "Validated as an optional GPU host-boundary output path, not a GPU hot-path speedup claim. The first CGNS+tavg run exposed a CUDA illegal-address failure in the fused tavg path; CGNS builds now use the host-boundary tavg fallback while non-CGNS builds keep the fused GPU tavg kernel."
+    },
+    {
+      "id": "lvlset",
+      "evidence_status": "excluded",
+      "public_record": false,
+      "source": null,
+      "gpu_runtime": null,
+      "cpu_runtime": null,
+      "speedup_claim": null,
+      "notes": "Excluded from this non-LVLSET audit."
+    }
+  ]
+}

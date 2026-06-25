@@ -224,10 +224,13 @@ real(rprec) :: wuv_l, uw_l, vw_l, pres_l
 real(rprec) :: vortx_l, vorty_l, vortz_l, tmp_cur, tmp_prev
 real(rprec) :: fzuv_l
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU) && !defined(ENABLE_CUDA) && !defined(PPCGNS)
 ! The fused GPU accumulation matches the host interpolation formulas for both
 ! single-rank and z-decomposed MPI cases.  Non-owned overlap planes are still
 ! synchronized during finalize before output, matching the legacy host path.
+! CGNS builds deliberately use the host-boundary fallback below because CGNS
+! output is an optional I/O path and the fused tavg kernel is not a required
+! performance target there.
 if (nproc >= 1) then
     dt_loc = this%dt
     !$acc wait(1)

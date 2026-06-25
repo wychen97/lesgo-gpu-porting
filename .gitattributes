@@ -21,6 +21,7 @@ CMakeLists.txt text eol=lf
 *.txt text eol=lf
 *.dat text eol=lf
 *.csv text eol=lf
+*.json text eol=lf
 *.html text eol=lf
 .gitignore text eol=lf
 .gitattributes text eol=lf
