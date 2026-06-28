@@ -41,6 +41,7 @@ PYTHON_CHECKS = [
     ("refactor backlog hotspots", "tools/check_refactor_backlog.py"),
     ("large-file navigation maps", "tools/check_navigation_maps.py"),
     ("IWM wall-surface indexing", "tools/check_iwm_surface_indexing.py"),
+    ("ATM structure packed paths", "tools/check_atm_structure_packed_paths.py"),
     ("GPU comment labels", "tools/check_gpu_comment_labels.py"),
     ("GPU file headers", "tools/check_gpu_headers.py"),
     ("GPU contract source groups", "tools/check_gpu_contract_source_groups.py"),

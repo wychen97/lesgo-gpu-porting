@@ -32,6 +32,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | Script | Purpose |
 | --- | --- |
 | `tools/check_active_source_comment_quality.py` | Verifies active non-LVLSET source comments avoid vague maintenance wording. |
+| `tools/check_atm_structure_packed_paths.py` | Verifies ATM structure-on runs keep packed/batched paths and carry `Cm`/`pitchingMoment`. |
 | `tools/check_branch_readiness.py` | Runs the default collaboration-readiness gate. |
 | `tools/check_build_profile_args.py` | Verifies documented CMake profile `-D...` arguments are valid public CMake knobs. |
 | `tools/check_cluster_script_headers.py` | Verifies root-level shell helpers carry a visible status header. |

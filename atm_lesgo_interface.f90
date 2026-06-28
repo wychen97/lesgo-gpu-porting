@@ -799,10 +799,11 @@ real(rprec), managed, pointer, dimension(:,:,:,:) :: bladeForces
 real(rprec), managed, pointer, dimension(:,:,:,:) :: integratedBladeForces
 real(rprec), managed, pointer, dimension(:,:,:,:) :: windVectors
 real(rprec), managed, pointer, dimension(:,:,:,:,:) :: bladeAlignedVectors
-real(rprec), managed, pointer, dimension(:,:,:) :: alpha, Cd, Cl, Cl_b, G
+real(rprec), managed, pointer, dimension(:,:,:) :: alpha, Cd, Cm, Cl, Cl_b, G
 real(rprec), managed, pointer, dimension(:,:,:) :: lift, drag, Vmag
 real(rprec), managed, pointer, dimension(:,:,:) :: induction_a, u_infinity
 real(rprec), managed, pointer, dimension(:,:,:) :: axialForce, tangentialForce
+real(rprec), managed, pointer, dimension(:,:,:) :: pitchingMoment
 
 j = turbineArray(i) % turbineTypeID
 mmend = turbineModel(j) % numBl
@@ -815,6 +816,7 @@ windVectors => turbineArray(i) % windVectors
 bladeAlignedVectors => turbineArray(i) % bladeAlignedVectors
 alpha => turbineArray(i) % alpha
 Cd => turbineArray(i) % Cd
+Cm => turbineArray(i) % Cm
 Cl => turbineArray(i) % Cl
 Cl_b => turbineArray(i) % Cl_b
 G => turbineArray(i) % G
@@ -825,6 +827,7 @@ induction_a => turbineArray(i) % induction_a
 u_infinity => turbineArray(i) % u_infinity
 axialForce => turbineArray(i) % axialForce
 tangentialForce => turbineArray(i) % tangentialForce
+pitchingMoment => turbineArray(i) % pitchingMoment
 
 !$cuf kernel do(3) <<<*,*>>>
 do q = 1, qqend
@@ -841,6 +844,7 @@ do q = 1, qqend
 
             alpha(m,n,q) = 0._rprec
             Cd(m,n,q) = 0._rprec
+            Cm(m,n,q) = 0._rprec
             Cl(m,n,q) = 0._rprec
             Cl_b(m,n,q) = 0._rprec
             G(m,n,q) = 0._rprec
@@ -851,6 +855,7 @@ do q = 1, qqend
             u_infinity(m,n,q) = 0._rprec
             axialForce(m,n,q) = 0._rprec
             tangentialForce(m,n,q) = 0._rprec
+            pitchingMoment(m,n,q) = 0._rprec
         enddo
     enddo
 enddo
@@ -4354,6 +4359,8 @@ if (ph /= 2) then
 atm_forcing_calls = atm_forcing_calls + 1
 #ifdef ENABLE_CUDA
 atm_diag_active = atm_diag_timing_enabled()
+! Point-owner LB uses a reduced at-point force path.  Keep structure off here
+! until that path carries the structural force/moment state with parity tests.
 atm_lb_candidate = atm_point_owner_lb_enabled() .and. atm_lb_owner_ready .and.&
     atm_point_owner_lb_supported() .and. .not. atm_full_gather_required() .and.&
     .not. atm_structure_enabled()
@@ -4447,7 +4454,7 @@ if ( mod(jt_total-1, updateInterval) == 0) then
         turbineArray(i) % VelNacelle_sampled = 0._rprec
         turbineArray(i) % VelNacelle_corrected = 0._rprec
 #ifdef ENABLE_CUDA
-        if (atm_reset_cuda_enabled() .and. .not. atm_structure_enabled()) then
+        if (atm_reset_cuda_enabled()) then
             call atm_lesgo_reset_turbine_gpu(i)
         else
 #endif
@@ -4621,15 +4628,12 @@ if ( mod(jt_total-1, updateInterval) == 0) then
     call atm_clock_convolve%stop()
     atm_time_convolve = atm_time_convolve + atm_clock_convolve%time
 
-    ! Batched OpenACC Cl/tip correction is validated for the current
-    ! exact-panel induced-velocity structure-off path.  Keep structure-on on the host
-    ! route until a dedicated structural validation accepts the batched path.
-    if (.not. atm_structure_enabled()) then
-        call atm_clock_clcorr%start()
-        call atm_batch_cl_correction_gpu()
-        call atm_clock_clcorr%stop()
-        atm_time_clcorr = atm_time_clcorr + atm_clock_clcorr%time
-    endif
+    ! Batched OpenACC Cl/tip correction updates the same induced-velocity
+    ! state used by both rigid and structural turbine consumers.
+    call atm_clock_clcorr%start()
+    call atm_batch_cl_correction_gpu()
+    call atm_clock_clcorr%stop()
+    atm_time_clcorr = atm_time_clcorr + atm_clock_clcorr%time
 #endif
 
     do i=1,numberOfTurbines
@@ -4652,11 +4656,11 @@ if ( mod(jt_total-1, updateInterval) == 0) then
             ! Only do this if the correction is active
             if (turbineArray(i) % tipALMCorrection .eqv. .true.)  then
 #ifdef PPLES_GPU
-                if (atm_structure_enabled() .or.                              &
-                    turbineArray(i) % sampling /= 'atPoint') then
+                if (turbineArray(i) % sampling /= 'atPoint') then
 #endif
                 ! Compute the correction for the Cl coefficient.  Structure-off
-                ! atPoint turbines are handled above by atm_batch_cl_correction_gpu().
+                ! and structure-on atPoint turbines are handled above by
+                ! atm_batch_cl_correction_gpu().
                 call atm_clock_clcorr%start()
                 call atm_compute_cl_correction(i)
                 call atm_clock_clcorr%stop()
@@ -4815,14 +4819,10 @@ if (atm_packed_gather_enabled()) then
     return
 endif
 #else
-! Explicit-residency (PPLES_GPU, de-cuf) build: use the packed gather - one
-! allreduce per turbine instead of ~15, same element-wise sums, far less MPI
-! latency. The packed buffer does not carry Cm/pitchingMoment, so keep the
-! per-array gather when the structural model is active.
-if (.not. atm_structure_enabled()) then
-    call atm_lesgo_mpi_gather_packed()
-    return
-endif
+! Use the packed gather - one allreduce per turbine instead of many per-array
+! reductions.  Structure-on runs add Cm/pitchingMoment to the packed payload.
+call atm_lesgo_mpi_gather_packed()
+return
 #endif
 
 do i=1,numberOfTurbines
@@ -4997,6 +4997,7 @@ implicit none
 integer :: i, nitem, npack, pos
 real(rprec), allocatable, save :: packed_send(:), packed_recv(:)
 integer, pointer :: TURBINE_COMMUNICATOR
+logical :: struct_active
 
 #ifdef ENABLE_CUDA
 if (atm_gpu_packed_gather_enabled()) then
@@ -5004,6 +5005,8 @@ if (atm_gpu_packed_gather_enabled()) then
     return
 endif
 #endif
+
+struct_active = atm_structure_enabled()
 
 do i=1,numberOfTurbines
 
@@ -5023,6 +5026,10 @@ do i=1,numberOfTurbines
                 size(turbineArray(i) % windVectors(:,:,:,1:3)) +             &
                 size(turbineArray(i) % induction_a(:,:,:)) +                 &
                 size(turbineArray(i) % u_infinity(:,:,:)) + 7
+        if (struct_active) then
+            npack = npack + size(turbineArray(i) % Cm) +                      &
+                size(turbineArray(i) % pitchingMoment)
+        endif
 
         if (allocated(packed_send)) then
             if (size(packed_send) /= npack) then
@@ -5079,6 +5086,18 @@ do i=1,numberOfTurbines
         packed_send(pos:pos+nitem-1) = reshape(turbineArray(i) % Cd,           &
             (/ nitem /))
         pos = pos + nitem
+
+        if (struct_active) then
+            nitem = size(turbineArray(i) % Cm)
+            packed_send(pos:pos+nitem-1) = reshape(turbineArray(i) % Cm,       &
+                (/ nitem /))
+            pos = pos + nitem
+
+            nitem = size(turbineArray(i) % pitchingMoment)
+            packed_send(pos:pos+nitem-1) = reshape(                           &
+                turbineArray(i) % pitchingMoment, (/ nitem /))
+            pos = pos + nitem
+        endif
 
         nitem = size(turbineArray(i) % Vmag)
         packed_send(pos:pos+nitem-1) = reshape(turbineArray(i) % Vmag,         &
@@ -5169,6 +5188,19 @@ do i=1,numberOfTurbines
             shape(turbineArray(i) % Cd))
         pos = pos + nitem
 
+        if (struct_active) then
+            nitem = size(turbineArray(i) % Cm)
+            turbineArray(i) % Cm = reshape(packed_recv(pos:pos+nitem-1),       &
+                shape(turbineArray(i) % Cm))
+            pos = pos + nitem
+
+            nitem = size(turbineArray(i) % pitchingMoment)
+            turbineArray(i) % pitchingMoment = reshape(                       &
+                packed_recv(pos:pos+nitem-1),                                 &
+                shape(turbineArray(i) % pitchingMoment))
+            pos = pos + nitem
+        endif
+
         nitem = size(turbineArray(i) % Vmag)
         turbineArray(i) % Vmag = reshape(packed_recv(pos:pos+nitem-1),         &
             shape(turbineArray(i) % Vmag))
@@ -5226,12 +5258,14 @@ implicit none
 integer :: i, nitem, npack, pos
 real(rprec), device, allocatable, save :: packed_send(:), packed_recv(:)
 integer, pointer :: TURBINE_COMMUNICATOR
-logical :: batch_done
+logical :: batch_done, struct_active
 
 if (atm_batch_gather_enabled()) then
     call atm_lesgo_mpi_gather_slim_batch_gpu(batch_done)
     if (batch_done) return
 end if
+
+struct_active = atm_structure_enabled()
 
 do i=1,numberOfTurbines
 
@@ -5240,6 +5274,10 @@ do i=1,numberOfTurbines
         TURBINE_COMMUNICATOR => turbineArray(i) % TURBINE_COMM_WORLD
 
         npack = size(turbineArray(i) % bladeForces) + 7
+        if (struct_active) then
+            npack = npack + size(turbineArray(i) % Cm) +                      &
+                size(turbineArray(i) % pitchingMoment)
+        endif
 
         if (allocated(packed_send)) then
             if (size(packed_send) /= npack) then
@@ -5262,6 +5300,17 @@ do i=1,numberOfTurbines
         call atm_pack_rank4(turbineArray(i) % bladeForces, packed_send, pos)
 #endif
         pos = pos + nitem
+
+        if (struct_active) then
+            nitem = size(turbineArray(i) % Cm)
+            call atm_pack_rank3(turbineArray(i) % Cm, packed_send, pos)
+            pos = pos + nitem
+
+            nitem = size(turbineArray(i) % pitchingMoment)
+            call atm_pack_rank3(turbineArray(i) % pitchingMoment, packed_send, &
+                pos)
+            pos = pos + nitem
+        endif
 
         call atm_pack_gather_scalars(packed_send, pos,                         &
             turbineArray(i) % torqueRotor, turbineArray(i) % thrust,            &
@@ -5287,6 +5336,17 @@ do i=1,numberOfTurbines
 #endif
         pos = pos + nitem
 
+        if (struct_active) then
+            nitem = size(turbineArray(i) % Cm)
+            call atm_unpack_rank3(packed_recv, pos, turbineArray(i) % Cm)
+            pos = pos + nitem
+
+            nitem = size(turbineArray(i) % pitchingMoment)
+            call atm_unpack_rank3(packed_recv, pos,                            &
+                turbineArray(i) % pitchingMoment)
+            pos = pos + nitem
+        endif
+
         turbineArray(i) % torqueRotor = packed_recv(pos)
         turbineArray(i) % thrust = packed_recv(pos+1)
         turbineArray(i) % nacelleForce = packed_recv(pos+2:pos+4)
@@ -5311,9 +5371,12 @@ logical, intent(out) :: done
 integer :: i, nitem, npack, pos, total_pack, comm_size
 real(rprec), device, allocatable, save :: packed_send(:), packed_recv(:)
 integer, pointer :: TURBINE_COMMUNICATOR
+logical :: struct_active
 
 done = .false.
 if (nproc <= 1) return
+
+struct_active = atm_structure_enabled()
 
 total_pack = 0
 do i=1,numberOfTurbines
@@ -5324,6 +5387,10 @@ do i=1,numberOfTurbines
     if (comm_size /= nproc) return
 
     total_pack = total_pack + size(turbineArray(i) % bladeForces) + 7
+    if (struct_active) then
+        total_pack = total_pack + size(turbineArray(i) % Cm) +                 &
+            size(turbineArray(i) % pitchingMoment)
+    endif
 enddo
 
 if (total_pack <= 0) return
@@ -5350,6 +5417,16 @@ do i=1,numberOfTurbines
     call atm_pack_rank4(turbineArray(i) % bladeForces, packed_send, pos)
 #endif
     pos = pos + nitem
+
+    if (struct_active) then
+        nitem = size(turbineArray(i) % Cm)
+        call atm_pack_rank3(turbineArray(i) % Cm, packed_send, pos)
+        pos = pos + nitem
+
+        nitem = size(turbineArray(i) % pitchingMoment)
+        call atm_pack_rank3(turbineArray(i) % pitchingMoment, packed_send, pos)
+        pos = pos + nitem
+    endif
 
     call atm_pack_gather_scalars(packed_send, pos,                         &
         turbineArray(i) % torqueRotor, turbineArray(i) % thrust,            &
@@ -5378,6 +5455,17 @@ do i=1,numberOfTurbines
 #endif
     pos = pos + nitem
 
+    if (struct_active) then
+        nitem = size(turbineArray(i) % Cm)
+        call atm_unpack_rank3(packed_recv, pos, turbineArray(i) % Cm)
+        pos = pos + nitem
+
+        nitem = size(turbineArray(i) % pitchingMoment)
+        call atm_unpack_rank3(packed_recv, pos,                              &
+            turbineArray(i) % pitchingMoment)
+        pos = pos + nitem
+    endif
+
     turbineArray(i) % torqueRotor = packed_recv(pos)
     turbineArray(i) % thrust = packed_recv(pos+1)
     turbineArray(i) % nacelleForce = packed_recv(pos+2:pos+4)
@@ -5399,6 +5487,9 @@ implicit none
 integer :: i, nitem, npack, pos
 real(rprec), device, allocatable, save :: packed_send(:), packed_recv(:)
 integer, pointer :: TURBINE_COMMUNICATOR
+logical :: struct_active
+
+struct_active = atm_structure_enabled()
 
 if (atm_slim_gather_enabled() .and. .not. atm_full_gather_required()) then
     call atm_lesgo_mpi_gather_slim_gpu()
@@ -5421,6 +5512,10 @@ do i=1,numberOfTurbines
                 size(turbineArray(i) % windVectors) +                        &
                 size(turbineArray(i) % induction_a) +                        &
                 size(turbineArray(i) % u_infinity) + 7
+        if (struct_active) then
+            npack = npack + size(turbineArray(i) % Cm) +                      &
+                size(turbineArray(i) % pitchingMoment)
+        endif
 
         if (allocated(packed_send)) then
             if (size(packed_send) /= npack) then
@@ -5461,6 +5556,17 @@ do i=1,numberOfTurbines
         nitem = size(turbineArray(i) % Cd)
         call atm_pack_rank3(turbineArray(i) % Cd, packed_send, pos)
         pos = pos + nitem
+
+        if (struct_active) then
+            nitem = size(turbineArray(i) % Cm)
+            call atm_pack_rank3(turbineArray(i) % Cm, packed_send, pos)
+            pos = pos + nitem
+
+            nitem = size(turbineArray(i) % pitchingMoment)
+            call atm_pack_rank3(turbineArray(i) % pitchingMoment, packed_send, &
+                pos)
+            pos = pos + nitem
+        endif
 
         nitem = size(turbineArray(i) % Vmag)
         call atm_pack_rank3(turbineArray(i) % Vmag, packed_send, pos)
@@ -5527,6 +5633,17 @@ do i=1,numberOfTurbines
         nitem = size(turbineArray(i) % Cd)
         call atm_unpack_rank3(packed_recv, pos, turbineArray(i) % Cd)
         pos = pos + nitem
+
+        if (struct_active) then
+            nitem = size(turbineArray(i) % Cm)
+            call atm_unpack_rank3(packed_recv, pos, turbineArray(i) % Cm)
+            pos = pos + nitem
+
+            nitem = size(turbineArray(i) % pitchingMoment)
+            call atm_unpack_rank3(packed_recv, pos,                            &
+                turbineArray(i) % pitchingMoment)
+            pos = pos + nitem
+        endif
 
         nitem = size(turbineArray(i) % Vmag)
         call atm_unpack_rank3(packed_recv, pos, turbineArray(i) % Vmag)
@@ -5847,6 +5964,8 @@ TURBINE_COMM => turbineArray(i) % TURBINE_COMM_WORLD
 j=turbineArray(i) % turbineTypeID ! The turbine type ID
 
 #ifdef ENABLE_CUDA
+! The legacy CUDA at-point blade-force kernel does not cover the structural
+! moment/torsion feedback path, so structure-on still uses the host route.
 if (atm_bladeforce_cuda_enabled() .and. .not. atm_structure_enabled() .and.  &
     turbineArray(i) % sampling == 'atPoint') then
     call atm_lesgo_force_gpu_atpoint(i)

@@ -10,9 +10,9 @@ structure, but they should be split only when a clean ownership boundary exists.
 
 | Priority | File | Current size | Refactor direction |
 | --- | --- | ---: | --- |
-| 1 | `atm_lesgo_interface.f90` | 286,525 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
+| 1 | `atm_lesgo_interface.f90` | 290,960 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
 | 2 | `sgs_stag_util.f90` | 161,830 bytes | Separate SGS model dispatch, halo exchange, tensor assembly, and runtime-model validation helpers. |
-| 3 | `actuator_turbine_model.f90` | 148,441 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
+| 3 | `actuator_turbine_model.f90` | 149,062 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
 | 4 | `lagrange_Sdep_gpu.f90` | 93,203 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
 | 5 | `scalars.f90` | 92,395 bytes | Separate CPU scalar transport, GPU scalar transport, halo handling, and timing diagnostics. |
 | 6 | `press_stag_array.f90` | 86,608 bytes | Separate pressure RHS assembly, halo policy, tridiagonal solve orchestration, and diagnostics. |

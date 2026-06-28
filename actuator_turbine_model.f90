@@ -1299,6 +1299,9 @@ else if (turbineArray(i) % rotationDir == "ccw") then
 endif
 
 #ifdef ENABLE_CUDA
+! The CUDA rotation shortcut only updates bladePoints.  Structure-on runs must
+! also rotate bladePoints_rigid and then rebuild bladePoints from elastic
+! displacement/twist, so keep them on the structural geometry path below.
 if (atm_model_cuda_enabled() .and. .not. atm_structure_enabled()) then
     bladePoints_d => turbineArray(i) % bladePoints
     rotorApex1 = rotorApex(1)
@@ -1444,7 +1447,10 @@ real(rprec), pointer :: Vmag(:,:,:)
 real(rprec), pointer :: chord(:,:,:)
 
 #ifdef ENABLE_CUDA
-if (atm_model_cuda_enabled() .and. .not. atm_structure_enabled()) then
+! The induced-velocity correction writes the same du/Uinf/uy state consumed by
+! both rigid and structural turbine paths.  Structure-on runs can therefore use
+! the per-turbine CUDA implementation when the batched PPLES path is inactive.
+if (atm_model_cuda_enabled()) then
     call atm_compute_cl_correction_gpu(i)
     return
 endif
@@ -2616,6 +2622,9 @@ turbineArray(i) % uvShaft = vector_divide(turbineArray(i) % uvShaft,           &
 
 ! Rotate turbine blades, blade by blade, point by point.
 #ifdef ENABLE_CUDA
+! The CUDA yaw shortcut only rotates bladePoints.  Structure-on runs must also
+! rotate bladePoints_rigid so later elastic displacement is applied from the
+! correct rigid reference geometry.
 if (atm_model_cuda_enabled() .and. .not. atm_structure_enabled()) then
     bladePoints_d => turbineArray(i) % bladePoints
     origin1 = turbineArray(i) % towerShaftIntersect(1)

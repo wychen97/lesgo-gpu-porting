@@ -143,6 +143,7 @@ python3 tools/check_sgs_model_constants.py
 python3 tools/check_refactor_backlog.py
 python3 tools/check_navigation_maps.py
 python3 tools/check_iwm_surface_indexing.py
+python3 tools/check_atm_structure_packed_paths.py
 python3 tools/check_gpu_comment_labels.py
 python3 tools/check_gpu_headers.py
 python3 tools/check_gpu_contract_source_groups.py
