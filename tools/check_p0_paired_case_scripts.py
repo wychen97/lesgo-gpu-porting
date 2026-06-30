@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the p0 public cases support clean paired CPU/GPU runs."""
+"""Verify the p0 public case scripts match the active branch profile."""
 
 from __future__ import annotations
 
@@ -79,6 +79,13 @@ def require(text: str, path: Path, marker: str, errors: list[str]) -> None:
         errors.append(f"{path} is missing required marker: {marker}")
 
 
+def cpu_default_branch(root: Path) -> bool:
+    readme = root / "README.md"
+    return readme.exists() and "LESGO CPU Baseline Branch" in readme.read_text(
+        encoding="utf-8"
+    )
+
+
 def executable_name(config: dict[str, object], use_les_gpu: bool) -> str:
     flags = dict(config["cmake_flags"])
     flags["USE_LES_GPU"] = use_les_gpu
@@ -110,14 +117,21 @@ def check_cmake_target_naming(root: Path) -> list[str]:
     return errors
 
 
-def check_compile_script(case_dir: Path, config: dict[str, object]) -> list[str]:
+def check_compile_script(
+    case_dir: Path, config: dict[str, object], cpu_default: bool
+) -> list[str]:
     path = case_dir / "compile_derecho.sh"
     text = path.read_text(encoding="utf-8")
     errors: list[str] = []
     cpu_exe = executable_name(config, use_les_gpu=False)
     gpu_exe = executable_name(config, use_les_gpu=True)
+    default_marker = (
+        "BUILD_PROFILE=\"${1:-${BUILD_PROFILE:-cpu}}\""
+        if cpu_default
+        else "BUILD_PROFILE=\"${1:-${BUILD_PROFILE:-gpu}}\""
+    )
     for marker in [
-        "BUILD_PROFILE=\"${1:-${BUILD_PROFILE:-gpu}}\"",
+        default_marker,
         "case \"${BUILD_PROFILE}\" in",
         "USE_CPU_BUILD=OFF",
         "USE_CPU_BUILD=ON",
@@ -136,12 +150,19 @@ def check_compile_script(case_dir: Path, config: dict[str, object]) -> list[str]
     return errors
 
 
-def check_submit_script(case_dir: Path, config: dict[str, object]) -> list[str]:
+def check_submit_script(
+    case_dir: Path, config: dict[str, object], cpu_default: bool
+) -> list[str]:
     path = case_dir / "submit_derecho.pbs"
     text = path.read_text(encoding="utf-8")
     errors: list[str] = []
-    for marker in [
-        "RUN_PROFILE=\"${RUN_PROFILE:-gpu}\"",
+    default_marker = (
+        "RUN_PROFILE=\"${RUN_PROFILE:-cpu}\""
+        if cpu_default
+        else "RUN_PROFILE=\"${RUN_PROFILE:-gpu}\""
+    )
+    markers = [
+        default_marker,
         "RUN_LABEL=\"${RUN_LABEL:-${RUN_PROFILE}}\"",
         "ARCHIVE_ROOT=\"${ARCHIVE_ROOT:-run-archives}\"",
         "case \"${RUN_PROFILE}\" in",
@@ -160,29 +181,39 @@ def check_submit_script(case_dir: Path, config: dict[str, object]) -> list[str]:
         "Archived run evidence to ${ARCHIVE_DIR}",
         "mpiexec -n \"${MPI_RANKS}\" -ppn \"${MPI_PPN}\" \"${RUN_EXE}\"",
         config["job_cpu"],
-        config["job_gpu"],
-    ]:
+    ]
+    if not cpu_default:
+        markers.append(config["job_gpu"])
+    for marker in markers:
         require(text, path, marker, errors)
     return errors
 
 
-def check_readme(case_dir: Path, config: dict[str, object]) -> list[str]:
+def check_readme(
+    case_dir: Path, config: dict[str, object], cpu_default: bool
+) -> list[str]:
     path = case_dir / "README.md"
     text = path.read_text(encoding="utf-8")
     errors: list[str] = []
-    for marker in [
+    markers = [
         "./compile_derecho.sh cpu",
-        "./compile_derecho.sh gpu",
-        "RUN_PROFILE=gpu",
         "RUN_PROFILE=cpu",
         "lesgo-run-exe-cpu",
-        "lesgo-run-exe-gpu",
         "RUN_LABEL",
         "run-archives",
         "does not set the Cray GPU-aware MPI environment variables",
         config["job_cpu"],
-        config["job_gpu"],
-    ]:
+    ]
+    if not cpu_default:
+        markers.extend(
+            [
+                "./compile_derecho.sh gpu",
+                "RUN_PROFILE=gpu",
+                "lesgo-run-exe-gpu",
+                config["job_gpu"],
+            ]
+        )
+    for marker in markers:
         require(text, path, marker, errors)
     return errors
 
@@ -190,6 +221,7 @@ def check_readme(case_dir: Path, config: dict[str, object]) -> list[str]:
 def main() -> int:
     repo_root = Path(".")
     root = repo_root / "test-cases"
+    cpu_default = cpu_default_branch(repo_root)
     errors: list[str] = []
     errors.extend(check_cmake_target_naming(repo_root))
     for case_name, config in CASES.items():
@@ -197,9 +229,9 @@ def main() -> int:
         if not case_dir.is_dir():
             errors.append(f"missing p0 case directory: {case_dir}")
             continue
-        errors.extend(check_compile_script(case_dir, config))
-        errors.extend(check_submit_script(case_dir, config))
-        errors.extend(check_readme(case_dir, config))
+        errors.extend(check_compile_script(case_dir, config, cpu_default))
+        errors.extend(check_submit_script(case_dir, config, cpu_default))
+        errors.extend(check_readme(case_dir, config, cpu_default))
 
     if errors:
         print("p0 paired case script check failed:")
@@ -207,7 +239,8 @@ def main() -> int:
             print(f"  {error}")
         return 1
 
-    print(f"p0 paired case script check passed ({len(CASES)} case trees).")
+    mode = "CPU-default" if cpu_default else "GPU-default"
+    print(f"p0 paired case script check passed ({len(CASES)} case trees, {mode}).")
     return 0
 
 

@@ -9,10 +9,11 @@
 #
 # If using another cluster, edit the module load line and FC compiler wrapper.
 # Usage:
-#   ./compile_derecho.sh gpu
 #   ./compile_derecho.sh cpu
+#   ./compile_derecho.sh gpu
 #
-# The default profile is gpu for backward compatibility.
+# This pure-CPU branch defaults to the CPU profile. The gpu argument is kept so
+# this script remains easy to compare with the main GPU branch.
 
 # Bash safety options:
 #   -e: stop if any command fails.
@@ -22,7 +23,7 @@ set -euo pipefail
 
 CASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT_DIR="$(cd "${CASE_DIR}/../.." && pwd -P)"
-BUILD_PROFILE="${1:-${BUILD_PROFILE:-gpu}}"
+BUILD_PROFILE="${1:-${BUILD_PROFILE:-cpu}}"
 BUILD_DIR="${CASE_DIR}/build-derecho-${BUILD_PROFILE}"
 BUILD_JOBS="${BUILD_JOBS:-8}"
 

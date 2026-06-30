@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
-# Derecho PBS job script for the 3072 x 384 x 400 / 60-turbine CPU or GPU case.
+# Derecho PBS job script for the 3072 x 384 x 400 / 60-turbine CPU case.
 #
 # Compile first:
-#   ./compile_derecho.sh gpu
 #   ./compile_derecho.sh cpu
 #
-# Submit the default 16-GPU run from this directory:
+# Submit the default 16-rank CPU smoke run from this directory:
 #   qsub submit_derecho.pbs
 #
-# Submit a CPU baseline with matching `nproc = 16`:
+# Submit the same CPU run explicitly:
 #   qsub -N lesgo_wf60_cpu16 -v RUN_PROFILE=cpu,RUN_LABEL=cpu16 \
-#        -l select=1:ncpus=32:mpiprocs=16:mem=220gb submit_derecho.pbs
+#        -q develop -l select=2:ncpus=8:mpiprocs=8:mem=180gb \
+#        -l place=scatter:shared submit_derecho.pbs
 #
 # For larger CPU baselines, edit `nproc` in `lesgo.conf` and keep the qsub
 # `select * mpiprocs`, `MPI_RANKS`, and `MPI_PPN` values consistent.
@@ -21,8 +21,8 @@
 
 # Change this account to your Derecho allocation.
 #PBS -A ujhb0028
-#PBS -N lesgo_wf60_gpu16
-#PBS -q main
+#PBS -N lesgo_wf60_cpu16
+#PBS -q develop
 
 # Resource sizing. Keep these four items consistent:
 #   1. the PBS select line below;
@@ -30,27 +30,25 @@
 #   3. MPI_PPN below;
 #   4. nproc in lesgo.conf.
 #
-# Current layout: 16 A100 GPUs.
-#   select=4   -> reserve 4 GPU nodes
-#   mpiprocs=4 -> run 4 MPI ranks per node
-#   ngpus=4    -> reserve 4 GPUs per node
+# Current layout: 16 CPU MPI ranks across two shared CPU nodes.
+#   select=2   -> reserve resources on 2 nodes
+#   mpiprocs=8 -> run 8 MPI ranks per node
+#   ncpus=8    -> reserve 8 CPU cores per node
 #
 # Total MPI ranks = select * mpiprocs = 16.
-# Total GPUs      = select * ngpus    = 16.
 # MPI_PPN below must equal mpiprocs.
 #
-# Example: 8 GPUs on Derecho 4-GPU nodes:
-#   #PBS -l select=2:ncpus=32:mpiprocs=4:ngpus=4:mem=220gb:gpu_type=a100
+# Example: 8 CPU ranks on one node:
+#   #PBS -l select=1:ncpus=8:mpiprocs=8:mem=180gb
 #   MPI_RANKS=8
-#   MPI_PPN=4
+#   MPI_PPN=8
 #   nproc=8 in lesgo.conf
 #
-# On another cluster, translate select/mpiprocs/ngpus to that scheduler's
-# node/task/GPU syntax, but keep one MPI rank per GPU unless the code is
-# deliberately being tested in a different layout.
-#PBS -l select=4:ncpus=32:mpiprocs=4:ngpus=4:mem=220gb:gpu_type=a100
-#PBS -l walltime=00:35:00
-#PBS -l place=scatter
+# On another cluster, translate select/mpiprocs/ncpus/mem to that scheduler's
+# node/task syntax. Keep total MPI ranks equal to nproc in lesgo.conf.
+#PBS -l select=2:ncpus=8:mpiprocs=8:mem=180gb
+#PBS -l walltime=00:20:00
+#PBS -l place=scatter:shared
 #PBS -j oe
 
 # Bash safety options:
@@ -63,8 +61,8 @@ cd "${PBS_O_WORKDIR}"
 
 # Must match the PBS line and lesgo.conf nproc.
 MPI_RANKS="${MPI_RANKS:-16}"
-MPI_PPN="${MPI_PPN:-4}"
-RUN_PROFILE="${RUN_PROFILE:-gpu}"
+MPI_PPN="${MPI_PPN:-8}"
+RUN_PROFILE="${RUN_PROFILE:-cpu}"
 RUN_LABEL="${RUN_LABEL:-${RUN_PROFILE}}"
 ARCHIVE_ROOT="${ARCHIVE_ROOT:-run-archives}"
 
