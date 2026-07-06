@@ -27,9 +27,6 @@ subroutine rmsdiv(rms)
 use types, only : rprec
 use param
 use sim_param, only : dudx, dvdy, dwdz
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 
 implicit none
 integer :: jx, jy, jz, jz_max
@@ -37,49 +34,14 @@ real(rprec) :: rms
 #ifdef PPMPI
 real(rprec) :: rms_global
 #endif
-#ifdef ENABLE_CUDA
-character(len=16) :: cuda_setting
-integer :: cuda_stat, istat
-logical, save :: cuda_initialized = .false.
-logical, save :: cuda_enabled = .true.
-#endif
 
 ! Initialize variables
-#ifdef ENABLE_CUDA
-if (.not. cuda_initialized) then
-    cuda_enabled = .true.
-    cuda_initialized = .true.
-end if
-#endif
 
 rms = 0._rprec
 jz_max = nz - 1
 
 ! Calculate L1 norm of velocity divergence
-#ifdef ENABLE_CUDA
-if (cuda_enabled) then
-    !$cuf kernel do(3) <<<*,*>>> reduction(+:rms)
-    do jz = 1, jz_max
-    do jy = 1, ny
-    do jx = 1, nx
-        rms = rms + abs(dudx(jx,jy,jz) + dvdy(jx,jy,jz) + dwdz(jx,jy,jz))
-    end do
-    end do
-    end do
-
-    istat = cudaDeviceSynchronize()
-    if (istat /= 0) then
-        print *, 'rmsdiv CUDA sync failure: ', istat
-        stop
-    end if
-    istat = cudaGetLastError()
-    if (istat /= 0) then
-        print *, 'rmsdiv CUDA kernel failure: ', istat
-        stop
-    end if
-else
-#endif
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! Device-side reduction over the resident gradients - replaces the
 ! dudx/dvdy/dwdz D2H + host loop (diagnostic-only).
 !$acc parallel loop collapse(3) default(present) reduction(+:rms)
@@ -98,9 +60,6 @@ do jx = 1, nx
 end do
 end do
 end do
-#endif
-#ifdef ENABLE_CUDA
-end if
 #endif
 rms = rms / (nx*ny*(jz_max))
 

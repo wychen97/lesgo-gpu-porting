@@ -40,13 +40,10 @@ module iwmles
 !     iwm_tR, iwm_Dz, and integrated wall-model profiles.
 !   - LES velocity/pressure fields are sampled inputs; this module should not
 !     make full LES fields host-authoritative during the GPU timestep.
-!   - ENABLE_CUDA keeps the legacy managed-memory path, while PPSGS_GPU uses
+!   - PPSGS_GPU uses
 !     OpenACC-present arrays in the optimized non-LVLSET branch.
 
 use types, only : rprec
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 
 implicit none
 
@@ -55,28 +52,13 @@ public iwm_wallstress, iwm_init, iwm_finalize,                                 &
     iwm_checkpoint, iwm_read_checkpoint, iwm_lhs_update_due
 
 ! u_tau,x  u_tau,y
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:), allocatable :: iwm_utx, iwm_uty
-#else
 real(rprec), dimension(:,:), allocatable :: iwm_utx, iwm_uty
-#endif
 ! tau_wall,x tau_wall,y
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:), allocatable :: iwm_tauwx, iwm_tauwy
-#else
 real(rprec), dimension(:,:), allocatable :: iwm_tauwx, iwm_tauwy
-#endif
 ! filtered tangential velocity, current and previous
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:,:), allocatable :: iwm_flt_tagvel,         &
-    iwm_flt_tagvel_m
-! filtered pressure
-real(rprec), managed, dimension(:,:), allocatable :: iwm_flt_p
-#else
 real(rprec), dimension(:,:,:), allocatable :: iwm_flt_tagvel, iwm_flt_tagvel_m
 ! filtered pressure
 real(rprec), dimension(:,:), allocatable :: iwm_flt_p
-#endif
 ! direction x
 integer :: iwm_dirx = 1
 ! direction y
@@ -85,11 +67,7 @@ integer :: iwm_diry = 2
 ! (because the world is 3D)
 integer :: iwm_DN  = 2
 ! integrated profiles, current and previous
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:,:), allocatable :: iwm_inte, iwm_inte_m
-#else
 real(rprec), dimension(:,:,:), allocatable :: iwm_inte, iwm_inte_m
-#endif
 integer :: iwm_Lu = 1   ! index for integral of u
 integer :: iwm_Luu = 2  ! index for integral of uu
 integer :: iwm_Lv = 3   ! etc.
@@ -98,41 +76,18 @@ integer :: iwm_Luv = 5
 ! the total number of integrals that need to be calculated
 integer :: iwm_LN  = 5
 ! unsteady, convective, pressure gradient
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:,:), allocatable :: iwm_unsdy, iwm_conv,    &
-    iwm_PrsGrad
-! turbulent diffusion, LHS
-real(rprec), managed, dimension(:,:,:), allocatable :: iwm_diff, iwm_LHS
-#else
 real(rprec), dimension(:,:,:), allocatable :: iwm_unsdy, iwm_conv, iwm_PrsGrad
 ! turbulent diffusion, LHS
 real(rprec), dimension(:,:,:), allocatable :: iwm_diff, iwm_LHS
-#endif
 ! dudz at z=dz/2, dudz at z=zo
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:,:), allocatable :: iwm_dudzT
-real(rprec), managed, dimension(:,:,:), allocatable :: iwm_dudzB
-#else
 real(rprec), dimension(:,:,:), allocatable :: iwm_dudzT, iwm_dudzB
-#endif
 ! filtered friction velocity, filtering time scale
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:), allocatable :: iwm_flt_us, iwm_tR
-#else
 real(rprec), dimension(:,:), allocatable :: iwm_flt_us, iwm_tR
-#endif
 ! HALF cell height, zo, linear correction in x, y directions
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:), allocatable :: iwm_Dz, iwm_z0, iwm_Ax,   &
-    iwm_Ay
-real(rprec), managed, dimension(:,:), allocatable :: iwm_u_inst, iwm_v_inst,   &
-    iwm_w_inst, iwm_p_inst
-#else
 real(rprec), dimension(:,:), allocatable :: iwm_Dz, iwm_z0, iwm_Ax, iwm_Ay
 #if defined(PPSGS_GPU)
 real(rprec), dimension(:,:), allocatable :: iwm_u_inst, iwm_v_inst,            &
     iwm_w_inst, iwm_p_inst
-#endif
 #endif
 
 ! number of time steps to skip between wall stress calculations
@@ -142,38 +97,6 @@ real(rprec) :: iwm_dt
 
 contains
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function iwm_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-iwm_cuda_enabled = .true.
-
-end function iwm_cuda_enabled
-
-!*******************************************************************************
-subroutine iwm_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= cudaSuccess) then
-    print *, 'IWM CUDA sync failure at ', trim(where), ': ', istat
-    stop 1
-end if
-istat = cudaGetLastError()
-if (istat /= cudaSuccess) then
-    print *, 'IWM CUDA kernel failure at ', trim(where), ': ', istat
-    stop 1
-end if
-
-end subroutine iwm_cuda_sync
-
-#endif
 
 !*******************************************************************************
 logical function iwm_lhs_update_due()
@@ -219,21 +142,7 @@ end if
 
 ! Imposing txz, tyz, dudz, dvdz every time step even iwm_* are not computed
 ! every time step.
-#ifdef ENABLE_CUDA
-if (iwm_cuda_enabled()) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do iwm_j = 1, ny
-    do iwm_i = 1, nx
-        txz(iwm_i,iwm_j,1) = -iwm_tauwx(iwm_i,iwm_j)
-        tyz(iwm_i,iwm_j,1) = -iwm_tauwy(iwm_i,iwm_j)
-        dudz(iwm_i,iwm_j,1) = iwm_dudzT(iwm_i,iwm_j,iwm_dirx)
-        dvdz(iwm_i,iwm_j,1) = iwm_dudzT(iwm_i,iwm_j,iwm_diry)
-    end do
-    end do
-    call iwm_cuda_sync('iwm_wallstress apply')
-else
-#endif
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc parallel loop collapse(2) default(present) async(1)
 do iwm_j = 1, ny
 do iwm_i = 1, nx
@@ -258,9 +167,6 @@ do iwm_j = 1, ny
     dvdz(iwm_i,iwm_j,1) = iwm_dudzT(iwm_i,iwm_j,iwm_diry)
 end do
 end do
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 end subroutine iwm_wallstress
 
@@ -361,7 +267,7 @@ allocate(iwm_Ay(nx,ny))
 iwm_Ax = 0._rprec
 iwm_Ay = 0._rprec
 
-#if defined(ENABLE_CUDA) || (defined(PPSGS_GPU))
+#if defined(PPSGS_GPU)
 allocate(iwm_u_inst(ld,ny))
 allocate(iwm_v_inst(ld,ny))
 allocate(iwm_w_inst(ld,ny))
@@ -375,7 +281,7 @@ iwm_p_inst = 0._rprec
 ! time step seen by the iwm
 iwm_dt=iwm_ntime_skip*cfl*L_x/nx/uinit
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc enter data copyin(iwm_utx, iwm_uty, iwm_tauwx, iwm_tauwy)
 !$acc enter data copyin(iwm_flt_tagvel, iwm_flt_tagvel_m, iwm_flt_p)
 !$acc enter data copyin(iwm_inte, iwm_inte_m, iwm_unsdy, iwm_conv)
@@ -395,7 +301,7 @@ subroutine iwm_finalize
 !
 implicit none
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc exit data delete(iwm_utx, iwm_uty, iwm_tauwx, iwm_tauwy)
 !$acc exit data delete(iwm_flt_tagvel, iwm_flt_tagvel_m, iwm_flt_p)
 !$acc exit data delete(iwm_inte, iwm_inte_m, iwm_unsdy, iwm_conv)
@@ -432,7 +338,7 @@ deallocate(iwm_Dz)
 deallocate(iwm_z0)
 deallocate(iwm_Ax)
 deallocate(iwm_Ay)
-#if defined(ENABLE_CUDA) || (defined(PPSGS_GPU))
+#if defined(PPSGS_GPU)
 if (allocated(iwm_u_inst)) deallocate(iwm_u_inst)
 if (allocated(iwm_v_inst)) deallocate(iwm_v_inst)
 if (allocated(iwm_w_inst)) deallocate(iwm_w_inst)
@@ -458,7 +364,7 @@ implicit none
 ! Wrapped horizontal-neighbor indices from the grid module.
 integer, pointer, dimension(:) :: autowrap_i, autowrap_j
 integer :: iwm_i,iwm_j
-#if defined(ENABLE_CUDA) || (defined(PPSGS_GPU))
+#if defined(PPSGS_GPU)
 integer :: ip, im, jp, jm
 #endif
 ! the instantaneous field
@@ -468,7 +374,7 @@ real(rprec) :: p_bar
 ! Scratch derivatives of integrated wall-model moments such as dLu/dx, dLv/dx.
 real(rprec) :: Luux, Luvx, Luvy, Lvvy, Lux, Lvy
 real(rprec) :: phip, phim
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 real(rprec) :: iwm_dt_l
 #endif
 
@@ -476,114 +382,8 @@ nullify(autowrap_i, autowrap_j)
 autowrap_i => grid % autowrap_i
 autowrap_j => grid % autowrap_j
 
-#ifdef ENABLE_CUDA
-if (iwm_cuda_enabled()) then
-    p_bar = 0._rprec
 
-    !$cuf kernel do(2) <<<*,*>>> reduction(+:p_bar)
-    do iwm_j = 1, ny
-    do iwm_i = 1, nx
-        iwm_flt_tagvel_m(iwm_i,iwm_j,iwm_dirx) =                              &
-            iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)
-        iwm_flt_tagvel_m(iwm_i,iwm_j,iwm_diry) =                              &
-            iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)
-        iwm_u_inst(iwm_i,iwm_j) = u(iwm_i,iwm_j,1)
-        iwm_v_inst(iwm_i,iwm_j) = v(iwm_i,iwm_j,1)
-        iwm_w_inst(iwm_i,iwm_j) = w(iwm_i,iwm_j,2)*0.25_rprec
-        iwm_p_inst(iwm_i,iwm_j) = p(iwm_i,iwm_j,1)                            &
-            - 0.5_rprec*(iwm_u_inst(iwm_i,iwm_j)*iwm_u_inst(iwm_i,iwm_j)      &
-            + iwm_v_inst(iwm_i,iwm_j)*iwm_v_inst(iwm_i,iwm_j)                 &
-            + iwm_w_inst(iwm_i,iwm_j)*iwm_w_inst(iwm_i,iwm_j))
-        p_bar = p_bar + iwm_p_inst(iwm_i,iwm_j)
-    end do
-    end do
-    call iwm_cuda_sync('iwm_calc_lhs pack')
-
-    p_bar = p_bar / real(nx*ny, rprec)
-    !$cuf kernel do(2) <<<*,*>>>
-    do iwm_j = 1, ny
-    do iwm_i = 1, nx
-        iwm_p_inst(iwm_i,iwm_j) = iwm_p_inst(iwm_i,iwm_j) - p_bar
-    end do
-    end do
-    call iwm_cuda_sync('iwm_calc_lhs pressure mean')
-
-    call test_filter_3(iwm_u_inst, iwm_v_inst, iwm_w_inst)
-    call test_filter(iwm_p_inst)
-
-    !$cuf kernel do(2) <<<*,*>>>
-    do iwm_j = 1, ny
-    do iwm_i = 1, nx
-        iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx) =                                &
-            iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)                              &
-            * (1._rprec-iwm_tR(iwm_i,iwm_j))                                  &
-            + iwm_u_inst(iwm_i,iwm_j)*iwm_tR(iwm_i,iwm_j)
-        iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry) =                                &
-            iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)                              &
-            * (1._rprec-iwm_tR(iwm_i,iwm_j))                                  &
-            + iwm_v_inst(iwm_i,iwm_j)*iwm_tR(iwm_i,iwm_j)
-        iwm_flt_p(iwm_i,iwm_j) = iwm_flt_p(iwm_i,iwm_j)                       &
-            * (1._rprec-iwm_tR(iwm_i,iwm_j))                                  &
-            + iwm_p_inst(iwm_i,iwm_j)*iwm_tR(iwm_i,iwm_j)
-
-        iwm_unsdy(iwm_i,iwm_j,iwm_dirx) =                                     &
-            (iwm_inte(iwm_i,iwm_j,iwm_Lu)-iwm_inte_m(iwm_i,iwm_j,iwm_Lu))     &
-            / iwm_dt
-        iwm_unsdy(iwm_i,iwm_j,iwm_diry) =                                     &
-            (iwm_inte(iwm_i,iwm_j,iwm_Lv)-iwm_inte_m(iwm_i,iwm_j,iwm_Lv))     &
-            / iwm_dt
-
-        ip = iwm_i + 1
-        im = iwm_i - 1
-        jp = iwm_j + 1
-        jm = iwm_j - 1
-        if (ip > nx) ip = 1
-        if (im < 1) im = nx
-        if (jp > ny) jp = 1
-        if (jm < 1) jm = ny
-
-        Luux = (iwm_inte(ip,iwm_j,iwm_Luu) - iwm_inte(im,iwm_j,iwm_Luu))      &
-            / dx / 2._rprec
-        Luvy = (iwm_inte(iwm_i,jp,iwm_Luv) - iwm_inte(iwm_i,jm,iwm_Luv))      &
-            / dy / 2._rprec
-        Luvx = (iwm_inte(ip,iwm_j,iwm_Luv) - iwm_inte(im,iwm_j,iwm_Luv))      &
-            / dx / 2._rprec
-        Lvvy = (iwm_inte(iwm_i,jp,iwm_Lvv) - iwm_inte(iwm_i,jm,iwm_Lvv))      &
-            / dy / 2._rprec
-        Lux = (iwm_inte(ip,iwm_j,iwm_Lu) - iwm_inte(im,iwm_j,iwm_Lu))         &
-            / dx / 2._rprec
-        Lvy = (iwm_inte(iwm_i,jp,iwm_Lv) - iwm_inte(iwm_i,jm,iwm_Lv))         &
-            / dy / 2._rprec
-
-        iwm_conv(iwm_i,iwm_j,iwm_dirx) = Luux + Luvy                          &
-            - iwm_flt_tagvel_m(iwm_i,iwm_j,iwm_dirx)*(Lux+Lvy)
-        iwm_conv(iwm_i,iwm_j,iwm_diry) = Luvx + Lvvy                          &
-            - iwm_flt_tagvel_m(iwm_i,iwm_j,iwm_diry)*(Lux+Lvy)
-
-        iwm_PrsGrad(iwm_i,iwm_j,iwm_dirx) =                                   &
-            (iwm_flt_p(ip,iwm_j)-iwm_flt_p(im,iwm_j))/dx/2._rprec             &
-            * iwm_Dz(iwm_i,iwm_j) - iwm_Dz(iwm_i,iwm_j)
-        iwm_PrsGrad(iwm_i,iwm_j,iwm_diry) =                                   &
-            (iwm_flt_p(iwm_i,jp)-iwm_flt_p(iwm_i,jm))/dy/2._rprec             &
-            * iwm_Dz(iwm_i,iwm_j)
-
-        iwm_lhs(iwm_i,iwm_j,iwm_dirx) = -iwm_inte(iwm_i,iwm_j,iwm_Lu)         &
-            + iwm_dt*(iwm_conv(iwm_i,iwm_j,iwm_dirx)                          &
-            + iwm_PrsGrad(iwm_i,iwm_j,iwm_dirx)                               &
-            - iwm_diff(iwm_i,iwm_j,iwm_dirx))
-        iwm_lhs(iwm_i,iwm_j,iwm_diry) = -iwm_inte(iwm_i,iwm_j,iwm_Lv)         &
-            + iwm_dt*(iwm_conv(iwm_i,iwm_j,iwm_diry)                          &
-            + iwm_PrsGrad(iwm_i,iwm_j,iwm_diry)                               &
-            - iwm_diff(iwm_i,iwm_j,iwm_diry))
-    end do
-    end do
-    call iwm_cuda_sync('iwm_calc_lhs final')
-    nullify(autowrap_i, autowrap_j)
-    return
-end if
-#endif
-
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 iwm_dt_l = iwm_dt
 p_bar = 0._rprec
 
@@ -873,7 +673,7 @@ real(rprec) :: dVelzT, dVelzB, Vel
 real(rprec) :: z0_Dz, one_minus_z0_Dz, log_Dz_z0, vonk_sq
 real(rprec) :: lhsx_l, lhsy_l, Ux_l, Uy_l, Dz_l, z0_l, utx_l, uty_l
 real(rprec) :: Ax_l, Ay_l, inteLu_l, inteLv_l
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 real(rprec) :: iwm_dt_l
 #endif
 
@@ -882,243 +682,8 @@ MaxIter=1500
 iwm_tol = 0.000001_rprec
 iwm_eps = 0.000000001_rprec
 
-#ifdef ENABLE_CUDA
-if (iwm_cuda_enabled()) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do iwm_j = 1, ny
-    do iwm_i = 1, nx
-        iwm_utx(iwm_i,iwm_j) = 1._rprec                                      &
-            * sign(1._rprec,iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx))
-        iwm_uty(iwm_i,iwm_j) = 0.1_rprec                                     &
-            * sign(1._rprec,iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry))
 
-        lhsx_l = iwm_lhs(iwm_i,iwm_j,iwm_dirx)
-        lhsy_l = iwm_lhs(iwm_i,iwm_j,iwm_diry)
-        Ux_l = iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)
-        Uy_l = iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)
-        Dz_l = iwm_Dz(iwm_i,iwm_j)
-        z0_l = iwm_z0(iwm_i,iwm_j)
-        utx_l = iwm_utx(iwm_i,iwm_j)
-        uty_l = iwm_uty(iwm_i,iwm_j)
-        z0_Dz = z0_l/Dz_l
-        one_minus_z0_Dz = 1._rprec - z0_Dz
-        log_Dz_z0 = log(Dz_l/z0_l)
-        Ax_l = (Ux_l - utx_l/vonk*log_Dz_z0) / one_minus_z0_Dz
-        Ay_l = (Uy_l - uty_l/vonk*log_Dz_z0) / one_minus_z0_Dz
-        inteLu_l = 0.5_rprec*Dz_l*Ax_l*one_minus_z0_Dz*one_minus_z0_Dz       &
-            + 1._rprec/vonk*utx_l*Dz_l*(z0_Dz - 1._rprec + log_Dz_z0)
-        inteLv_l = 0.5_rprec*Dz_l*Ay_l*one_minus_z0_Dz*one_minus_z0_Dz       &
-            + 1._rprec/vonk*uty_l*Dz_l*(z0_Dz - 1._rprec + log_Dz_z0)
-        fx = inteLu_l + lhsx_l
-        fy = inteLv_l + lhsy_l
-
-        iter = 0
-        equil_flag = 0
-        div_flag = 0
-        do while (max(abs(fx),abs(fy)) > iwm_tol)
-            iwmutxP = iwm_utx(iwm_i,iwm_j) + iwm_eps
-            iwmutyP = iwm_uty(iwm_i,iwm_j)
-            utx_l = iwmutxP
-            uty_l = iwmutyP
-            Ax_l = (Ux_l - utx_l/vonk*log_Dz_z0) / one_minus_z0_Dz
-            Ay_l = (Uy_l - uty_l/vonk*log_Dz_z0) / one_minus_z0_Dz
-            inteLu_l = 0.5_rprec*Dz_l*Ax_l*one_minus_z0_Dz*one_minus_z0_Dz   &
-                + 1._rprec/vonk*utx_l*Dz_l*(z0_Dz - 1._rprec + log_Dz_z0)
-            inteLv_l = 0.5_rprec*Dz_l*Ay_l*one_minus_z0_Dz*one_minus_z0_Dz   &
-                + 1._rprec/vonk*uty_l*Dz_l*(z0_Dz - 1._rprec + log_Dz_z0)
-            fxp = inteLu_l + lhsx_l
-            fyp = inteLv_l + lhsy_l
-            a11 = (fxp-fx)/iwm_eps
-            a21 = (fyp-fy)/iwm_eps
-
-            iwmutxP = iwm_utx(iwm_i,iwm_j)
-            iwmutyP = iwm_uty(iwm_i,iwm_j) + iwm_eps
-            utx_l = iwmutxP
-            uty_l = iwmutyP
-            Ax_l = (Ux_l - utx_l/vonk*log_Dz_z0) / one_minus_z0_Dz
-            Ay_l = (Uy_l - uty_l/vonk*log_Dz_z0) / one_minus_z0_Dz
-            inteLu_l = 0.5_rprec*Dz_l*Ax_l*one_minus_z0_Dz*one_minus_z0_Dz   &
-                + 1._rprec/vonk*utx_l*Dz_l*(z0_Dz - 1._rprec + log_Dz_z0)
-            inteLv_l = 0.5_rprec*Dz_l*Ay_l*one_minus_z0_Dz*one_minus_z0_Dz   &
-                + 1._rprec/vonk*uty_l*Dz_l*(z0_Dz - 1._rprec + log_Dz_z0)
-            fxp = inteLu_l + lhsx_l
-            fyp = inteLv_l + lhsy_l
-            a12 = (fxp-fx)/iwm_eps
-            a22 = (fyp-fy)/iwm_eps
-
-            iwm_utx(iwm_i,iwm_j) = iwm_utx(iwm_i,iwm_j)                      &
-                - 0.50_rprec*(a22*fx-a12*fy)/(a11*a22-a12*a21)
-            iwm_uty(iwm_i,iwm_j) = iwm_uty(iwm_i,iwm_j)                      &
-                - 0.50_rprec*(-a21*fx+a11*fy)/(a11*a22-a12*a21)
-
-            utx_l = iwm_utx(iwm_i,iwm_j)
-            uty_l = iwm_uty(iwm_i,iwm_j)
-            Ax_l = (Ux_l - utx_l/vonk*log_Dz_z0) / one_minus_z0_Dz
-            Ay_l = (Uy_l - uty_l/vonk*log_Dz_z0) / one_minus_z0_Dz
-            inteLu_l = 0.5_rprec*Dz_l*Ax_l*one_minus_z0_Dz*one_minus_z0_Dz   &
-                + 1._rprec/vonk*utx_l*Dz_l*(z0_Dz - 1._rprec + log_Dz_z0)
-            inteLv_l = 0.5_rprec*Dz_l*Ay_l*one_minus_z0_Dz*one_minus_z0_Dz   &
-                + 1._rprec/vonk*uty_l*Dz_l*(z0_Dz - 1._rprec + log_Dz_z0)
-            fx = inteLu_l + lhsx_l
-            fy = inteLv_l + lhsy_l
-            iter = iter + 1
-            if (iter > MaxIter) then
-                equil_flag = 1
-                div_flag = 1
-                exit
-            end if
-        end do
-
-        if (iwm_utx(iwm_i,iwm_j)-1.0 == iwm_utx(iwm_i,iwm_j) .or.             &
-            iwm_uty(iwm_i,iwm_j)-1.0 == iwm_uty(iwm_i,iwm_j)) then
-            equil_flag = 1
-            div_flag = 1
-        end if
-
-        equilutx = vonk*iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)                 &
-            / log(iwm_Dz(iwm_i,iwm_j)/iwm_z0(iwm_i,iwm_j))
-        equiluty = vonk*iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)                 &
-            / log(iwm_Dz(iwm_i,iwm_j)/iwm_z0(iwm_i,iwm_j))
-        if (equil_flag == 1) then
-            iwm_utx(iwm_i,iwm_j) = equilutx
-            iwm_uty(iwm_i,iwm_j) = equiluty
-        end if
-
-        if (equil_flag == 1) then
-            iwmpAx = 0._rprec
-            iwmpAy = 0._rprec
-        else
-            iwmpAx = (iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)                   &
-                - iwm_utx(iwm_i,iwm_j)/vonk                                  &
-                * log(iwm_Dz(iwm_i,iwm_j)/iwm_z0(iwm_i,iwm_j)))              &
-                / (1._rprec-iwm_z0(iwm_i,iwm_j)/iwm_Dz(iwm_i,iwm_j))
-            iwmpAy = (iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)                   &
-                - iwm_uty(iwm_i,iwm_j)/vonk                                  &
-                * log(iwm_Dz(iwm_i,iwm_j)/iwm_z0(iwm_i,iwm_j)))              &
-                / (1._rprec-iwm_z0(iwm_i,iwm_j)/iwm_Dz(iwm_i,iwm_j))
-        end if
-
-        if (abs(iwmpAx) > 1._rprec .or. abs(iwmpAy) > 1._rprec) then
-            equil_flag = 1
-            iwm_utx(iwm_i,iwm_j) = equilutx
-            iwm_uty(iwm_i,iwm_j) = equiluty
-            iwmpAx = 0._rprec
-            iwmpAy = 0._rprec
-        end if
-
-        iwm_Ax(iwm_i,iwm_j) = iwmpAx
-        iwm_Ay(iwm_i,iwm_j) = iwmpAy
-
-        iwm_inte_m(iwm_i,iwm_j,iwm_Lu ) = iwm_inte(iwm_i,iwm_j,iwm_Lu )
-        iwm_inte_m(iwm_i,iwm_j,iwm_Lv ) = iwm_inte(iwm_i,iwm_j,iwm_Lv )
-        iwm_inte_m(iwm_i,iwm_j,iwm_Luv) = iwm_inte(iwm_i,iwm_j,iwm_Luv)
-        iwm_inte_m(iwm_i,iwm_j,iwm_Luu) = iwm_inte(iwm_i,iwm_j,iwm_Luu)
-        iwm_inte_m(iwm_i,iwm_j,iwm_Lvv) = iwm_inte(iwm_i,iwm_j,iwm_Lvv)
-
-        iwmputx = iwm_utx(iwm_i,iwm_j)
-        iwmputy = iwm_uty(iwm_i,iwm_j)
-        iwmpDz = iwm_Dz(iwm_i,iwm_j)
-        iwmpz0 = iwm_z0(iwm_i,iwm_j)
-        z0_Dz = iwmpz0/iwmpDz
-        one_minus_z0_Dz = 1._rprec - z0_Dz
-        log_Dz_z0 = log(iwmpDz/iwmpz0)
-        vonk_sq = vonk*vonk
-
-        iwm_inte(iwm_i,iwm_j,iwm_Lu) = 0.5_rprec*iwmpDz*iwmpAx               &
-            * one_minus_z0_Dz*one_minus_z0_Dz                                &
-            + 1._rprec/vonk*iwmputx*iwmpDz*(z0_Dz - 1._rprec + log_Dz_z0)
-        iwm_inte(iwm_i,iwm_j,iwm_Lv) = 0.5_rprec*iwmpDz*iwmpAy               &
-            * one_minus_z0_Dz*one_minus_z0_Dz                                &
-            + 1._rprec/vonk*iwmputy*iwmpDz*(z0_Dz - 1._rprec + log_Dz_z0)
-        iwm_inte(iwm_i,iwm_j,iwm_Luv) =                                      &
-            1._rprec/vonk_sq*iwmputx*iwmputy*iwmpDz                          &
-            * (1._rprec - 2*z0_Dz + (1._rprec - log_Dz_z0)                   &
-            * (1._rprec - log_Dz_z0))                                        &
-            + 1._rprec/3._rprec*iwmpAx*iwmpAy*iwmpDz                         &
-            * one_minus_z0_Dz*one_minus_z0_Dz*one_minus_z0_Dz                &
-            - 0.25_rprec/vonk*(iwmpAx*iwmputy + iwmpAy*iwmputx)*iwmpDz       &
-            * (1._rprec - 4._rprec*z0_Dz + 3._rprec*z0_Dz*z0_Dz              &
-            - 2._rprec*log_Dz_z0 + 4._rprec*z0_Dz*log_Dz_z0)
-        iwm_inte(iwm_i,iwm_j,iwm_Luu) =                                      &
-            1._rprec/vonk_sq*iwmputx*iwmputx*iwmpDz                          &
-            * ((log_Dz_z0 - 1._rprec)*(log_Dz_z0 - 1._rprec)                 &
-            - 2._rprec*z0_Dz + 1._rprec)                                     &
-            + 1._rprec/3._rprec*iwmpAx*iwmpAx*iwmpDz                         &
-            * one_minus_z0_Dz*one_minus_z0_Dz                                &
-            - 0.5_rprec/vonk*iwmputx*iwmpAx*iwmpDz                           &
-            * (1._rprec - 4._rprec*z0_Dz + 3._rprec*z0_Dz*z0_Dz              &
-            - 2._rprec*log_Dz_z0 + 4._rprec*z0_Dz*log_Dz_z0)
-        iwm_inte(iwm_i,iwm_j,iwm_Lvv) =                                      &
-            1._rprec/vonk_sq*iwmputy*iwmputy*iwmpDz                          &
-            * ((log_Dz_z0 - 1._rprec)*(log_Dz_z0 - 1._rprec)                 &
-            - 2._rprec*z0_Dz + 1._rprec)                                     &
-            + 1._rprec/3._rprec*iwmpAy*iwmpAy*iwmpDz                         &
-            * one_minus_z0_Dz*one_minus_z0_Dz                                &
-            - 0.5_rprec/vonk*iwmputy*iwmpAy*iwmpDz                           &
-            * (1._rprec - 4._rprec*z0_Dz - 3._rprec*z0_Dz*z0_Dz              &
-            - 2._rprec*log_Dz_z0 + 4._rprec*z0_Dz*log_Dz_z0)
-
-        iwm_dudzT(iwm_i,iwm_j,iwm_dirx) = 1.0/iwmpDz*(iwmpAx+iwmputx/vonk)
-        iwm_dudzT(iwm_i,iwm_j,iwm_diry) = 1.0/iwmpDz*(iwmpAy+iwmputy/vonk)
-        iwm_dudzB(iwm_i,iwm_j,iwm_dirx) = 1.0/iwmpDz*iwmpAx                  &
-            + iwmputx/vonk/iwmpz0
-        iwm_dudzB(iwm_i,iwm_j,iwm_diry) = 1.0/iwmpDz*iwmpAy                  &
-            + iwmputy/vonk/iwmpz0
-
-        Vel = sqrt(iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)                      &
-            * iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)                           &
-            + iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)                           &
-            * iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry))
-        dVelzT = abs(iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)/Vel                &
-            * iwm_dudzT(iwm_i,iwm_j,iwm_dirx)                                &
-            + iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)/Vel                       &
-            * iwm_dudzT(iwm_i,iwm_j,iwm_diry))
-        dVelzB = sqrt(iwm_dudzB(iwm_i,iwm_j,iwm_dirx)                        &
-            * iwm_dudzB(iwm_i,iwm_j,iwm_dirx)                                &
-            + iwm_dudzB(iwm_i,iwm_j,iwm_diry)                                &
-            * iwm_dudzB(iwm_i,iwm_j,iwm_diry))
-
-        iwm_diff(iwm_i,iwm_j,iwm_dirx) = vonk_sq*iwmpDz*iwmpDz*dVelzT        &
-            * iwm_dudzT(iwm_i,iwm_j,iwm_dirx)                                &
-            - vonk_sq*iwmpz0*iwmpz0*dVelzB*iwm_dudzB(iwm_i,iwm_j,iwm_dirx)
-        iwm_diff(iwm_i,iwm_j,iwm_diry) = vonk_sq*iwmpDz*iwmpDz*dVelzT        &
-            * iwm_dudzT(iwm_i,iwm_j,iwm_diry)                                &
-            - vonk_sq*iwmpz0*iwmpz0*dVelzB*iwm_dudzB(iwm_i,iwm_j,iwm_diry)
-
-        if (equil_flag == 1) then
-            equilWMpara = sqrt(iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)          &
-                * iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)                       &
-                + iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)                       &
-                * iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry))                      &
-                * vonk_sq/(log_Dz_z0*log_Dz_z0)
-            iwm_tauwx(iwm_i,iwm_j) = equilWMpara                             &
-                * iwm_flt_tagvel(iwm_i,iwm_j,iwm_dirx)
-            iwm_tauwy(iwm_i,iwm_j) = equilWMpara                             &
-                * iwm_flt_tagvel(iwm_i,iwm_j,iwm_diry)
-        else
-            iwm_tauwx(iwm_i,iwm_j) = vonk_sq*iwmpz0*iwmpz0*dVelzB            &
-                * iwm_dudzB(iwm_i,iwm_j,iwm_dirx)
-            iwm_tauwy(iwm_i,iwm_j) = vonk_sq*iwmpz0*iwmpz0*dVelzB            &
-                * iwm_dudzB(iwm_i,iwm_j,iwm_diry)
-        end if
-
-        utaup = sqrt(sqrt(iwm_tauwx(iwm_i,iwm_j)*iwm_tauwx(iwm_i,iwm_j)      &
-            + iwm_tauwy(iwm_i,iwm_j)*iwm_tauwy(iwm_i,iwm_j)))
-        iwm_flt_us(iwm_i,iwm_j) = iwm_flt_us(iwm_i,iwm_j)                    &
-            * (1._rprec-iwm_tR(iwm_i,iwm_j)) + utaup*iwm_tR(iwm_i,iwm_j)
-        iwm_tR(iwm_i,iwm_j) = iwm_dt/(iwm_Dz(iwm_i,iwm_j)                    &
-            / iwm_flt_us(iwm_i,iwm_j) / vonk)
-        if (iwm_tR(iwm_i,iwm_j) > 1._rprec) then
-            iwm_tR(iwm_i,iwm_j) = 1._rprec
-        end if
-    end do
-    end do
-    call iwm_cuda_sync('iwm_calc_wallstress')
-    return
-end if
-#endif
-
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 iwm_dt_l = iwm_dt
 ! The filtered friction velocity update is point-local in (i,j); keep this
 ! loop on the same async queue as the surrounding IWM kernels.
@@ -1613,7 +1178,7 @@ iwm_i = int(nx/2._rprec)
 iwm_j = int(ny/2._rprec)
 
 if( mod(jt_total,dmpPrd)==0)then
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc wait(1)
 !$acc update self(iwm_flt_tagvel(iwm_i:iwm_i,iwm_j:iwm_j,1:iwm_DN),             &
 !$acc&            iwm_utx(iwm_i:iwm_i,iwm_j:iwm_j),                            &
@@ -1648,7 +1213,7 @@ implicit none
 
 integer :: fid
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc wait(1)
 !$acc update self(iwm_utx, iwm_uty, iwm_tauwx, iwm_tauwy)
 !$acc update self(iwm_flt_tagvel, iwm_flt_tagvel_m, iwm_flt_p)
@@ -1693,7 +1258,7 @@ read(fid) iwm_utx(:,:), iwm_uty(:,:), iwm_tauwx(:,:), iwm_tauwy(:,:),          &
     iwm_z0(:,:), iwm_Ax(:,:), iwm_Ay(:,:), iwm_dt
 close(fid)
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc update device(iwm_utx, iwm_uty, iwm_tauwx, iwm_tauwy)
 !$acc update device(iwm_flt_tagvel, iwm_flt_tagvel_m, iwm_flt_p)
 !$acc update device(iwm_inte, iwm_inte_m, iwm_unsdy, iwm_conv)

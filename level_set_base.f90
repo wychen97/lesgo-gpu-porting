@@ -21,9 +21,6 @@ module level_set_base
 use types, only : rp => rprec
 use types, only : rprec
 use param, only : ld, ny, nz, dx, lbz
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 save
@@ -87,11 +84,7 @@ logical :: phi_0_is_set = .false.
 
 
 !real (rp) :: phi(ld, ny, lbz:nz)
-#ifdef ENABLE_CUDA
-real(rp), managed, allocatable, dimension(:,:,:) :: phi
-#else
 real(rp), allocatable, dimension(:,:,:) :: phi
-#endif
 
 logical :: use_trees
 

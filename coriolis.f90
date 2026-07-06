@@ -23,9 +23,6 @@ module coriolis
 ! This module contains all of the subroutines associated with scalar transport
 use types, only : rprec
 use pid_m
-    #ifdef ENABLE_CUDA
-    use cudafor
-    #endif
 implicit none
 
 save
@@ -82,37 +79,6 @@ real(rprec), dimension(:), allocatable :: t_interp, alpha_interp, G_interp
 
 contains
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function coriolis_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-coriolis_cuda_enabled = .true.
-
-end function coriolis_cuda_enabled
-
-!*******************************************************************************
-subroutine coriolis_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'coriolis CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'coriolis CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine coriolis_cuda_sync
-#endif
 
 !*******************************************************************************
 subroutine coriolis_init
@@ -218,7 +184,7 @@ real(rprec) :: ubar = 0, vbar = 0
 #ifdef PPMPI
 real(rprec) :: coriolis_reduce_send(2), coriolis_reduce_recv(2)
 #endif
-    #if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
     integer :: jx, jy, jz
     real(rprec) :: plane_inv
     #endif
@@ -238,26 +204,8 @@ real(rprec) :: coriolis_reduce_send(2), coriolis_reduce_recv(2)
             end do
             end do
     #else
-    #ifdef ENABLE_CUDA
-            if (coriolis_cuda_enabled()) then
-                ubar = 0._rprec
-                vbar = 0._rprec
-                plane_inv = 1._rprec / real(nx*ny, rprec)
-            !$cuf kernel do(2) <<<*,*>>> reduction(+:ubar, vbar)
-            do jy = 1, ny
-            do jx = 1, nx
-                ubar = ubar + (w1*u(jx,jy,k1) + w2*u(jx,jy,k2))*plane_inv
-                vbar = vbar + (w1*v(jx,jy,k1) + w2*v(jx,jy,k2))*plane_inv
-            end do
-            end do
-            call coriolis_cuda_sync('plane reduction')
-        else
-#endif
         ubar = w1*sum(u(1:nx,:,k1))/(nx*ny) + w2*sum(u(1:nx,:,k2))/(nx*ny)
         vbar = w1*sum(v(1:nx,:,k1))/(nx*ny) + w2*sum(v(1:nx,:,k2))/(nx*ny)
-    #ifdef ENABLE_CUDA
-            end if
-#endif
     #endif
     else
         ubar = 0._rprec
@@ -330,43 +278,12 @@ end if
             end do
         end if
     #else
-    #ifdef ENABLE_CUDA
-        if (coriolis_cuda_enabled()) then
-            if (coriolis_forcing == 2) then
-                !$cuf kernel do(3) <<<*,*>>>
-            do jz = 1, nz-1
-            do jy = 1, ny
-            do jx = 1, nx
-                RHSx(jx,jy,jz) = RHSx(jx,jy,jz) + fc*v(jx,jy,jz) - fc*vg      &
-                    + pid_rot_rate*v(jx,jy,jz)
-                RHSy(jx,jy,jz) = RHSy(jx,jy,jz) - fc*u(jx,jy,jz) + fc*ug      &
-                    - pid_rot_rate*u(jx,jy,jz)
-            end do
-            end do
-            end do
-        else
-            !$cuf kernel do(3) <<<*,*>>>
-            do jz = 1, nz-1
-            do jy = 1, ny
-            do jx = 1, nx
-                RHSx(jx,jy,jz) = RHSx(jx,jy,jz) + fc*v(jx,jy,jz) - fc*vg
-                RHSy(jx,jy,jz) = RHSy(jx,jy,jz) - fc*u(jx,jy,jz) + fc*ug
-            end do
-            end do
-            end do
-        end if
-        call coriolis_cuda_sync('forcing apply')
-    else
-#endif
     RHSx(:,:,1:nz-1) = RHSx(:,:,1:nz-1) + fc * v(:,:,1:nz-1) - fc * vg
     RHSy(:,:,1:nz-1) = RHSy(:,:,1:nz-1) - fc * u(:,:,1:nz-1) + fc * ug
     if (coriolis_forcing == 2) then
         RHSx(:,:,1:nz-1) = RHSx(:,:,1:nz-1) + pid_rot_rate * v(:,:,1:nz-1)
         RHSy(:,:,1:nz-1) = RHSy(:,:,1:nz-1) - pid_rot_rate * u(:,:,1:nz-1)
     end if
-#ifdef ENABLE_CUDA
-    end if
-#endif
     #endif
 
 end if

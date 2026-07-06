@@ -37,17 +37,9 @@ public :: initialize_cps, synchronize_cps, inflow_cps
 character(*), parameter :: mod_name = 'concurrent_precursor'
 
 type vel_sample_type
-    #ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: u, v, w
-    #else
     real(rprec), allocatable, dimension(:,:,:) :: u, v, w
-    #endif
 #ifdef PPSCALARS
-    #ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: theta
-    #else
     real(rprec), allocatable, dimension(:,:,:) :: theta
-    #endif
 #endif
 end type vel_sample_type
 
@@ -170,16 +162,6 @@ write(*,'(1a,E15.7)') '  cps total: ', cps_time_sync + cps_time_inflow
 
 end subroutine cps_stage_report
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function cps_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-cps_cuda_enabled = .true.
-
-end function cps_cuda_enabled
-#endif
 
     !*******************************************************************************
 subroutine initialize_cps()
@@ -216,7 +198,7 @@ allocate(vel_sample_t%theta(cps_fringe%nx, ny, nz))
 
 #ifdef PPLES_GPU
 ! Active LES GPU builds use OpenACC explicit residency rather than the older
-! ENABLE_CUDA managed-memory branch.  Keep CPS sample buffers and fringe
+! Legacy managed-memory branch removed; keep CPS sample buffers and fringe
 ! metadata resident so sampling, MPI exchange, and fringe application do not
 ! force velocity host round-trips.
 allocate(cps_iwrap_acc(cps_fringe%nx))
@@ -536,28 +518,6 @@ end if
 return
 #endif
 
-#ifdef ENABLE_CUDA
-    if (cps_cuda_enabled()) then
-        !$cuf kernel do(3) <<<*,*>>>
-        do k = 1, nz
-        do j = 1, ny
-        do i = 1, cps_fringe%nx
-            i_w = cps_fringe%iwrap(i)
-            u(i_w,j,k) = cps_fringe%alpha(i) * u(i_w,j,k)                         &
-                + cps_fringe%beta(i) * vel_sample_t%u(i,j,k)
-            v(i_w,j,k) = cps_fringe%alpha(i) * v(i_w,j,k)                         &
-                + cps_fringe%beta(i) * vel_sample_t%v(i,j,k)
-            w(i_w,j,k) = cps_fringe%alpha(i) * w(i_w,j,k)                         &
-                + cps_fringe%beta(i) * vel_sample_t%w(i,j,k)
-#ifdef PPSCALARS
-            theta(i_w,j,k) = cps_fringe%alpha(i) * theta(i_w,j,k)                 &
-                + cps_fringe%beta(i) * vel_sample_t%theta(i,j,k)
-#endif
-        end do
-        end do
-        end do
-    else
-#endif
     do i = 1, cps_fringe%nx
         i_w = cps_fringe%iwrap(i)
         u(i_w,1:ny,1:nz) = cps_fringe%alpha(i) * u(i_w,1:ny,1:nz)                  &
@@ -571,9 +531,6 @@ return
             + cps_fringe%beta(i) * theta_p(i,1:ny,1:nz)
 #endif
     end do
-#ifdef ENABLE_CUDA
-    endif
-#endif
 
 nullify(u_p, v_p, w_p)
 #ifdef PPSCALARS

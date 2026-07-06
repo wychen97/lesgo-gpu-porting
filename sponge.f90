@@ -22,9 +22,6 @@ module sponge
 !*******************************************************************************
 ! This module contains all of the subroutines associated with scalar transport
 use types, only : rprec
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 private
@@ -34,48 +31,13 @@ public :: sponge_init, sponge_force
 logical, public :: use_sponge = .false.
 real(rprec), public :: sponge_frequency = 3.9_rprec
 real(rprec), public :: sponge_height = 0.75_rprec
-#ifdef ENABLE_CUDA
-real (rprec), managed, dimension (:), allocatable :: sp
-#else
 real (rprec), dimension (:), allocatable :: sp
-#endif
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 !$acc declare create(sp)
 #endif
 
 contains
 
-#ifdef ENABLE_CUDA
-!******************************************************************************
-logical function sponge_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-sponge_cuda_enabled = .true.
-
-end function sponge_cuda_enabled
-
-!******************************************************************************
-subroutine sponge_cuda_sync(where)
-!******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'sponge CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'sponge CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine sponge_cuda_sync
-#endif
 
 !******************************************************************************
 subroutine sponge_init()
@@ -95,7 +57,7 @@ do k = lbz, nz
     end if
 end do
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 !$acc update device(sp)
 #endif
 
@@ -109,13 +71,13 @@ use param, only : nx, ny, nz
 use sim_param, only :  RHSx, RHSy, RHSz, u, v, w
 
 integer :: k
-#if defined(ENABLE_CUDA) || (defined(PPLES_GPU) && !defined(ENABLE_CUDA))
+#if defined(PPLES_GPU)
 integer :: jx, jy
 real(rprec) :: usum, vsum, wsum, umean, vmean, wmean, scale_uv, scale_w
 #endif
 
 if (use_sponge) then
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
     ! Direct OpenACC sponge path: wait for queued RHS/velocity work, then
     ! compute plane means and apply sponge forcing on the device.
     !$acc wait(1)
@@ -153,45 +115,6 @@ if (use_sponge) then
         end do
     end do
     return
-#endif
-#ifdef ENABLE_CUDA
-    if (sponge_cuda_enabled()) then
-        do k = 1, nz-1
-            usum = 0._rprec
-            vsum = 0._rprec
-            wsum = 0._rprec
-
-            !$cuf kernel do(2) <<<*,*>>> reduction(+:usum, vsum, wsum)
-            do jy = 1, ny
-            do jx = 1, nx
-                usum = usum + u(jx,jy,k)
-                vsum = vsum + v(jx,jy,k)
-                wsum = wsum + w(jx,jy,k)
-            end do
-            end do
-            call sponge_cuda_sync('plane means')
-
-            umean = usum / real(nx*ny, rprec)
-            vmean = vsum / real(nx*ny, rprec)
-            wmean = wsum / real(nx*ny, rprec)
-            scale_uv = 0.5_rprec*(sp(k) + sp(k+1))
-            scale_w = sp(k)
-
-            !$cuf kernel do(2) <<<*,*>>>
-            do jy = 1, ny
-            do jx = 1, nx
-                RHSx(jx,jy,k) = RHSx(jx,jy,k) - scale_uv                      &
-                    * (u(jx,jy,k) - umean)
-                RHSy(jx,jy,k) = RHSy(jx,jy,k) - scale_uv                      &
-                    * (v(jx,jy,k) - vmean)
-                RHSz(jx,jy,k) = RHSz(jx,jy,k) - scale_w                       &
-                    * (w(jx,jy,k) - wmean)
-            end do
-            end do
-            call sponge_cuda_sync('forcing apply')
-        end do
-        return
-    end if
 #endif
     do k = 1, nz-1
         RHSx(1:nx,1:ny,k) = RHSx(1:nx,1:ny,k) - 0.5_rprec*(sp(k) + sp(k+1))    &

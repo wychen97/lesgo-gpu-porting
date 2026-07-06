@@ -31,7 +31,6 @@ GPU_MARKERS = [
     "PPSGS_GPU",
     "PPSCALARS_GPU",
     "PPGPU_AWARE_MPI",
-    "ENABLE_CUDA",
     "cuda",
     "cufft",
 ]
@@ -308,13 +307,26 @@ def review_bucket(item: Subprogram) -> str:
         return "iwm-wallmodel-profile"
 
     if filename in {
+        "convec.f90",
+        "derivatives.f90",
+        "divstress_uv.f90",
+        "divstress_w.f90",
         "emul_complex.f90",
         "fft.f90",
         "hit_inflow.f90",
+        "interpolag_Sdep.f90",
+        "interpolag_Ssim.f90",
+        "lagrange_Sdep.f90",
+        "lagrange_Ssim.f90",
         "mpi_transpose_mod.f90",
+        "scaledep_dynamic.f90",
+        "std_dynamic.f90",
         "tridag_array.f90",
     }:
         return "cpu-fallback-compat"
+
+    if filename == "test_filtermodule.f90":
+        return "diagnostic-profiling"
 
     return "needs-manual-review"
 

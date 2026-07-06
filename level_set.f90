@@ -26,9 +26,6 @@ use param, only : ld, nx, ny, nz, dx, dy, dz, iBOGUS, BOGUS, path, L_x, L_y,   &
 use param, only : status
 use mpi
 #endif
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 use test_filtermodule, only : filter_size
 use messages
 
@@ -93,16 +90,6 @@ real (rp) :: phi_0
 
 
 !--these are the extra overlap arrays required for BC with MPI
-#ifdef ENABLE_CUDA
-real (rp), managed, allocatable, dimension(:,:,:) :: phitop
-real (rp), managed, allocatable, dimension(:,:,:) :: phibot
-real (rp), managed, allocatable, dimension(:,:,:) :: utop, vtop, wtop
-real (rp), managed, allocatable, dimension(:,:,:) :: ubot, vbot, wbot
-real (rp), managed, allocatable, dimension(:,:,:) :: txxtop, txytop, txztop,  &
-                                            tyytop, tyztop, tzztop
-real (rp), managed, allocatable, dimension(:,:,:) :: txxbot, txybot, txzbot,  &
-                                            tyybot, tyzbot, tzzbot
-#else
 real (rp), allocatable, dimension(:,:,:) :: phitop
 real (rp), allocatable, dimension(:,:,:) :: phibot
 real (rp), allocatable, dimension(:,:,:) :: utop, vtop, wtop
@@ -111,62 +98,20 @@ real (rp), allocatable, dimension(:,:,:) :: txxtop, txytop, txztop,  &
                                             tyytop, tyztop, tzztop
 real (rp), allocatable, dimension(:,:,:) :: txxbot, txybot, txzbot,  &
                                             tyybot, tyzbot, tzzbot
-#endif
 !--really only needed for Lagrangian SGS models
-#ifdef ENABLE_CUDA
-real (rp), managed, allocatable, dimension (:,:,:) :: FMMbot
-real (rp), managed, allocatable, dimension (:,:,:) :: FMMtop
-
-real (rp), managed, allocatable, dimension(:,:,:,:) :: norm !--normal vector
-#else
 real (rp), allocatable, dimension (:,:,:) :: FMMbot
 real (rp), allocatable, dimension (:,:,:) :: FMMtop
 
 real (rp), allocatable, dimension(:,:,:,:) :: norm !--normal vector
-#endif
                                                  !--may want to change so only normals
                                                  !  near 0-set are stored
 !--experimental: desired velocities for IB method
-#ifdef ENABLE_CUDA
-real (rp), managed, allocatable, dimension(:,:,:) :: udes, vdes, wdes
-#else
 real (rp), allocatable, dimension(:,:,:) :: udes, vdes, wdes
-#endif
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 contains
 
-#ifdef ENABLE_CUDA
-!**********************************************************************
-logical function level_set_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-level_set_cuda_enabled = .true.
-
-end function level_set_cuda_enabled
-
-!**********************************************************************
-subroutine level_set_cuda_sync(where)
-!**********************************************************************
-implicit none
-
-character(*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-  print *, trim(where), ' CUDA sync failure: ', istat
-  stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-  print *, trim(where), ' CUDA kernel failure: ', istat
-  stop
-end if
-end subroutine level_set_cuda_sync
-#endif
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine level_set_init ()
@@ -454,27 +399,6 @@ real (rp) :: phix
 
 !---------------------------------------------------------------------
 
-#ifdef ENABLE_CUDA
-if (level_set_cuda_enabled()) then
-  !$cuf kernel do(3) <<<*,*>>>
-  do k = 1, nz
-    do j = 1, ny
-      do i = 1, nx
-        if ((coord == 0) .and. (k == 1)) then
-          phix = phi(i, j, k)
-        else
-          phix = 0.5_rp * (phi(i, j, k) + phi(i, j, k - 1))
-        end if
-
-        if (phix < 0._rp) Cs_opt2(i, j, k) = eps
-      end do
-    end do
-  end do
-
-  call level_set_cuda_sync(sub_name)
-  return
-end if
-#endif
 
 do k = 1, nz
 
@@ -568,36 +492,6 @@ real (rp) :: z
 
 delta = filter_size * (dx * dy * dz)**(1._rp / 3._rp)
 
-#ifdef ENABLE_CUDA
-if (level_set_cuda_enabled()) then
-  !$cuf kernel do(3) <<<*,*>>>
-  do k = 1, nz
-    do j = 1, ny
-      do i = 1, nx
-        if ((coord == 0) .and. (k == 1)) then
-          phix = phi(i, j, k)
-        else
-          phix = 0.5_rp * (phi(i, j, k) + phi(i, j, k - 1))
-        end if
-
-        if (phix > 0._rp) then
-          if (lbc_mom == 0) then
-            dmin = phix
-          else
-            z = (k - 1) * dz
-            dmin = min (z, phix)
-          end if
-
-          beta(i, j, k) = 1._rp - c1 * exp (-c2 * dmin / delta)
-        end if
-      end do
-    end do
-  end do
-
-  call level_set_cuda_sync(sub_name)
-  return
-end if
-#endif
 
 do k = 1, nz
 
@@ -765,26 +659,6 @@ real (rp) :: phi_F_LM
 !phi_F_LM = 0._rp
 phi_F_LM = filter_size * dx  !--experimental
 
-#ifdef ENABLE_CUDA
-if (level_set_cuda_enabled()) then
-  !$cuf kernel do(3) <<<*,*>>>
-  do k = 1, nz - 1
-    do j = 1, ny
-      do i = 1, nx
-        if ((coord == 0) .and. (k == 1)) then
-          phix = phi(i, j, k)
-        else
-          phix = 0.5_rp * (phi(i, j, k) + phi(i, j, k - 1))
-        end if
-
-        if (phix < phi_F_LM) F_LM(i, j, k) = 0._rp
-      end do
-    end do
-  end do
-
-  call level_set_cuda_sync(sub_name)
-else
-#endif
 do k = 1, nz - 1
 
   if ( (coord == 0) .and. (k == 1) ) then
@@ -805,9 +679,6 @@ do k = 1, nz - 1
   end do
 
 end do
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 #ifdef PPMPI
   !--make F_LM valid at 1:nz (as in core code) by syncing nz to 1'
@@ -3192,35 +3063,6 @@ integer :: i, j, k
 if (modulo (jt_total, global_CA_nskip) /= 0) return  !--do nothing
 fCA_out = path // 'output/global_CA.dat'
 
-#ifdef ENABLE_CUDA
-if (level_set_cuda_enabled()) then
-  f_Cx = 0._rp
-  f_Cy = 0._rp
-  f_Cz = 0._rp
-  Uinf = 0._rp
-
-  !$cuf kernel do(3) <<<*,*>>> reduction(+:f_Cx,f_Cy,f_Cz)
-  do k = 1, nz - 1
-    do j = 1, ny
-      do i = 1, nx
-        f_Cx = f_Cx - fx(i, j, k) * dx * dy * dz
-        f_Cy = f_Cy - fy(i, j, k) * dx * dy * dz
-        f_Cz = f_Cz - fz(i, j, k) * dx * dy * dz
-      end do
-    end do
-  end do
-
-  !$cuf kernel do(2) <<<*,*>>> reduction(+:Uinf)
-  do k = 1, nz - 1
-    do j = 1, ny
-      Uinf = Uinf + u(1, j, k)
-    end do
-  end do
-  Uinf = Uinf / (ny * (nz - 1))
-
-  call level_set_cuda_sync(sub_name)
-else
-#endif
 f_Cx = -sum (fx(1:nx, :, 1:nz-1)) * dx * dy * dz
      !--(-) since want force ON object
      !--dx*dy*dz is since force is per cell (unit volume)
@@ -3231,9 +3073,6 @@ f_Cy = -sum (fy(1:nx, :, 1:nz-1)) * dx * dy * dz
 f_Cz = -sum (fz(1:nx, :, 1:nz-1)) * dx * dy * dz
 
 Uinf = sum (u(1, :, 1:nz-1)) / (ny * (nz - 1))  !--measure at inflow plane
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 #ifdef PPMPI
 
@@ -4426,9 +4265,6 @@ integer :: i, j, k
 integer :: k_min
 
 real (rp) :: Rx, Ry, Rz
-#ifdef ENABLE_CUDA
-logical :: top_rank_l
-#endif
 
 !---------------------------------------------------------------------
 
@@ -4439,99 +4275,6 @@ if (vel_BC) then
   if (use_log_profile) call enforce_log_profile ()
 end if
 
-#ifdef ENABLE_CUDA
-if (level_set_cuda_enabled()) then
-
-  if (coord == 0) then
-    k = 1
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-      do i = 1, nx
-        if (phi(i, j, k) <= 0._rp) then
-          Rx = -tadv1 * dpdx(i, j, k)
-          Ry = -tadv1 * dpdy(i, j, k)
-          fx(i, j, k) = (-u(i, j, k) / dt - Rx)
-          fy(i, j, k) = (-v(i, j, k) / dt - Ry)
-        else if (vel_BC) then
-          Rx = -tadv1 * dpdx(i, j, k)
-          Ry = -tadv1 * dpdy(i, j, k)
-
-          if (udes(i, j, k) < huge (1._rp) / 2) then
-            fx(i, j, k) = ((udes(i, j, k) - u(i, j, k)) / dt - Rx)
-          end if
-
-          if (vdes(i, j, k) < huge (1._rp) / 2) then
-            fy(i, j, k) = ((vdes(i, j, k) - v(i, j, k)) / dt - Ry)
-          end if
-        end if
-      end do
-    end do
-
-    k_min = 2
-  else
-    k_min = 1
-  end if
-
-  if (k_min <= nz - 1) then
-    !$cuf kernel do(3) <<<*,*>>>
-    do k = k_min, nz - 1
-      do j = 1, ny
-        do i = 1, nx
-          if (phi(i, j, k) <= 0._rp) then
-            Rx = -tadv1 * dpdx(i, j, k)
-            Ry = -tadv1 * dpdy(i, j, k)
-            fx(i, j, k) = (-u(i, j, k) / dt - Rx)
-            fy(i, j, k) = (-v(i, j, k) / dt - Ry)
-          else if (vel_BC) then
-            Rx = -tadv1 * dpdx(i, j, k)
-            Ry = -tadv1 * dpdy(i, j, k)
-
-            if (udes(i, j, k) < huge (1._rp) / 2) then
-              fx(i, j, k) = ((udes(i, j, k) - u(i, j, k)) / dt - Rx)
-            end if
-
-            if (vdes(i, j, k) < huge (1._rp) / 2) then
-              fy(i, j, k) = ((vdes(i, j, k) - v(i, j, k)) / dt - Ry)
-            end if
-          end if
-
-          if (phi(i, j, k) + phi(i, j, k - 1) <= 0._rp) then
-            Rz = -tadv1 * dpdz(i, j, k)
-            fz(i, j, k) = (-w(i, j, k) / dt - Rz)
-          else if (vel_BC) then
-            Rz = -tadv1 * dpdz(i, j, k)
-
-            if (wdes(i, j, k) < huge (1._rp) / 2._rp) then
-              fz(i, j, k) = ((wdes(i, j, k) - w(i, j, k)) / dt - Rz)
-            end if
-          end if
-        end do
-      end do
-    end do
-  end if
-
-#ifdef PPMPI
-  top_rank_l = (coord == nproc - 1)
-#else
-  top_rank_l = .true.
-#endif
-  !$cuf kernel do(2) <<<*,*>>>
-  do j = 1, ny
-    do i = 1, nx
-      fx(i, j, nz) = BOGUS
-      fy(i, j, nz) = BOGUS
-      if (top_rank_l) then
-        fz(i, j, nz) = 0._rp
-      else
-        fz(i, j, nz) = BOGUS
-      end if
-    end do
-  end do
-
-  call level_set_cuda_sync(sub_name)
-  return
-end if
-#endif
 
 if (coord == 0) then
 

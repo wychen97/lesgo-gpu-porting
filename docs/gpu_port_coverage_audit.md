@@ -109,13 +109,13 @@ Current result:
 
 | Classification | Subprograms |
 | --- | ---: |
-| `gpu-marked` | 330 |
-| `gpu-file-unmarked` | 1 |
-| `host-boundary` | 99 |
-| `host-or-diagnostic` | 52 |
-| `unmarked-runtime-candidate` | 91 |
+| `gpu-marked` | 147 |
+| `gpu-file-unmarked` | 2 |
+| `host-boundary` | 102 |
+| `host-or-diagnostic` | 41 |
+| `unmarked-runtime-candidate` | 107 |
 
-The 91 unmarked runtime candidates now have review buckets from
+The 107 unmarked runtime candidates now have review buckets from
 `tools/report_gpu_static_inventory.py --review`:
 
 For the generated full function-level table, see
@@ -123,19 +123,19 @@ For the generated full function-level table, see
 
 | Review bucket | Candidates | Meaning |
 | --- | ---: | --- |
-| `atm-host-model` | 30 | ATM blade, controller, structure, and small math helpers that remain host-side in the current hybrid design. |
+| `adm-cpu-fallback-profile` | 5 | ADM/turbine CPU fallback or compatibility routines; profile before treating them as missing GPU work. |
+| `atm-host-model` | 35 | ATM blade, controller, structure, and small math helpers that remain host-side in the current hybrid design. |
 | `atm-mirror-lb-control` | 11 | ATM mirror, synchronization, cell-search, and load-balance control helpers around the GPU sampling/forcing path. |
+| `cpu-fallback-compat` | 27 | CPU fallback or host compatibility routines retained beside GPU production paths. |
+| `diagnostic-profiling` | 8 | Profiling, timing, or audit helpers; not GPU hot-path kernels. |
+| `excluded-lvlset-bridge` | 1 | LVLSET bridge code excluded from the current non-LVLSET scope. |
 | `generic-helper-profile` | 10 | Generic interpolation/math helpers that may be CPU fallback or low-cost support code. |
-| `cpu-fallback-compat` | 10 | CPU fallback or host compatibility routines retained beside GPU production paths. |
-| `scalar-init-fallback` | 8 | Scalar initialization, stability helper, or CPU fallback routines. Passive and active scalar cases still need direct validation. |
-| `adm-cpu-fallback-profile` | 4 | ADM/turbine CPU fallback or compatibility routines. Profile before treating them as missing GPU work. |
 | `inflow-fringe-profile` | 2 | Inflow/fringe helpers that need targeted runtime validation for nonstandard inflow configurations. |
 | `iwm-wallmodel-profile` | 1 | IWM wall-model candidate that needs an IWM-heavy correctness and timing case before broad speed claims. |
-| `diagnostic-profiling` | 14 | Profiling, timing, or audit helpers; not GPU hot-path kernels. |
-| `excluded-lvlset-bridge` | 1 | LVLSET bridge code excluded from the current non-LVLSET scope. |
+| `scalar-init-fallback` | 7 | Scalar initialization, stability helper, or CPU fallback routines; validate passive and active scalar cases separately. |
 
 The important distinction is that this list is no longer interpreted as
-91 missing GPU kernels.  It is a review queue: most entries are host/control
+107 missing GPU kernels.  It is a review queue: most entries are host/control
 work, CPU fallback compatibility, diagnostics, or targeted benchmark gaps.
 
 Each bucket is tied to one or more validation rows so the static review remains

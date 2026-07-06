@@ -174,7 +174,7 @@ allocate(fza_uv(nx,ny,lbz:nz))
 allocate(pres_real(nx,ny,lbz:nz))
 allocate(vortx(nx,ny,lbz:nz), vorty(nx,ny,lbz:nz), vortz(nx,ny,lbz:nz))
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! Keep running sums resident for the explicit-residency GPU path. Multi-rank
 ! time averaging keeps the existing host path until halo-aware validation is
 ! added.
@@ -224,7 +224,7 @@ real(rprec) :: wuv_l, uw_l, vw_l, pres_l
 real(rprec) :: vortx_l, vorty_l, vortz_l, tmp_cur, tmp_prev
 real(rprec) :: fzuv_l
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA) && !defined(PPCGNS)
+#if defined(PPLES_GPU) && !defined(PPCGNS)
 ! The fused GPU accumulation matches the host interpolation formulas for both
 ! single-rank and z-decomposed MPI cases.  Non-owned overlap planes are still
 ! synchronized during finalize before output, matching the legacy host path.
@@ -799,7 +799,7 @@ close(13)
 call mpi_barrier( comm, ierr )
 #endif
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! Finalize is the last use of the time-average device state.
 !$acc exit data delete(this%u, this%v, this%w, this%u_w, this%v_w, this%w_uv)
 !$acc exit data delete(this%u2, this%v2, this%w2, this%uv, this%uw, this%vw)
@@ -832,7 +832,7 @@ fname = checkpoint_tavg_file
 call string_concat( fname, '.c', coord)
 #endif
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! Host-side checkpoint/finalize output is an I/O boundary.
 !$acc wait(1)
 !$acc update self(this%u, this%v, this%w, this%u_w, this%v_w, this%w_uv)

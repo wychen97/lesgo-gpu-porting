@@ -28,22 +28,6 @@ public
 
 logical :: sim_param_initialized = .false.
 
-#if defined(ENABLE_CUDA) && !defined(PPLES_GPU)
-  ! CUDA managed-memory path: arrays are declared managed for NVHPC/CUDA builds.
-  real(rprec), managed, allocatable, dimension(:,:,:) :: u, v, w
-  real(rprec), managed, allocatable, dimension(:,:,:) :: dudx, dudy, dudz
-  real(rprec), managed, allocatable, dimension(:,:,:) :: dvdx, dvdy, dvdz
-  real(rprec), managed, allocatable, dimension(:,:,:) :: dwdx, dwdy, dwdz
-  real(rprec), managed, allocatable, dimension(:,:,:) :: RHSx, RHSy, RHSz
-  real(rprec), managed, allocatable, dimension(:,:,:) :: RHSx_f, RHSy_f, RHSz_f
-  real(rprec), managed, allocatable, dimension(:,:,:) :: dpdx, dpdy, dpdz
-  real(rprec), managed, allocatable, dimension(:,:,:) :: txx, txy, tyy, txz, tyz, tzz
-  real(rprec), managed, allocatable, dimension(:,:,:) :: divtx, divty, divtz
-  real(rprec), managed, allocatable, dimension(:,:,:) :: fx, fy, fz, fxa, fya, fza
-
-  real(rprec), managed, allocatable, target, dimension(:,:,:) :: p
-  real(rprec), managed, allocatable, dimension(:,:) :: ustar_lbc
-#else
   ! CPU and explicit-residency GPU builds use ordinary host allocatables.
   real(rprec), allocatable, dimension(:,:,:) :: u, v, w
   real(rprec), allocatable, dimension(:,:,:) :: dudx, dudy, dudz
@@ -58,7 +42,6 @@ logical :: sim_param_initialized = .false.
 
   real(rprec), allocatable, target, dimension(:,:,:) :: p
   real(rprec), allocatable, dimension(:,:) :: ustar_lbc
-#endif
 
 #ifdef PPLES_GPU
 ! Experimental explicit-residency LES route. These arrays are ordinary host

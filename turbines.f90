@@ -51,7 +51,7 @@ save
 private
 
 public :: turbines_init, turbines_forcing, turbine_vel_init, turbines_finalize, &
-    turbines_acc_available, turbines_forcing_acc
+    turbines_checkpoint, turbines_acc_available, turbines_forcing_acc
 
 character (*), parameter :: mod_name = 'turbines'
 
@@ -1018,11 +1018,7 @@ integer :: fid
 real(rprec) :: ind2
 real(rprec), dimension(nloc) :: disk_avg_vel
 real(rprec), dimension(nloc) :: u_vel_center, v_vel_center, w_vel_center
-#ifdef ENABLE_CUDA
-real(rprec), managed, allocatable, dimension(:,:,:) :: w_uv
-#else
 real(rprec), allocatable, dimension(:,:,:) :: w_uv
-#endif
 real(rprec), pointer, dimension(:) :: y, z
 real(rprec), dimension(nloc) :: buffer_array
 
@@ -1037,22 +1033,7 @@ allocate(w_uv(ld,ny,lbz:nz))
 call mpi_sync_real_array(w, 0, MPI_SYNC_DOWNUP)
 #endif
 
-#ifdef ENABLE_CUDA
-if (turbines_cuda_enabled()) then
-    call turbines_interp_w_to_uv_gpu(w, w_uv)
-#ifdef PPMPI
-    if( lbz == 0 ) then
-        call mpi_sync_real_array(w_uv, lbz, MPI_SYNC_DOWNUP)
-    elseif( lbz == 1 ) then
-        call mpi_sync_real_array(w_uv, lbz, MPI_SYNC_DOWN)
-    endif
-#endif
-else
-#endif
 w_uv = interp_to_uv_grid(w, lbz)
-#ifdef ENABLE_CUDA
-endif
-#endif
 
 ! Do interpolation for dynamically changing parameters
 do s = 1, nloc

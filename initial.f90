@@ -42,9 +42,6 @@ use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWNUP
 #ifdef PPSCALARS
 use scalars, only : ic_scal, theta
 #endif
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 
 implicit none
 
@@ -186,71 +183,9 @@ if (coord == 0) then
 end if
 #endif
 
-#ifdef ENABLE_CUDA
-call initial_cuda_touch_velocity()
-#endif
 
 contains
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function initial_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-initial_cuda_enabled = .true.
-
-end function initial_cuda_enabled
-
-!*******************************************************************************
-subroutine initial_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= cudaSuccess) then
-    print *, 'initial CUDA sync failure at ', trim(where), ': ', istat
-    stop 1
-end if
-istat = cudaGetLastError()
-if (istat /= cudaSuccess) then
-    print *, 'initial CUDA kernel failure at ', trim(where), ': ', istat
-    stop 1
-end if
-
-end subroutine initial_cuda_sync
-
-!*******************************************************************************
-subroutine initial_cuda_touch_velocity()
-!*******************************************************************************
-implicit none
-
-integer :: jx, jy, jz
-integer :: zlo, zhi
-
-if (.not. initial_cuda_enabled()) return
-
-zlo = lbound(u,3)
-zhi = ubound(u,3)
-
-!$cuf kernel do(3) <<<*,*>>>
-do jz = zlo, zhi
-    do jy = 1, ny
-        do jx = 1, nx
-            u(jx,jy,jz) = u(jx,jy,jz)
-            v(jx,jy,jz) = v(jx,jy,jz)
-            w(jx,jy,jz) = w(jx,jy,jz)
-        end do
-    end do
-end do
-
-call initial_cuda_sync('velocity touch')
-
-end subroutine initial_cuda_touch_velocity
-#endif
 
 !*******************************************************************************
 subroutine ic_uniform()
@@ -258,29 +193,6 @@ subroutine ic_uniform()
 ! This subroutine creates a uniform initial condition without turbulence.
 !
 implicit none
-#ifdef ENABLE_CUDA
-integer :: jx, jy, jz
-integer :: zlo, zhi
-
-if (initial_cuda_enabled()) then
-    zlo = lbound(u,3)
-    zhi = ubound(u,3)
-
-    !$cuf kernel do(3) <<<*,*>>>
-    do jz = zlo, zhi
-        do jy = 1, ny
-            do jx = 1, nx
-                u(jx,jy,jz) = inflow_velocity
-                v(jx,jy,jz) = 0._rprec
-                w(jx,jy,jz) = 0._rprec
-            end do
-        end do
-    end do
-
-    call initial_cuda_sync('uniform initial condition')
-    return
-end if
-#endif
 
 u = inflow_velocity
 v = 0._rprec

@@ -21,9 +21,6 @@
 module mpi_defs
 !*******************************************************************************
 use mpi
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 save
@@ -44,11 +41,6 @@ character (*), parameter :: mod_name = 'mpi_defs'
 integer, parameter :: MPI_SYNC_DOWN=1
 integer, parameter :: MPI_SYNC_UP=2
 integer, parameter :: MPI_SYNC_DOWNUP=3
-#ifdef ENABLE_CUDA
-integer, public :: cuda_local_rank = 0
-integer, public :: cuda_local_size = 1
-integer, public :: cuda_bound_device = 0
-#endif
 
 #ifdef PPCGNS
 integer, public :: cgnsParallelComm
@@ -137,66 +129,12 @@ cgnsParallelComm = localComm
 call cgp_mpi_comm_f(cgnsParallelComm, ierr)
     #endif
 
-#ifdef ENABLE_CUDA
-    call bind_cuda_device()
-#endif
 
 call cuda_mpi_debug_init('mpi_defs.initialize_mpi', nproc, rank, coord, up,    &
     down, -1)
 
 end subroutine initialize_mpi
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-subroutine bind_cuda_device()
-!*******************************************************************************
-use param, only : global_rank, ierr
-implicit none
-
-integer :: node_comm
-integer :: ndev, istat, last
-integer :: bind_device
-character(32) :: env
-integer :: env_stat, env_len
-logical :: verbose
-
-call mpi_comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &
-    node_comm, ierr)
-call mpi_comm_rank(node_comm, cuda_local_rank, ierr)
-call mpi_comm_size(node_comm, cuda_local_size, ierr)
-call mpi_comm_free(node_comm, ierr)
-
-ndev = 0
-istat = cudaGetDeviceCount(ndev)
-last = cudaGetLastError()
-if (istat /= 0 .or. ndev <= 0) then
-    write(*,*) 'CUDA bind failed: cudaGetDeviceCount status=', istat,           &
-        ' last=', last, ' count=', ndev, ' global_rank=', global_rank
-    stop
-end if
-
-bind_device = mod(cuda_local_rank, ndev)
-istat = cudaSetDevice(bind_device)
-last = cudaGetLastError()
-if (istat /= 0 .or. last /= 0) then
-    write(*,*) 'CUDA bind failed: cudaSetDevice device=', bind_device,          &
-        ' status=', istat, ' last=', last, ' global_rank=', global_rank,        &
-        ' local_rank=', cuda_local_rank, ' local_size=', cuda_local_size,       &
-        ' visible_devices=', ndev
-    stop
-end if
-
-cuda_bound_device = bind_device
-
-verbose = .false.
-if (verbose) then
-    write(*,*) 'CUDA bind: global_rank=', global_rank,                         &
-        ' local_rank=', cuda_local_rank, ' local_size=', cuda_local_size,       &
-        ' visible_devices=', ndev, ' device=', cuda_bound_device
-end if
-
-end subroutine bind_cuda_device
-#endif
 
 #ifdef PPCPS
 !*******************************************************************************

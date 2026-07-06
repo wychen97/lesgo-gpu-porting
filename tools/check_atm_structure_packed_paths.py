@@ -69,30 +69,6 @@ def check_packed_payload(text: str, failures: list[str]) -> None:
             "turbineArray(i) % Cm = reshape(packed_recv(pos:pos+nitem-1)",
             "turbineArray(i) % pitchingMoment = reshape(",
         ],
-        "atm_lesgo_mpi_gather_slim_gpu": [
-            "struct_active = atm_structure_enabled()",
-            "size(turbineArray(i) % Cm)",
-            "size(turbineArray(i) % pitchingMoment)",
-            "call atm_pack_rank3(turbineArray(i) % Cm, packed_send, pos)",
-            "call atm_unpack_rank3(packed_recv, pos, turbineArray(i) % Cm)",
-            "turbineArray(i) % pitchingMoment",
-        ],
-        "atm_lesgo_mpi_gather_slim_batch_gpu": [
-            "struct_active = atm_structure_enabled()",
-            "size(turbineArray(i) % Cm)",
-            "size(turbineArray(i) % pitchingMoment)",
-            "call atm_pack_rank3(turbineArray(i) % Cm, packed_send, pos)",
-            "call atm_unpack_rank3(packed_recv, pos, turbineArray(i) % Cm)",
-            "turbineArray(i) % pitchingMoment",
-        ],
-        "atm_lesgo_mpi_gather_packed_gpu": [
-            "struct_active = atm_structure_enabled()",
-            "size(turbineArray(i) % Cm)",
-            "size(turbineArray(i) % pitchingMoment)",
-            "call atm_pack_rank3(turbineArray(i) % Cm, packed_send, pos)",
-            "call atm_unpack_rank3(packed_recv, pos, turbineArray(i) % Cm)",
-            "turbineArray(i) % pitchingMoment",
-        ],
     }
 
     for name, needles in required.items():
@@ -120,19 +96,6 @@ def check_batched_cl_correction(text: str, failures: list[str]) -> None:
 
 
 def check_reset_payload(text: str, failures: list[str]) -> None:
-    block = subroutine_block(text, "atm_lesgo_reset_turbine_gpu")
-    require("Cm => turbineArray(i) % Cm" in block, "GPU reset does not point to Cm", failures)
-    require(
-        "pitchingMoment => turbineArray(i) % pitchingMoment" in block,
-        "GPU reset does not point to pitchingMoment",
-        failures,
-    )
-    require("Cm(m,n,q) = 0._rprec" in block, "GPU reset does not clear Cm", failures)
-    require(
-        "pitchingMoment(m,n,q) = 0._rprec" in block,
-        "GPU reset does not clear pitchingMoment",
-        failures,
-    )
     require(
         "atm_reset_cuda_enabled() .and. .not. atm_structure_enabled()" not in text,
         "reset GPU path is still disabled by structure ON",
@@ -160,21 +123,6 @@ def check_remaining_structure_guards(text: str, failures: list[str]) -> None:
 
 
 def check_actuator_model_guards(text: str, failures: list[str]) -> None:
-    cl_block = subroutine_block(text, "atm_compute_cl_correction")
-    call_index = cl_block.find("call atm_compute_cl_correction_gpu(i)")
-    require(
-        call_index >= 0,
-        "atm_compute_cl_correction no longer calls the CUDA correction",
-        failures,
-    )
-    if call_index >= 0:
-        prefix = cl_block[max(0, call_index - 250) : call_index]
-        require(
-            ".not. atm_structure_enabled()" not in prefix,
-            "per-turbine CUDA Cl correction is still guarded by structure OFF",
-            failures,
-        )
-
     allowed_contexts = [
         "CUDA rotation shortcut only updates bladePoints",
         "CUDA yaw shortcut only rotates bladePoints",

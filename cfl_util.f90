@@ -24,9 +24,6 @@ module cfl_util
 ! This module provides the subroutines/functions for getting CFL related
 ! quantities
 !
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 
 save
 private
@@ -35,37 +32,6 @@ public get_max_cfl, get_cfl_dt
 
 contains
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function cfl_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-cfl_cuda_enabled = .true.
-
-end function cfl_cuda_enabled
-
-!*******************************************************************************
-subroutine cfl_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'cfl_util CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'cfl_util CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine cfl_cuda_sync
-#endif
 
 !*******************************************************************************
 function get_max_cfl() result(cfl)
@@ -93,7 +59,7 @@ real(rprec) :: cfl_buf
 #endif
 integer :: jx, jy, jz
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! Explicit-residency: reduce over the DEVICE velocity (host copy is stale here).
 cfl_u = 0._rprec
 cfl_v = 0._rprec
@@ -113,35 +79,9 @@ cfl_u = cfl_u / dx
 cfl_v = cfl_v / dy
 cfl_w = cfl_w / dz
 #else
-#ifdef ENABLE_CUDA
-if (cfl_cuda_enabled()) then
-    cfl_u = 0._rprec
-    cfl_v = 0._rprec
-    cfl_w = 0._rprec
-
-    !$cuf kernel do(3) <<<*,*>>> reduction(max:cfl_u,cfl_v,cfl_w)
-    do jz = 1, nz - 1
-    do jy = 1, ny
-    do jx = 1, nx
-        cfl_u = max(cfl_u, abs(u(jx,jy,jz)))
-        cfl_v = max(cfl_v, abs(v(jx,jy,jz)))
-        cfl_w = max(cfl_w, abs(w(jx,jy,jz)))
-    end do
-    end do
-    end do
-    call cfl_cuda_sync('get_max_cfl')
-
-    cfl_u = cfl_u / dx
-    cfl_v = cfl_v / dy
-    cfl_w = cfl_w / dz
-else
-#endif
 cfl_u = maxval( abs(u(1:nx,1:ny,1:nz-1)) ) / dx
 cfl_v = maxval( abs(v(1:nx,1:ny,1:nz-1)) ) / dy
 cfl_w = maxval( abs(w(1:nx,1:ny,1:nz-1)) ) / dz
-#ifdef ENABLE_CUDA
-end if
-#endif
 #endif
 
 cfl = dt * maxval( (/ cfl_u, cfl_v, cfl_w /) )
@@ -182,7 +122,7 @@ real(rprec) :: dt_buf
 integer :: jx, jy, jz
 
 ! Avoid division by computing max dt^-1
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! Explicit-residency (mem:separate): reduce over the DEVICE velocity. The host
 ! copy of u,v,w is stale here (only synced every nenergy / at the ATM forcing),
 ! so the host maxval below would compute dt from a lagged field -> CFL blow-up.
@@ -205,35 +145,9 @@ dt_inv_u = dt_inv_u / dx
 dt_inv_v = dt_inv_v / dy
 dt_inv_w = dt_inv_w / dz
 #else
-#ifdef ENABLE_CUDA
-if (cfl_cuda_enabled()) then
-    dt_inv_u = 0._rprec
-    dt_inv_v = 0._rprec
-    dt_inv_w = 0._rprec
-
-    !$cuf kernel do(3) <<<*,*>>> reduction(max:dt_inv_u,dt_inv_v,dt_inv_w)
-    do jz = 1, nz - 1
-    do jy = 1, ny
-    do jx = 1, nx
-        dt_inv_u = max(dt_inv_u, abs(u(jx,jy,jz)))
-        dt_inv_v = max(dt_inv_v, abs(v(jx,jy,jz)))
-        dt_inv_w = max(dt_inv_w, abs(w(jx,jy,jz)))
-    end do
-    end do
-    end do
-    call cfl_cuda_sync('get_cfl_dt')
-
-    dt_inv_u = dt_inv_u / dx
-    dt_inv_v = dt_inv_v / dy
-    dt_inv_w = dt_inv_w / dz
-else
-#endif
 dt_inv_u = maxval( abs(u(1:nx,1:ny,1:nz-1)) ) / dx
 dt_inv_v = maxval( abs(v(1:nx,1:ny,1:nz-1)) ) / dy
 dt_inv_w = maxval( abs(w(1:nx,1:ny,1:nz-1)) ) / dz
-#ifdef ENABLE_CUDA
-end if
-#endif
 #endif
 
 dt = cfl / maxval( (/ dt_inv_u, dt_inv_v, dt_inv_w /) )

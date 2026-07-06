@@ -47,11 +47,7 @@ use fft
 use derivatives, only : filt_da_vel, ddz_vel
 use test_filtermodule
 use cfl_util
-#ifdef ENABLE_CUDA
-use sgs_stag_util, only : sgs_stag, sgs_combined_tau_halo_active
-#else
 use sgs_stag_util, only : sgs_stag
-#endif
 use forcing
 use functions, only: get_tau_wall_bot, get_tau_wall_top
 
@@ -70,7 +66,7 @@ use cuda_mpi_debug, only : mpi_dbg_sendrecv_r
 #ifdef PPLVLSET
 use level_set, only : level_set_global_CA, level_set_vel_err
 use level_set_base, only : global_CA_calc
-#if defined(PPSGS_GPU) && defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU) && defined(PPLES_GPU)
 use sgs_param, only : S11, S12, S13, S22, S23, S33, Nu_t, Cs_opt2,            &
                       F_LM, F_MM, F_QN, F_NN, Beta, Tn_all
 #ifdef PPDYN_TN
@@ -79,7 +75,7 @@ use sgs_param, only : F_ee2, F_deedt2, ee_past
 #endif
 #endif
 
-#if defined(PPATM) && defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPATM) && defined(PPLES_GPU)
 use atm_lesgo_interface, only : atm_lesgo_forcing
 #endif
 
@@ -112,9 +108,6 @@ use press_gpu_m, only : press_stag_array_gpu
 use sgs_gpu_m, only : sgs_stag_gpu, divstress_uv_gpu, divstress_w_gpu
 #endif
 
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 
 implicit none
 
@@ -255,27 +248,9 @@ time_loop: do jt_step = nstart, nsteps
     end do
     end do
 #else
-#ifdef ENABLE_CUDA
-    if (main_pointwise_cuda_enabled()) then
-        !$cuf kernel do(3) <<<*,*>>>
-        do jz = lbz, nz
-        do jy = 1, ny
-        do jx = 1, ld
-            RHSx_f(jx,jy,jz) = RHSx(jx,jy,jz)
-            RHSy_f(jx,jy,jz) = RHSy(jx,jy,jz)
-            RHSz_f(jx,jy,jz) = RHSz(jx,jy,jz)
-        end do
-        end do
-        end do
-        call main_cuda_sync('RHS history copy')
-    else
-#endif
     RHSx_f = RHSx
     RHSy_f = RHSy
     RHSz_f = RHSz
-#ifdef ENABLE_CUDA
-    end if
-#endif
 #endif
 
     ! ------------------------------------------------------
@@ -309,7 +284,7 @@ time_loop: do jt_step = nstart, nsteps
         !$acc update self(u, v, w, dudx, dudy, dudz, dvdx, dvdy, dvdz,          &
         !$acc             dwdx, dwdy, dwdz)
     else
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 #ifdef PPSCALARS
         ! In scalar builds, lbc_mom=2 equilibrium and lbc_mom=3 IWM are device-resident.
         ! Keep host staging for scalar DNS/free/upper wallstress paths.
@@ -364,7 +339,7 @@ time_loop: do jt_step = nstart, nsteps
     if (coord == 0 .or. coord == nproc-1) then
         call wallstress()
 #ifdef PPLES_GPU
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 #ifdef PPSCALARS
         ! For scalar builds, lower equilibrium and IWM wallstress write these
         ! planes on device. Other scalar wallstress paths still use host.
@@ -407,7 +382,7 @@ time_loop: do jt_step = nstart, nsteps
         call error(prog_name,                                                   &
             'PPSGS_GPU currently supports active SGS models 1, 2, 3, 4, and 5 only')
     end if
-#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLVLSET) && defined(PPLES_GPU)
     ! LVLSET has no OpenACC SGS path yet. Use the established CPU LVLSET SGS
     ! routines and explicitly bridge the resident LES/SGS arrays.
     !$acc wait(1)
@@ -458,18 +433,12 @@ time_loop: do jt_step = nstart, nsteps
     call clock_sgs_halo%stop
     total_time_sgs_halo = clock_sgs_halo%time
 #else
-#ifdef ENABLE_CUDA
-    if (.not. sgs_combined_tau_halo_active()) then
-#endif
     call clock_sgs_halo%start
     call mpi_dbg_sendrecv_r (tzz(1,1,nz-1), ld*ny, MPI_RPREC, up, 6,          &
                        tzz(1,1,0), ld*ny, MPI_RPREC, down, 6,                 &
                        comm, status, ierr, 'main_tzz_halo')
     call clock_sgs_halo%stop
     total_time_sgs_halo = clock_sgs_halo%time
-#ifdef ENABLE_CUDA
-    end if
-#endif
 #endif
 #endif
 
@@ -478,7 +447,7 @@ time_loop: do jt_step = nstart, nsteps
     ! in this version. Provides divtz 1:nz-1, except 1:nz at top process
     call clock_sgs_divuv%start
 #ifdef PPSGS_GPU
-#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLVLSET) && defined(PPLES_GPU)
     ! LVLSET stress boundary treatment is still host-only. Keep div-stress on
     ! the same path as the LVLSET SGS bridge, then refresh device divtau.
     call divstress_uv(divtx, divty, txx, txy, txz, tyy, tyz)
@@ -494,7 +463,7 @@ time_loop: do jt_step = nstart, nsteps
 
     call clock_sgs_divw%start
 #ifdef PPSGS_GPU
-#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLVLSET) && defined(PPLES_GPU)
     call divstress_w(divtz, txz, tyz, tzz)
     !$acc update device(divtz)
 #else
@@ -524,7 +493,7 @@ time_loop: do jt_step = nstart, nsteps
     call clock_convec%stop
     total_time_convec = clock_convec%time
 
-#if defined(PPATM) && defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPATM) && defined(PPLES_GPU)
     ! ATM phase 1 (w_uv interp, blade update, device velocity sampling, host
     ! blade-force model, MPI gather) runs HERE - convec_gpu now returns with
     ! its async(1) kernels still draining (~60 ms backlog), so phase 1's
@@ -561,37 +530,10 @@ time_loop: do jt_step = nstart, nsteps
         end do
     end if
 #else
-#ifdef ENABLE_CUDA
-    if (main_pointwise_cuda_enabled()) then
-        !$cuf kernel do(3) <<<*,*>>>
-        do jz = 1, nz - 1
-        do jy = 1, ny
-        do jx = 1, ld
-            RHSx(jx,jy,jz) = -RHSx(jx,jy,jz) - divtx(jx,jy,jz)
-            RHSy(jx,jy,jz) = -RHSy(jx,jy,jz) - divty(jx,jy,jz)
-            RHSz(jx,jy,jz) = -RHSz(jx,jy,jz) - divtz(jx,jy,jz)
-        end do
-        end do
-        end do
-
-        if (coord == nproc-1) then
-            !$cuf kernel do(2) <<<*,*>>>
-            do jy = 1, ny
-            do jx = 1, ld
-                RHSz(jx,jy,nz) = -RHSz(jx,jy,nz) - divtz(jx,jy,nz)
-            end do
-            end do
-        end if
-        call main_cuda_sync('add div-tau to RHS')
-    else
-#endif
     RHSx(:,:,1:nz-1) = -RHSx(:,:,1:nz-1) - divtx(:,:,1:nz-1)
     RHSy(:,:,1:nz-1) = -RHSy(:,:,1:nz-1) - divty(:,:,1:nz-1)
     RHSz(:,:,1:nz-1) = -RHSz(:,:,1:nz-1) - divtz(:,:,1:nz-1)
     if (coord == nproc-1) RHSz(:,:,nz) = -RHSz(:,:,nz)-divtz(:,:,nz)
-#ifdef ENABLE_CUDA
-    end if
-#endif
 #endif
 
     call coriolis_calc()
@@ -619,25 +561,8 @@ time_loop: do jt_step = nstart, nsteps
         end do
         end do
 #else
-#ifdef ENABLE_CUDA
-        if (main_pointwise_cuda_enabled()) then
-            !$cuf kernel do(3) <<<*,*>>>
-            do jz = 1, nz - 1
-            do jy = 1, ny
-            do jx = 1, ld
-                RHSx(jx,jy,jz) = RHSx(jx,jy,jz) + mean_p_force_x
-                RHSy(jx,jy,jz) = RHSy(jx,jy,jz) + mean_p_force_y
-            end do
-            end do
-            end do
-            call main_cuda_sync('mean pressure forcing')
-        else
-#endif
         RHSx(:,:,1:nz-1) = RHSx(:,:,1:nz-1) + mean_p_force_x
         RHSy(:,:,1:nz-1) = RHSy(:,:,1:nz-1) + mean_p_force_y
-#ifdef ENABLE_CUDA
-        end if
-#endif
 #endif
     end if
 
@@ -683,27 +608,9 @@ time_loop: do jt_step = nstart, nsteps
     end do
     end do
 #else
-#ifdef ENABLE_CUDA
-    if (main_pointwise_cuda_enabled()) then
-        !$cuf kernel do(3) <<<*,*>>>
-        do jz = 1, nz - 1
-        do jy = 1, ny
-        do jx = 1, ld
-            RHSx(jx,jy,jz) = RHSx(jx,jy,jz) + fxa(jx,jy,jz)
-            RHSy(jx,jy,jz) = RHSy(jx,jy,jz) + fya(jx,jy,jz)
-            RHSz(jx,jy,jz) = RHSz(jx,jy,jz) + fza(jx,jy,jz)
-        end do
-        end do
-        end do
-        call main_cuda_sync('applied force RHS update')
-    else
-#endif
     RHSx(:,:,1:nz-1) = RHSx(:,:,1:nz-1) + fxa(:,:,1:nz-1)
     RHSy(:,:,1:nz-1) = RHSy(:,:,1:nz-1) + fya(:,:,1:nz-1)
     RHSz(:,:,1:nz-1) = RHSz(:,:,1:nz-1) + fza(:,:,1:nz-1)
-#ifdef ENABLE_CUDA
-    end if
-#endif
 #endif
 #endif
 
@@ -727,27 +634,9 @@ time_loop: do jt_step = nstart, nsteps
         end do
         end do
 #else
-#ifdef ENABLE_CUDA
-        if (main_pointwise_cuda_enabled()) then
-            !$cuf kernel do(3) <<<*,*>>>
-            do jz = lbz, nz
-            do jy = 1, ny
-            do jx = 1, ld
-                RHSx_f(jx,jy,jz) = RHSx(jx,jy,jz)
-                RHSy_f(jx,jy,jz) = RHSy(jx,jy,jz)
-                RHSz_f(jx,jy,jz) = RHSz(jx,jy,jz)
-            end do
-            end do
-            end do
-            call main_cuda_sync('Euler RHS copy')
-        else
-#endif
         RHSx_f = RHSx
         RHSy_f = RHSy
         RHSz_f = RHSz
-#ifdef ENABLE_CUDA
-        end if
-#endif
 #endif
     end if
 
@@ -780,34 +669,6 @@ time_loop: do jt_step = nstart, nsteps
         end do
     end if
 #else
-#ifdef ENABLE_CUDA
-    if (main_pointwise_cuda_enabled()) then
-        !$cuf kernel do(3) <<<*,*>>>
-        do jz = 1, nz - 1
-        do jy = 1, ny
-        do jx = 1, ld
-            u(jx,jy,jz) = u(jx,jy,jz) + dt *                                  &
-                (tadv1 * RHSx(jx,jy,jz) + tadv2 * RHSx_f(jx,jy,jz))
-            v(jx,jy,jz) = v(jx,jy,jz) + dt *                                  &
-                (tadv1 * RHSy(jx,jy,jz) + tadv2 * RHSy_f(jx,jy,jz))
-            w(jx,jy,jz) = w(jx,jy,jz) + dt *                                  &
-                (tadv1 * RHSz(jx,jy,jz) + tadv2 * RHSz_f(jx,jy,jz))
-        end do
-        end do
-        end do
-
-        if (coord == nproc-1) then
-            !$cuf kernel do(2) <<<*,*>>>
-            do jy = 1, ny
-            do jx = 1, ld
-                w(jx,jy,nz) = w(jx,jy,nz) + dt *                              &
-                    (tadv1 * RHSz(jx,jy,nz) + tadv2 * RHSz_f(jx,jy,nz))
-            end do
-            end do
-        end if
-        call main_cuda_sync('intermediate velocity update')
-    else
-#endif
     u(:,:,1:nz-1) = u(:,:,1:nz-1) +                                            &
         dt * ( tadv1 * RHSx(:,:,1:nz-1) + tadv2 * RHSx_f(:,:,1:nz-1) )
     v(:,:,1:nz-1) = v(:,:,1:nz-1) +                                            &
@@ -818,9 +679,6 @@ time_loop: do jt_step = nstart, nsteps
         w(:,:,nz) = w(:,:,nz) +                                                &
             dt * ( tadv1 * RHSz(:,:,nz) + tadv2 * RHSz_f(:,:,nz) )
     end if
-#ifdef ENABLE_CUDA
-    end if
-#endif
 #endif
 
     ! Set unused values to BOGUS so unintended uses will be noticable
@@ -845,38 +703,6 @@ time_loop: do jt_step = nstart, nsteps
     end do
     end do
 #else
-#ifdef ENABLE_CUDA
-    if (main_pointwise_cuda_enabled()) then
-#ifdef PPMPI
-        !$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            u(jx,jy,0) = BOGUS
-            v(jx,jy,0) = BOGUS
-            w(jx,jy,0) = BOGUS
-        end do
-        end do
-#endif
-
-        !$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            u(jx,jy,nz) = BOGUS
-            v(jx,jy,nz) = BOGUS
-        end do
-        end do
-
-        if(coord < nproc-1) then
-            !$cuf kernel do(2) <<<*,*>>>
-            do jy = 1, ny
-            do jx = 1, ld
-                w(jx,jy,nz) = BOGUS
-            end do
-            end do
-        end if
-        call main_cuda_sync('safetymode sentinel update')
-    else
-#endif
 #ifdef PPMPI
     u(:,:,0) = BOGUS
     v(:,:,0) = BOGUS
@@ -885,9 +711,6 @@ time_loop: do jt_step = nstart, nsteps
     u(:,:,nz) = BOGUS
     v(:,:,nz) = BOGUS
     if(coord < nproc-1) w(:,:,nz) = BOGUS
-#ifdef ENABLE_CUDA
-    end if
-#endif
 #endif
 #endif
 
@@ -903,7 +726,7 @@ time_loop: do jt_step = nstart, nsteps
     call clock_press%start
 
 #ifdef PPPRESS_GPU
-#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLVLSET) && defined(PPLES_GPU)
     ! LVLSET bridge: pressure still has to consume host RHS values produced by
     ! the host LVLSET/divstress fallback, then return pressure gradients to the
     ! device for the remaining explicit-residency update/projection kernels.
@@ -940,39 +763,12 @@ time_loop: do jt_step = nstart, nsteps
         end do
     end if
 #else
-#ifdef ENABLE_CUDA
-    if (main_pointwise_cuda_enabled()) then
-        !$cuf kernel do(3) <<<*,*>>>
-        do jz = 1, nz - 1
-        do jy = 1, ny
-        do jx = 1, ld
-            RHSx(jx,jy,jz) = RHSx(jx,jy,jz) - dpdx(jx,jy,jz)
-            RHSy(jx,jy,jz) = RHSy(jx,jy,jz) - dpdy(jx,jy,jz)
-            RHSz(jx,jy,jz) = RHSz(jx,jy,jz) - dpdz(jx,jy,jz)
-        end do
-        end do
-        end do
-
-        if(coord == nproc-1) then
-            !$cuf kernel do(2) <<<*,*>>>
-            do jy = 1, ny
-            do jx = 1, ld
-                RHSz(jx,jy,nz) = RHSz(jx,jy,nz) - dpdz(jx,jy,nz)
-            end do
-            end do
-        end if
-        call main_cuda_sync('pressure-gradient RHS update')
-    else
-#endif
     RHSx(:,:,1:nz-1) = RHSx(:,:,1:nz-1) - dpdx(:,:,1:nz-1)
     RHSy(:,:,1:nz-1) = RHSy(:,:,1:nz-1) - dpdy(:,:,1:nz-1)
     RHSz(:,:,1:nz-1) = RHSz(:,:,1:nz-1) - dpdz(:,:,1:nz-1)
     if(coord == nproc-1) then
         RHSz(:,:,nz) = RHSz(:,:,nz) - dpdz(:,:,nz)
     end if
-#ifdef ENABLE_CUDA
-    end if
-#endif
 #endif
     ! -------------------------------
     call clock_press%stop
@@ -1005,7 +801,7 @@ time_loop: do jt_step = nstart, nsteps
 
     ! Write ke to file
     if (modulo (jt_total, nenergy) == 0) then
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
         ! energy() reduces on the device now - the 765 MB u/v/w D2H this
         ! used to do every nenergy steps is gone.
         !$acc wait(1)
@@ -1017,7 +813,7 @@ time_loop: do jt_step = nstart, nsteps
     end if
 
 #ifdef PPLVLSET
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
     if (global_CA_calc) then
         !$acc wait(1)
         !$acc update self(u, fx, fy, fz)
@@ -1040,14 +836,14 @@ time_loop: do jt_step = nstart, nsteps
 
         ! Calculate rms divergence of velocity
         ! only written to screen, not used otherwise
-#if defined(PPDERIVS_GPU) && !defined(ENABLE_CUDA) && defined(PPLES_GPU)
+#if defined(PPDERIVS_GPU) && defined(PPLES_GPU)
         ! rmsdiv() reduces on the device now - no dudx/dvdy/dwdz D2H.
         !$acc wait(1)
 #elif defined(PPDERIVS_GPU)
         !$acc wait(1)
         !$acc update self(dudx, dvdy, dwdz)
 #endif
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
         ! get_tau_wall_bot/top reduce txz/tyz directly on the OpenACC device,
         ! so wbase diagnostics no longer need wall-plane device-to-host copies.
         !$acc wait(1)
@@ -1279,36 +1075,5 @@ endif
 
 end subroutine main_read_env_real
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function main_pointwise_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-main_pointwise_cuda_enabled = .true.
-
-end function main_pointwise_cuda_enabled
-
-!*******************************************************************************
-subroutine main_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'main CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'main CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine main_cuda_sync
-#endif
 
 end program main

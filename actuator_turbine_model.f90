@@ -56,11 +56,6 @@ use atm_base ! Include basic types and precision of real numbers
 use atm_input_util ! Utilities to read input files
 use param, only : coord
 
-#ifdef ENABLE_CUDA
-use cudafor
-use cublas
-use cusolverDn
-#endif
 
 implicit none
 
@@ -300,123 +295,7 @@ close(unit)
 
 end subroutine atm_structure_diag_snapshot
 
-#ifdef ENABLE_CUDA
-! GPU structural-solver validation and path-selection gates.  These switches are
-! diagnostic/path controls; they should not be used to hide production defaults.
 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-logical function atm_structure_gpu_enabled()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-logical, save :: initialized = .false.
-logical, save :: active = .false.
-
-if (.not. initialized) then
-    active = atm_model_env_enabled('LESGO_ATM_STRUCTURE_GPU')
-    initialized = .true.
-endif
-
-atm_structure_gpu_enabled = active
-
-end function atm_structure_gpu_enabled
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-logical function atm_structure_gpu_validate_enabled()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-logical, save :: initialized = .false.
-logical, save :: active = .false.
-
-if (.not. initialized) then
-    active = atm_model_env_enabled('LESGO_ATM_STRUCTURE_GPU_VALIDATE')
-    initialized = .true.
-endif
-
-atm_structure_gpu_validate_enabled = active
-
-end function atm_structure_gpu_validate_enabled
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-logical function atm_structure_gpu_direct_enabled()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-logical, save :: initialized = .false.
-logical, save :: active = .false.
-
-if (.not. initialized) then
-    active = atm_model_env_enabled('LESGO_ATM_STRUCTURE_GPU_DIRECT')
-    initialized = .true.
-endif
-
-atm_structure_gpu_direct_enabled = active
-
-end function atm_structure_gpu_direct_enabled
-#endif
-
-#ifdef ENABLE_CUDA
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-logical function atm_model_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-atm_model_cuda_enabled = .true.
-
-end function atm_model_cuda_enabled
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-logical function atm_model_extra_sync_enabled()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-atm_model_extra_sync_enabled = .false.
-
-end function atm_model_extra_sync_enabled
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_model_cuda_check(where)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-character(*), intent(in) :: where
-integer :: istat
-
-if (atm_model_extra_sync_enabled()) then
-    call atm_model_cuda_sync(where)
-    return
-end if
-
-istat = cudaGetLastError()
-if (istat /= cudaSuccess) then
-    print *, 'ATM model CUDA kernel failure at ', trim(where), ': ', istat
-    stop 1
-end if
-
-end subroutine atm_model_cuda_check
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_model_cuda_sync(where)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-character(*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= cudaSuccess) then
-    print *, 'ATM model CUDA sync failure at ', trim(where), ': ', istat
-    stop 1
-end if
-istat = cudaGetLastError()
-if (istat /= cudaSuccess) then
-    print *, 'ATM model CUDA kernel failure at ', trim(where), ': ', istat
-    stop 1
-end if
-
-end subroutine atm_model_cuda_sync
-#endif
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine atm_initialize()
@@ -1271,13 +1150,6 @@ real(rprec), pointer :: uvShaft(:)
 real(rprec), pointer :: azimuth
 real(rprec) :: disp_ax, disp_tg, theta_tot
 real(rprec) :: vec1_rot(3), vec2_rot(3), origin_zero(3)
-#ifdef ENABLE_CUDA
-real(rprec), managed, pointer, dimension(:,:,:,:) :: bladePoints_d
-real(rprec) :: rotorApex1, rotorApex2, rotorApex3
-real(rprec) :: ax1, ax2, ax3, cang, sang
-real(rprec) :: rm11, rm12, rm13, rm21, rm22, rm23, rm31, rm32, rm33
-real(rprec) :: p1, p2, p3, r1, r2, r3
-#endif
 
 j=turbineArray(i) % turbineTypeID
 
@@ -1298,53 +1170,6 @@ else if (turbineArray(i) % rotationDir == "ccw") then
     deltaAzimuthI = -deltaAzimuth
 endif
 
-#ifdef ENABLE_CUDA
-! The CUDA rotation shortcut only updates bladePoints.  Structure-on runs must
-! also rotate bladePoints_rigid and then rebuild bladePoints from elastic
-! displacement/twist, so keep them on the structural geometry path below.
-if (atm_model_cuda_enabled() .and. .not. atm_structure_enabled()) then
-    bladePoints_d => turbineArray(i) % bladePoints
-    rotorApex1 = rotorApex(1)
-    rotorApex2 = rotorApex(2)
-    rotorApex3 = rotorApex(3)
-    ax1 = uvShaft(1)
-    ax2 = uvShaft(2)
-    ax3 = uvShaft(3)
-    cang = cos(deltaAzimuthI)
-    sang = sin(deltaAzimuthI)
-
-    rm11 = ax1*ax1 + (1._rprec - ax1*ax1) * cang
-    rm12 = ax1*ax2 * (1._rprec - cang) - ax3 * sang
-    rm13 = ax1*ax3 * (1._rprec - cang) + ax2 * sang
-    rm21 = ax1*ax2 * (1._rprec - cang) + ax3 * sang
-    rm22 = ax2*ax2 + (1._rprec - ax2*ax2) * cang
-    rm23 = ax2*ax3 * (1._rprec - cang) - ax1 * sang
-    rm31 = ax1*ax3 * (1._rprec - cang) - ax2 * sang
-    rm32 = ax2*ax3 * (1._rprec - cang) + ax1 * sang
-    rm33 = ax3*ax3 + (1._rprec - ax3*ax3) * cang
-
-    !$cuf kernel do(3) <<<*,*>>>
-    do q=1, turbineArray(i) % numBladePoints
-        do n=1, turbineArray(i) % numAnnulusSections
-            do m=1, turbineModel(j) % numBl
-                p1 = bladePoints_d(m,n,q,1) - rotorApex1
-                p2 = bladePoints_d(m,n,q,2) - rotorApex2
-                p3 = bladePoints_d(m,n,q,3) - rotorApex3
-
-                r1 = rm11*p1 + rm12*p2 + rm13*p3
-                r2 = rm21*p1 + rm22*p2 + rm23*p3
-                r3 = rm31*p1 + rm32*p2 + rm33*p3
-
-                bladePoints_d(m,n,q,1) = r1 + rotorApex1
-                bladePoints_d(m,n,q,2) = r2 + rotorApex2
-                bladePoints_d(m,n,q,3) = r3 + rotorApex3
-            enddo
-        enddo
-    enddo
-
-    call atm_model_cuda_check('atm_rotateBlades')
-else
-#endif
 origin_zero = (/ 0._rprec, 0._rprec, 0._rprec /)
 
 ! Loop through all the points and rotate them accordingly
@@ -1382,9 +1207,6 @@ do q=1, turbineArray(i) % numBladePoints
         enddo
     enddo
 enddo
-#ifdef ENABLE_CUDA
-endif
-#endif
 
 if (pastFirstTimeStep) then
     azimuth = azimuth + deltaAzimuth;
@@ -1446,15 +1268,6 @@ real(rprec), pointer :: cd(:,:,:)
 real(rprec), pointer :: Vmag(:,:,:)
 real(rprec), pointer :: chord(:,:,:)
 
-#ifdef ENABLE_CUDA
-! The induced-velocity correction writes the same du/Uinf/uy state consumed by
-! both rigid and structural turbine paths.  Structure-on runs can therefore use
-! the per-turbine CUDA implementation when the batched PPLES path is inactive.
-if (atm_model_cuda_enabled()) then
-    call atm_compute_cl_correction_gpu(i)
-    return
-endif
-#endif
 
 ! The wind vector
 uy_opt_vec => turbineArray(i) % uy_opt_vec
@@ -1584,375 +1397,6 @@ deallocate(inv_2pi_eps_opt_loc, z_face, f_face_les)
 
 end subroutine atm_compute_cl_correction
 
-#ifdef ENABLE_CUDA
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_compute_cl_correction_gpu(i)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! GPU induced-velocity correction.
-!
-! Runtime selector:
-!   LESGO_ATM_INDUCED_METHOD=legacy        old dG/dz filtered lifting-line path
-!   LESGO_ATM_INDUCED_METHOD=2024_midpoint generalized 2024 midpoint quadrature
-!   LESGO_ATM_INDUCED_METHOD=2024_panel    generalized 2024 exact panel integral
-!
-! The selector changes only the induced-velocity convolution.  Structural solver,
-! force application, turbine controls, and LESGO flow numerics are unchanged.
-! Update docs/environment_switches.md if these model switches change.
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-integer, intent(in) :: i
-integer, parameter :: induced_legacy = 0
-integer, parameter :: induced_midpoint = 1
-integer, parameter :: induced_panel = 2
-integer, parameter :: option_disabled = 0
-integer, parameter :: option_enabled = 1
-integer :: j, m, n, q, k, mmend, nnend, qqend
-integer, save :: induced_method = -1
-integer, save :: du_include_ux = -1
-integer, save :: ux_use_cd_eff = -1
-logical, save :: induced_method_printed = .false.
-character(len=32) :: env_value
-logical :: env_has_value
-real(rprec) :: eps_s, opt_eps_chord, relax, sqrt_pi
-real(rprec) :: u1, u2, u3, o1, o2, o3, mag_uinf, mag_uyopt
-real(rprec) :: dir1, dir2, dir3, cd_eff, fac, vmag_i
-real(rprec) :: z_q, z_k, dzeta, dG_k, uy_les_s, uy_opt_s
-real(rprec) :: tan1, tan2, tan3, mag_tan
-real(rprec) :: les1, les2, les3, opt1, opt2, opt3, inv_vmag
-real(rprec) :: eps_k, dzp_k, g_over_v, aexp, kernel_s
-real(rprec) :: half_dzp, up, um, f_up, f_um, uval, u2val
-real(rprec), parameter :: u_small = 1.0e-2_rprec
-real(rprec), managed, pointer, dimension(:,:,:,:) :: uy_opt_vec
-real(rprec), managed, pointer, dimension(:,:,:,:) :: uy_LES_vec
-real(rprec), managed, pointer, dimension(:,:,:,:) :: ux_LES_vec
-real(rprec), managed, pointer, dimension(:,:,:,:) :: Uinf_vec
-real(rprec), managed, pointer, dimension(:,:,:,:) :: windVectors
-real(rprec), managed, pointer, dimension(:,:,:) :: cl, cd, Vmag, chord
-real(rprec), managed, pointer, dimension(:,:,:) :: G, dG
-real(rprec), managed, pointer, dimension(:,:,:) :: epsilon_opt
-real(rprec), managed, pointer, dimension(:,:,:) :: bladeRadius
-real(rprec), managed, pointer, dimension(:,:,:) :: uy_LES, uy_opt
-real(rprec), managed, pointer, dimension(:,:,:,:) :: du
-real(rprec), managed, pointer, dimension(:) :: db
-
-if (induced_method < 0) then
-    induced_method = induced_panel
-    call atm_model_env_token('LESGO_ATM_INDUCED_METHOD', env_value,            &
-        env_has_value)
-    if (env_has_value) then
-        select case (env_value)
-        case ('legacy','LEGACY','0','old','OLD')
-            induced_method = induced_legacy
-        case ('2024_uniform','2024-UNIFORM','uniform','UNIFORM',               &
-              '2024_midpoint','2024-MIDPOINT','midpoint','MIDPOINT','1')
-            induced_method = induced_midpoint
-        ! Keep the personal-name token as a backward-compatible input alias;
-        ! logs and documentation use the technical `2024_panel` method name.
-        case ('2024_panel','2024-PANEL','panel','PANEL','atharva','ATHARVA',   &
-              'exact','EXACT','2')
-            induced_method = induced_panel
-        case default
-            induced_method = induced_panel
-        end select
-    endif
-endif
-
-if (du_include_ux < 0) then
-    du_include_ux = option_enabled
-    call atm_model_env_token('LESGO_ATM_DU_INCLUDE_UX', env_value,             &
-        env_has_value)
-    if (env_has_value) then
-        if (env_value == '0') du_include_ux = option_disabled
-        if (env_value == '1') du_include_ux = option_enabled
-    endif
-endif
-
-if (ux_use_cd_eff < 0) then
-    ux_use_cd_eff = option_disabled
-    call atm_model_env_token('LESGO_ATM_UX_USE_CD_EFF', env_value,             &
-        env_has_value)
-    if (env_has_value) then
-        if (env_value == '0') ux_use_cd_eff = option_disabled
-        if (env_value == '1') ux_use_cd_eff = option_enabled
-    endif
-endif
-
-if (.not. induced_method_printed) then
-    if (induced_method == induced_legacy) then
-        write(*,*) 'ATM induced velocity method: legacy dG/dz'
-    elseif (induced_method == induced_midpoint) then
-        write(*,*) 'ATM induced velocity method: 2024 uniform reference'
-    else
-        write(*,*) 'ATM induced velocity method: 2024 generalized exact panel'
-    endif
-    write(*,*) 'ATM induced options: du_include_ux=', du_include_ux,           &
-        ' ux_use_cd_eff=', ux_use_cd_eff
-    induced_method_printed = .true.
-endif
-
-j = turbineArray(i) % turbineTypeID
-mmend = turbineModel(j) % numBl
-nnend = turbineArray(i) % numAnnulusSections
-qqend = turbineArray(i) % numBladePoints
-eps_s = turbineArray(i) % epsilon
-opt_eps_chord = turbineArray(i) % optimalEpsilonChord
-relax = 0.1_rprec
-sqrt_pi = sqrt(pi)
-
-uy_opt_vec => turbineArray(i) % uy_opt_vec
-uy_LES_vec => turbineArray(i) % uy_LES_vec
-ux_LES_vec => turbineArray(i) % ux_LES_vec
-Uinf_vec => turbineArray(i) % Uinf_vec
-windVectors => turbineArray(i) % windVectors
-cl => turbineArray(i) % cl
-cd => turbineArray(i) % cd
-Vmag => turbineArray(i) % Vmag
-chord => turbineArray(i) % chord
-G => turbineArray(i) % G
-dG => turbineArray(i) % dG
-epsilon_opt => turbineArray(i) % epsilon_opt
-bladeRadius => turbineArray(i) % bladeRadius
-uy_LES => turbineArray(i) % uy_LES
-uy_opt => turbineArray(i) % uy_opt
-du => turbineArray(i) % du
-db => turbineArray(i) % db
-
-!$cuf kernel do(3) <<<*,*>>>
-do q=1, qqend
-    do n=1, nnend
-        do m=1, mmend
-            Uinf_vec(m,n,q,1) = windVectors(m,n,q,1) - uy_opt_vec(m,n,q,1)
-            Uinf_vec(m,n,q,2) = windVectors(m,n,q,2) - uy_opt_vec(m,n,q,2)
-            Uinf_vec(m,n,q,3) = windVectors(m,n,q,3) - uy_opt_vec(m,n,q,3)
-
-            u1 = Uinf_vec(m,n,q,1)
-            u2 = Uinf_vec(m,n,q,2)
-            u3 = Uinf_vec(m,n,q,3)
-            mag_uinf = sqrt(u1*u1 + u2*u2 + u3*u3)
-            dir1 = u1 / mag_uinf
-            dir2 = u2 / mag_uinf
-            dir3 = u3 / mag_uinf
-
-            o1 = uy_opt_vec(m,n,q,1)
-            o2 = uy_opt_vec(m,n,q,2)
-            o3 = uy_opt_vec(m,n,q,3)
-            mag_uyopt = sqrt(o1*o1 + o2*o2 + o3*o3)
-            vmag_i = Vmag(m,n,q)
-            cd_eff = cd(m,n,q) + cl(m,n,q) * mag_uyopt / vmag_i
-            if (ux_use_cd_eff == option_enabled) then
-                fac = cd_eff * chord(m,n,q) / eps_s /                         &
-                    (4._rprec * sqrt_pi) * vmag_i
-            else
-                fac = cd(m,n,q) * chord(m,n,q) / eps_s /                      &
-                    (4._rprec * sqrt_pi) * vmag_i
-            endif
-            ux_LES_vec(m,n,q,1) = fac * dir1
-            ux_LES_vec(m,n,q,2) = fac * dir2
-            ux_LES_vec(m,n,q,3) = fac * dir3
-
-            G(m,n,q) = 0.5_rprec * cl(m,n,q) * chord(m,n,q) *                 &
-                vmag_i * vmag_i
-            epsilon_opt(m,n,q) = chord(m,n,q) * opt_eps_chord
-        enddo
-    enddo
-enddo
-
-! Legacy method still needs dG/dz.  It is harmless to compute it for all modes
-! and keeps the kernel sequence stable across A/B/C tests.
-!$cuf kernel do(3) <<<*,*>>>
-do q=1, qqend
-    do n=1, nnend
-        do m=1, mmend
-            if (q .eq. 1) then
-                dG(m,n,q) = G(m,n,1)
-            elseif (q .eq. qqend) then
-                dG(m,n,q) = -G(m,n,qqend)
-            else
-                dG(m,n,q) = (G(m,n,q+1) - G(m,n,q-1)) / 2._rprec
-            endif
-        enddo
-    enddo
-enddo
-
-!$cuf kernel do(3) <<<*,*>>>
-do q=1, qqend
-    do n=1, nnend
-        do m=1, mmend
-            uy_LES_vec(m,n,q,1) = 0._rprec
-            uy_LES_vec(m,n,q,2) = 0._rprec
-            uy_LES_vec(m,n,q,3) = 0._rprec
-            uy_opt_vec(m,n,q,1) = 0._rprec
-            uy_opt_vec(m,n,q,2) = 0._rprec
-            uy_opt_vec(m,n,q,3) = 0._rprec
-
-            z_q = bladeRadius(m,n,q)
-            les1 = 0._rprec
-            les2 = 0._rprec
-            les3 = 0._rprec
-            opt1 = 0._rprec
-            opt2 = 0._rprec
-            opt3 = 0._rprec
-
-            do k=1, qqend
-                z_k = bladeRadius(m,n,k)
-                dzeta = z_q - z_k
-                eps_k = epsilon_opt(m,n,k)
-                dzp_k = db(k)
-                if (induced_method == induced_midpoint) then
-                    g_over_v = G(m,n,k)
-                else
-                    g_over_v = G(m,n,k) / Vmag(m,n,k)
-                endif
-
-                tan1 = Uinf_vec(m,n,k,2)
-                tan2 = -Uinf_vec(m,n,k,1)
-                tan3 = 0._rprec
-                mag_tan = sqrt(tan1*tan1 + tan2*tan2 + tan3*tan3)
-                tan1 = tan1 / mag_tan
-                tan2 = tan2 / mag_tan
-                tan3 = tan3 / mag_tan
-
-                if (induced_method == induced_legacy) then
-                    if (k /= q) then
-                        dG_k = dG(m,n,k)
-                        uy_les_s = -dG_k / (4._rprec * pi * dzeta) *          &
-                            (1._rprec - exp(-((dzeta/eps_s) *                 &
-                            (dzeta/eps_s))))
-                        uy_opt_s = -dG_k / (4._rprec * pi * dzeta) *          &
-                            (1._rprec - exp(-((dzeta/eps_k) *                 &
-                            (dzeta/eps_k))))
-                    else
-                        uy_les_s = 0._rprec
-                        uy_opt_s = 0._rprec
-                    endif
-                elseif (induced_method == induced_midpoint) then
-                    if (abs(dzeta) > 1.0e-14_rprec) then
-                        aexp = exp(-((dzeta/eps_s) * (dzeta/eps_s)))
-                        kernel_s = 1._rprec / (2._rprec * pi * eps_s*eps_s) * &
-                            (aexp - (1._rprec - aexp) * eps_s*eps_s /         &
-                            (2._rprec * dzeta*dzeta))
-                        uy_les_s = -g_over_v * kernel_s * dzp_k
-
-                        aexp = exp(-((dzeta/eps_k) * (dzeta/eps_k)))
-                        kernel_s = 1._rprec / (2._rprec * pi * eps_k*eps_k) * &
-                            (aexp - (1._rprec - aexp) * eps_k*eps_k /         &
-                            (2._rprec * dzeta*dzeta))
-                        uy_opt_s = -g_over_v * kernel_s * dzp_k
-                    else
-                        uy_les_s = -g_over_v / (4._rprec * pi * eps_s*eps_s) *&
-                            dzp_k
-                        uy_opt_s = -g_over_v / (4._rprec * pi * eps_k*eps_k) *&
-                            dzp_k
-                    endif
-                else
-                    half_dzp = 0.5_rprec * dzp_k
-
-                    uval = (dzeta + half_dzp) / eps_s
-                    u2val = uval * uval
-                    if (abs(uval) < u_small) then
-                        f_up = 0.5_rprec * uval *                             &
-                            (1._rprec - 0.5_rprec * u2val *                   &
-                            (1._rprec - (u2val / 3._rprec) *                  &
-                            (1._rprec - 0.25_rprec * u2val)))
-                    else
-                        f_up = (1._rprec - exp(-u2val)) / (2._rprec * uval)
-                    endif
-                    uval = (dzeta - half_dzp) / eps_s
-                    u2val = uval * uval
-                    if (abs(uval) < u_small) then
-                        f_um = 0.5_rprec * uval *                             &
-                            (1._rprec - 0.5_rprec * u2val *                   &
-                            (1._rprec - (u2val / 3._rprec) *                  &
-                            (1._rprec - 0.25_rprec * u2val)))
-                    else
-                        f_um = (1._rprec - exp(-u2val)) / (2._rprec * uval)
-                    endif
-                    uy_les_s = -g_over_v * (f_up - f_um) /                    &
-                        (2._rprec * pi * eps_s)
-
-                    up = (dzeta + half_dzp) / eps_k
-                    um = (dzeta - half_dzp) / eps_k
-                    u2val = up * up
-                    if (abs(up) < u_small) then
-                        f_up = 0.5_rprec * up *                               &
-                            (1._rprec - 0.5_rprec * u2val *                   &
-                            (1._rprec - (u2val / 3._rprec) *                  &
-                            (1._rprec - 0.25_rprec * u2val)))
-                    else
-                        f_up = (1._rprec - exp(-u2val)) / (2._rprec * up)
-                    endif
-                    u2val = um * um
-                    if (abs(um) < u_small) then
-                        f_um = 0.5_rprec * um *                               &
-                            (1._rprec - 0.5_rprec * u2val *                   &
-                            (1._rprec - (u2val / 3._rprec) *                  &
-                            (1._rprec - 0.25_rprec * u2val)))
-                    else
-                        f_um = (1._rprec - exp(-u2val)) / (2._rprec * um)
-                    endif
-                    uy_opt_s = -g_over_v * (f_up - f_um) /                    &
-                        (2._rprec * pi * eps_k)
-                endif
-
-                les1 = les1 + uy_les_s * tan1
-                les2 = les2 + uy_les_s * tan2
-                les3 = les3 + uy_les_s * tan3
-                opt1 = opt1 + uy_opt_s * tan1
-                opt2 = opt2 + uy_opt_s * tan2
-                opt3 = opt3 + uy_opt_s * tan3
-            enddo
-
-            if (induced_method /= induced_panel) then
-                inv_vmag = 1._rprec / Vmag(m,n,q)
-                uy_LES_vec(m,n,q,1) = les1 * inv_vmag
-                uy_LES_vec(m,n,q,2) = les2 * inv_vmag
-                uy_LES_vec(m,n,q,3) = les3 * inv_vmag
-                uy_opt_vec(m,n,q,1) = opt1 * inv_vmag
-                uy_opt_vec(m,n,q,2) = opt2 * inv_vmag
-                uy_opt_vec(m,n,q,3) = opt3 * inv_vmag
-            else
-                uy_LES_vec(m,n,q,1) = les1
-                uy_LES_vec(m,n,q,2) = les2
-                uy_LES_vec(m,n,q,3) = les3
-                uy_opt_vec(m,n,q,1) = opt1
-                uy_opt_vec(m,n,q,2) = opt2
-                uy_opt_vec(m,n,q,3) = opt3
-            endif
-
-            uy_LES(m,n,q) = sqrt(uy_LES_vec(m,n,q,1)*uy_LES_vec(m,n,q,1) +    &
-                uy_LES_vec(m,n,q,2)*uy_LES_vec(m,n,q,2) +                    &
-                uy_LES_vec(m,n,q,3)*uy_LES_vec(m,n,q,3))
-            uy_opt(m,n,q) = sqrt(uy_opt_vec(m,n,q,1)*uy_opt_vec(m,n,q,1) +    &
-                uy_opt_vec(m,n,q,2)*uy_opt_vec(m,n,q,2) +                    &
-                uy_opt_vec(m,n,q,3)*uy_opt_vec(m,n,q,3))
-
-            if (du_include_ux == option_enabled) then
-                du(m,n,q,1) = du(m,n,q,1) * (1._rprec - relax) + relax *      &
-                    (uy_opt_vec(m,n,q,1) - uy_LES_vec(m,n,q,1) +             &
-                     ux_LES_vec(m,n,q,1))
-                du(m,n,q,2) = du(m,n,q,2) * (1._rprec - relax) + relax *      &
-                    (uy_opt_vec(m,n,q,2) - uy_LES_vec(m,n,q,2) +             &
-                     ux_LES_vec(m,n,q,2))
-                du(m,n,q,3) = du(m,n,q,3) * (1._rprec - relax) + relax *      &
-                    (uy_opt_vec(m,n,q,3) - uy_LES_vec(m,n,q,3) +             &
-                     ux_LES_vec(m,n,q,3))
-            else
-                du(m,n,q,1) = du(m,n,q,1) * (1._rprec - relax) + relax *      &
-                    (uy_opt_vec(m,n,q,1) - uy_LES_vec(m,n,q,1))
-                du(m,n,q,2) = du(m,n,q,2) * (1._rprec - relax) + relax *      &
-                    (uy_opt_vec(m,n,q,2) - uy_LES_vec(m,n,q,2))
-                du(m,n,q,3) = du(m,n,q,3) * (1._rprec - relax) + relax *      &
-                    (uy_opt_vec(m,n,q,3) - uy_LES_vec(m,n,q,3))
-            endif
-        enddo
-    enddo
-enddo
-
-call atm_model_cuda_sync('atm_compute_cl_correction')
-
-end subroutine atm_compute_cl_correction_gpu
-#endif
 
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2537,48 +1981,15 @@ subroutine atm_integrate_u(i)
 implicit none
 
 integer, intent(in) :: i ! i - turbineTypeArray
-#ifdef ENABLE_CUDA
-real(rprec), managed, pointer, dimension(:,:,:) :: u_infinity, induction_a
-real(rprec) :: u_sum, induction_sum, npoints
-integer :: m, n, q, mmend, nnend, qqend
-#else
 real(rprec), pointer, dimension(:,:,:) :: u_infinity, induction_a
-#endif
 real(rprec), pointer :: u_infinity_mean
 
 induction_a => turbineArray(i) % induction_a
 u_infinity_mean => turbineArray(i) % u_infinity_mean
 u_infinity => turbineArray(i) % u_infinity
 
-#ifdef ENABLE_CUDA
-if (atm_model_cuda_enabled()) then
-    mmend = size(u_infinity, 1)
-    nnend = size(u_infinity, 2)
-    qqend = size(u_infinity, 3)
-    npoints = real(mmend*nnend*qqend, rprec)
-    u_sum = 0._rprec
-    induction_sum = 0._rprec
-
-    !$cuf kernel do(3) <<<*,*>>> reduction(+:u_sum, induction_sum)
-    do q = 1, qqend
-    do n = 1, nnend
-    do m = 1, mmend
-        u_sum = u_sum + u_infinity(m,n,q)
-        induction_sum = induction_sum + induction_a(m,n,q)
-    end do
-    end do
-    end do
-    call atm_model_cuda_sync('atm_integrate_u')
-
-    u_infinity_mean = (u_sum / npoints) /                                     &
-        (1._rprec - induction_sum / npoints)
-else
-#endif
 u_infinity_mean = sum(u_infinity) / size(u_infinity) / &
 (1. - sum(induction_a) / size(induction_a))
-#ifdef ENABLE_CUDA
-endif
-#endif
 
 !~ write(*,*) "U infinity is", u_infinity_mean, size(u_infinity)
 
@@ -2595,13 +2006,6 @@ integer, intent(in) :: i
 integer :: j
 integer :: m,n,q
 real(rprec) :: origin_zero(3)
-#ifdef ENABLE_CUDA
-real(rprec), managed, pointer, dimension(:,:,:,:) :: bladePoints_d
-real(rprec) :: origin1, origin2, origin3
-real(rprec) :: ax1, ax2, ax3, cang, sang
-real(rprec) :: rm11, rm12, rm13, rm21, rm22, rm23, rm31, rm32, rm33
-real(rprec) :: p1, p2, p3, r1, r2, r3
-#endif
 ! Perform rotation for the turbine.
 j=turbineArray(i) % turbineTypeID
 
@@ -2621,53 +2025,6 @@ turbineArray(i) % uvShaft = vector_divide(turbineArray(i) % uvShaft,           &
                             vector_mag(turbineArray(i) % uvShaft))
 
 ! Rotate turbine blades, blade by blade, point by point.
-#ifdef ENABLE_CUDA
-! The CUDA yaw shortcut only rotates bladePoints.  Structure-on runs must also
-! rotate bladePoints_rigid so later elastic displacement is applied from the
-! correct rigid reference geometry.
-if (atm_model_cuda_enabled() .and. .not. atm_structure_enabled()) then
-    bladePoints_d => turbineArray(i) % bladePoints
-    origin1 = turbineArray(i) % towerShaftIntersect(1)
-    origin2 = turbineArray(i) % towerShaftIntersect(2)
-    origin3 = turbineArray(i) % towerShaftIntersect(3)
-    ax1 = turbineArray(i) % uvTower(1)
-    ax2 = turbineArray(i) % uvTower(2)
-    ax3 = turbineArray(i) % uvTower(3)
-    cang = cos(turbineArray(i) % deltaNacYaw)
-    sang = sin(turbineArray(i) % deltaNacYaw)
-
-    rm11 = ax1*ax1 + (1._rprec - ax1*ax1) * cang
-    rm12 = ax1*ax2 * (1._rprec - cang) - ax3 * sang
-    rm13 = ax1*ax3 * (1._rprec - cang) + ax2 * sang
-    rm21 = ax1*ax2 * (1._rprec - cang) + ax3 * sang
-    rm22 = ax2*ax2 + (1._rprec - ax2*ax2) * cang
-    rm23 = ax2*ax3 * (1._rprec - cang) - ax1 * sang
-    rm31 = ax1*ax3 * (1._rprec - cang) - ax2 * sang
-    rm32 = ax2*ax3 * (1._rprec - cang) + ax1 * sang
-    rm33 = ax3*ax3 + (1._rprec - ax3*ax3) * cang
-
-    !$cuf kernel do(3) <<<*,*>>>
-    do q=1, turbineArray(i) % numBladePoints
-        do n=1, turbineArray(i) %  numAnnulusSections
-            do m=1, turbineModel(j) % numBl
-                p1 = bladePoints_d(m,n,q,1) - origin1
-                p2 = bladePoints_d(m,n,q,2) - origin2
-                p3 = bladePoints_d(m,n,q,3) - origin3
-
-                r1 = rm11*p1 + rm12*p2 + rm13*p3
-                r2 = rm21*p1 + rm22*p2 + rm23*p3
-                r3 = rm31*p1 + rm32*p2 + rm33*p3
-
-                bladePoints_d(m,n,q,1) = r1 + origin1
-                bladePoints_d(m,n,q,2) = r2 + origin2
-                bladePoints_d(m,n,q,3) = r3 + origin3
-            enddo
-        enddo
-    enddo
-
-    call atm_model_cuda_sync('atm_yawNacelle')
-else
-#endif
 do q=1, turbineArray(i) % numBladePoints
     do n=1, turbineArray(i) %  numAnnulusSections
         do m=1, turbineModel(j) % numBl
@@ -2686,9 +2043,6 @@ do q=1, turbineArray(i) % numBladePoints
         enddo
     enddo
 enddo
-#ifdef ENABLE_CUDA
-endif
-#endif
 
 ! Compute the new yaw angle and make sure it isn't bigger than 2*pi.
 if (pastFirstTimeStep) then
@@ -3077,10 +2431,6 @@ real(rprec), allocatable :: Ff(:), Fe(:), Ft(:), Uf(:), Ue(:), Ut(:)
 real(rprec), allocatable :: df(:), vf(:), accf(:), de(:), ve(:), acce(:)
 real(rprec), allocatable :: Ttension(:)
 logical, save :: missing_data_warned = .false.
-#ifdef ENABLE_CUDA
-logical :: use_gpu_solve
-logical, save :: structure_gpu_path_printed = .false.
-#endif
 
 if (.not. atm_structure_enabled()) return
 if (.not. atm_structure_has_data(i)) then
@@ -3103,13 +2453,6 @@ structure_update_local = 0._rprec
 structure_total_local = 0._rprec
 if (structure_timing) call cpu_time(structure_t0)
 
-#ifdef ENABLE_CUDA
-use_gpu_solve = atm_structure_gpu_enabled()
-if (.not. structure_gpu_path_printed) then
-    write(*,*) 'ATM structural FP64 GPU solve enabled=', use_gpu_solve
-    structure_gpu_path_printed = .true.
-endif
-#endif
 
 a0 = 1._rprec / (beta * dt * dt)
 a1 = gamma / (beta * dt)
@@ -3277,21 +2620,9 @@ do m = 1, turbineModel(j) % NumBl
         structure_stage_t0 = structure_t1
     endif
 
-#ifdef ENABLE_CUDA
-    if (use_gpu_solve) then
-        call solve_linear_system_gpu_dp(DOFs, Af, Ff, Uf)
-        call solve_linear_system_gpu_dp(DOFs, Ae, Fe, Ue)
-        call solve_linear_system_gpu_dp(N, Kt, Ft, Ut)
-    else
-        call solve_linear_system_banded_dp(DOFs, 3, Af, Ff, Uf)
-        call solve_linear_system_banded_dp(DOFs, 3, Ae, Fe, Ue)
-        call solve_linear_system_banded_dp(N, 1, Kt, Ft, Ut)
-    endif
-#else
     call solve_linear_system_banded_dp(DOFs, 3, Af, Ff, Uf)
     call solve_linear_system_banded_dp(DOFs, 3, Ae, Fe, Ue)
     call solve_linear_system_banded_dp(N, 1, Kt, Ft, Ut)
-#endif
 
     if (structure_timing) then
         call cpu_time(structure_t1)
@@ -3362,179 +2693,6 @@ endif
 
 end subroutine atm_solve_structure
 
-#ifdef ENABLE_CUDA
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-attributes(global) subroutine solve_linear_system_gpu_kernel(N, lda, A, B, X,  &
-    info)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-integer, value :: N, lda
-real(rprec), device :: A(lda,*), B(*), X(*)
-integer, device :: info(*)
-
-integer :: i, j, k, max_idx
-real(rprec) :: factor, pivot, temp
-
-if (blockIdx%x /= 1 .or. threadIdx%x /= 1) return
-
-info(1) = 0
-do k = 1, N - 1
-    max_idx = k
-    pivot = abs(A(k,k))
-    do i = k + 1, N
-        if (abs(A(i,k)) > pivot) then
-            max_idx = i
-            pivot = abs(A(i,k))
-        endif
-    enddo
-    if (pivot <= tiny(1._rprec)) then
-        info(1) = k
-        return
-    endif
-    if (max_idx /= k) then
-        do j = k, N
-            temp = A(k,j)
-            A(k,j) = A(max_idx,j)
-            A(max_idx,j) = temp
-        enddo
-        temp = B(k)
-        B(k) = B(max_idx)
-        B(max_idx) = temp
-    endif
-    do i = k + 1, N
-        factor = A(i,k) / A(k,k)
-        do j = k, N
-            A(i,j) = A(i,j) - factor * A(k,j)
-        enddo
-        B(i) = B(i) - factor * B(k)
-    enddo
-enddo
-
-if (abs(A(N,N)) <= tiny(1._rprec)) then
-    info(1) = N
-    return
-endif
-X(N) = B(N) / A(N,N)
-do i = N - 1, 1, -1
-    temp = B(i)
-    do j = i + 1, N
-        temp = temp - A(i,j) * X(j)
-    enddo
-    X(i) = temp / A(i,i)
-enddo
-
-end subroutine solve_linear_system_gpu_kernel
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine solve_linear_system_gpu_dp(N, A, B, X)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! FP64 structural linear solve on the GPU. This mirrors the validated host
-! Gaussian-elimination interface exactly, including row pivoting.
-implicit none
-
-integer, intent(in) :: N
-real(rprec), intent(inout) :: A(N,N)
-real(rprec), intent(inout) :: B(N)
-real(rprec), intent(out) :: X(N)
-
-real(rprec), device, save, allocatable :: A_d(:,:), B_d(:), X_d(:), work_d(:)
-integer, device, save, allocatable :: info_d(:), ipiv_d(:)
-type(cusolverDnHandle), save :: solver_handle
-integer, save :: capacity = 0
-integer, save :: work_capacity = 0
-integer, save :: validation_count = 0
-logical, save :: solver_initialized = .false.
-integer :: istat, lwork, info_h
-real(rprec), allocatable :: A_ref(:,:), B_ref(:), X_ref(:)
-real(rprec) :: max_diff, ref_norm
-
-if (.not. solver_initialized) then
-    istat = cusolverDnCreate(solver_handle)
-    if (istat /= 0) then
-        print *, 'ATM structural cuSOLVER create failed: ', istat
-        stop 1
-    endif
-    solver_initialized = .true.
-endif
-
-if (capacity < N) then
-    if (allocated(A_d)) deallocate(A_d, B_d, X_d, info_d, ipiv_d)
-    allocate(A_d(N,N), B_d(N), X_d(N), info_d(1), ipiv_d(N))
-    capacity = N
-
-    istat = cusolverDnDgetrf_bufferSize(solver_handle, capacity, capacity,     &
-                                        A_d, capacity, lwork)
-    if (istat /= 0) then
-        print *, 'ATM structural cuSOLVER buffer query failed: ', istat
-        stop 1
-    endif
-    if (work_capacity < lwork) then
-        if (allocated(work_d)) deallocate(work_d)
-        allocate(work_d(lwork))
-        work_capacity = lwork
-    endif
-endif
-
-A_d(1:N,1:N) = A(1:N,1:N)
-B_d(1:N) = B(1:N)
-info_d(1) = 0
-
-if (atm_structure_gpu_direct_enabled()) then
-    call solve_linear_system_gpu_kernel<<<1,1>>>(N, capacity, A_d, B_d, X_d,   &
-                                                info_d)
-    istat = cudaGetLastError()
-    if (istat /= 0) then
-        print *, 'ATM structural GPU linear solve launch failed: ', istat
-        stop 1
-    endif
-    call atm_model_cuda_sync('ATM structural GPU direct linear solve')
-    info_h = info_d(1)
-    if (info_h /= 0) then
-        print *, 'ATM structural GPU direct singular matrix, info=', info_h
-        stop 1
-    endif
-    X(1:N) = X_d(1:N)
-else
-    istat = cusolverDnDgetrf(solver_handle, N, N, A_d, capacity, work_d,       &
-                             ipiv_d, info_d(1))
-    if (istat /= 0) then
-        print *, 'ATM structural cuSOLVER Dgetrf failed: ', istat
-        stop 1
-    endif
-
-    istat = cusolverDnDgetrs(solver_handle, CUBLAS_OP_N, N, 1, A_d, capacity,  &
-                             ipiv_d, B_d, N, info_d(1))
-    if (istat /= 0) then
-        print *, 'ATM structural cuSOLVER Dgetrs failed: ', istat
-        stop 1
-    endif
-    call atm_model_cuda_sync('ATM structural cuSOLVER solve')
-    info_h = info_d(1)
-    if (info_h /= 0) then
-        print *, 'ATM structural cuSOLVER solve failed, info=', info_h
-        stop 1
-    endif
-    X(1:N) = B_d(1:N)
-endif
-
-if (atm_structure_gpu_validate_enabled()) then
-    allocate(A_ref(N,N), B_ref(N), X_ref(N))
-    A_ref = A
-    B_ref = B
-    call solve_linear_system_dp(N, A_ref, B_ref, X_ref)
-    max_diff = maxval(abs(X(1:N) - X_ref(1:N)))
-    ref_norm = max(maxval(abs(X_ref(1:N))), tiny(1._rprec))
-    validation_count = validation_count + 1
-    if (validation_count <= 12 .or. max_diff / ref_norm > 1.0e-10_rprec) then
-        write(*,*) 'ATM structural GPU solve validation N=', N,                &
-            ' maxabs=', max_diff, ' rel=', max_diff / ref_norm
-    endif
-    deallocate(A_ref, B_ref, X_ref)
-endif
-
-end subroutine solve_linear_system_gpu_dp
-#endif
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine solve_linear_system_banded_dp(N, half_band, A, B, X)

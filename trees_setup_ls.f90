@@ -19,9 +19,6 @@
 
 module trees_setup_ls
 use trees_base_ls
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 save
@@ -60,13 +57,8 @@ integer, intent (in) :: ip  !--specifies chunk (or process)
                             !  local chunk k=nz <-> ip*(mx(3)-1)+mx(3)
 integer, intent (in) :: mx(nd) ! maximum dimension in x,y,z directions
 
-#ifdef ENABLE_CUDA
-real (rp), managed, intent (out) :: phi(mx(1), mx(2), 0:mx(3))
-integer, managed, intent (out), optional :: brident(mx(1), mx(2), mx(3))
-#else
 real (rp), intent (out) :: phi(mx(1), mx(2), 0:mx(3))  !--note 0 here
 integer, intent (out), optional :: brident(mx(1), mx(2), mx(3))
-#endif
 
 character (*), parameter :: sub = mod_name // '.sdistfcn_tree_array'
 
@@ -128,17 +120,10 @@ implicit none
 type (branch_type), intent (in) :: br
 integer, intent (in) :: ip
 integer, intent (in) :: mx(3)
-#ifdef ENABLE_CUDA
-real (rp), managed, intent (inout) :: phi(mx(1), mx(2), 0:mx(3))
-                             !--only 1:nx, 1:ny used
-                             !--note 0
-integer, managed, intent (inout), optional :: brident(mx(1), mx(2), mx(3))
-#else
 real (rp), intent (inout) :: phi(mx(1), mx(2), 0:mx(3))
                              !--only 1:nx, 1:ny used
                              !--note 0
 integer, intent (inout), optional :: brident(mx(1), mx(2), mx(3))
-#endif
 
 character (*), parameter :: sub_name = mod_name // '.sdistfcn_branch'
 
@@ -184,24 +169,6 @@ cosine  = l / sqrt ((rb0 * t)**2 + l**2)
 !lambda_skew(3,1)=sin(45.*3.14/180);
 !lambda_skew(3,3)=cos(45.*3.14/180);
 
-#ifdef ENABLE_CUDA
-if (trees_setup_cuda_enabled() .and. present(brident) .and.                  &
-    branch_cross_section == 'square' .and. add_base .and. add_cap .and.      &
-    base_shape == 'rectangular' .and. cap_shape == 'rectangular') then
-
-  call sdistfcn_branch_square_gpu(ip, mx, phi, brident, br % ident, l,        &
-       rb0, rbl, tgt, sine, cosine, br % x0, br % abs_dir, br % x_hat,        &
-       br % y_hat, br % z_hat)
-
-  if (associated (br % sub_branch)) then
-    do i = 1, br % n_sub_branch
-      call sdistfcn_branch (br % sub_branch(i), ip, mx, phi, brident)
-    end do
-  end if
-
-  return
-end if
-#endif
 
 
 do k = 0, mx(3)  !--mx(3) should be (grid % nx(3) - 1) / (np) + 1
@@ -872,280 +839,13 @@ subroutine sdistfcn_branch_square_gpu(ip, mx, phi, brident, ident, l, rb0,    &
 implicit none
 
 integer, intent(in) :: ip, mx(3), ident
-#ifdef ENABLE_CUDA
-real(rp), managed, intent(inout) :: phi(mx(1), mx(2), 0:mx(3))
-integer, managed, intent(inout) :: brident(mx(1), mx(2), mx(3))
-#else
 real(rp), intent(inout) :: phi(mx(1), mx(2), 0:mx(3))
 integer, intent(inout) :: brident(mx(1), mx(2), mx(3))
-#endif
 real(rp), intent(in) :: l, rb0, rbl, tgt, sine, cosine
 real(rp), intent(in) :: br_x0(nd), br_abs_dir(nd)
 real(rp), intent(in) :: br_x_hat(nd), br_y_hat(nd), br_z_hat(nd)
 
-#ifdef ENABLE_CUDA
-integer :: i, j, k, ktot, istat, mx1, mx2, mx3
-real(rp) :: xx, yy, zz, xp1, xp2, xp3, xperp1, xperp2, xperp3
-real(rp) :: d_para, rb, bx, by, s1, s2, dist, tmp
-real(rp) :: c1, c2, c3, u1, u2, u3, dot_tmp, mag_tmp
-real(rp) :: gx0, gy0, gz0, gdx, gdy, gdz
-real(rp) :: x01, x02, x03, ad1, ad2, ad3
-real(rp) :: xh1, xh2, xh3, yh1, yh2, yh3, zh1, zh2, zh3
-
-gx0 = grid % x_min(1, 1)
-gy0 = grid % x_min(2, 1)
-gz0 = grid % x_min(3, 1)
-gdx = grid % dx(1)
-gdy = grid % dx(2)
-gdz = grid % dx(3)
-mx1 = mx(1)
-mx2 = mx(2)
-mx3 = mx(3)
-x01 = br_x0(1)
-x02 = br_x0(2)
-x03 = br_x0(3)
-ad1 = br_abs_dir(1)
-ad2 = br_abs_dir(2)
-ad3 = br_abs_dir(3)
-xh1 = br_x_hat(1)
-xh2 = br_x_hat(2)
-xh3 = br_x_hat(3)
-yh1 = br_y_hat(1)
-yh2 = br_y_hat(2)
-yh3 = br_y_hat(3)
-zh1 = br_z_hat(1)
-zh2 = br_z_hat(2)
-zh3 = br_z_hat(3)
-
-!$cuf kernel do(3) <<<*, *>>>
-do k = 0, mx3
-do j = 1, mx2
-do i = 1, mx1
-  ktot = ip * (mx3 - 1) + k
-  xx = gx0 + real(i - 1, rp) * gdx - x01
-  yy = gy0 + real(j - 1, rp) * gdy - x02
-  zz = gz0 + real(ktot - 1, rp) * gdz - x03
-
-  d_para = xx*ad1 + yy*ad2 + zz*ad3
-  xp1 = d_para * ad1
-  xp2 = d_para * ad2
-  xp3 = d_para * ad3
-  xperp1 = xx - xp1
-  xperp2 = yy - xp2
-  xperp3 = zz - xp3
-  rb = rb0 * (1._rp - (d_para / l) * (1._rp - rbl / rb0))
-
-  bx = xx*xh1 + yy*xh2 + zz*xh3
-  by = xx*yh1 + yy*yh2 + zz*yh3
-  s1 = sign(1._rp, bx)
-  s2 = sign(1._rp, by)
-
-  if (d_para < -rb0) then
-    if ((abs(bx) > rb0) .and. (abs(by) > rb0)) then
-      c1 = rb0 * (-zh1 + s1*xh1 + s2*yh1)
-      c2 = rb0 * (-zh2 + s1*xh2 + s2*yh2)
-      c3 = rb0 * (-zh3 + s1*xh3 + s2*yh3)
-      dist = sqrt((xx-c1)*(xx-c1) + (yy-c2)*(yy-c2) + (zz-c3)*(zz-c3))
-    else if ((abs(bx) <= rb0) .and. (abs(by) > rb0)) then
-      c1 = rb0 * (-zh1 + s2*yh1)
-      c2 = rb0 * (-zh2 + s2*yh2)
-      c3 = rb0 * (-zh3 + s2*yh3)
-      u1 = xx - c1
-      u2 = yy - c2
-      u3 = zz - c3
-      dot_tmp = u1*xh1 + u2*xh2 + u3*xh3
-      u1 = u1 - dot_tmp*xh1
-      u2 = u2 - dot_tmp*xh2
-      u3 = u3 - dot_tmp*xh3
-      dist = sqrt(u1*u1 + u2*u2 + u3*u3)
-    else if ((abs(bx) > rb0) .and. (abs(by) <= rb0)) then
-      c1 = rb0 * (-zh1 + s1*xh1)
-      c2 = rb0 * (-zh2 + s1*xh2)
-      c3 = rb0 * (-zh3 + s1*xh3)
-      u1 = xx - c1
-      u2 = yy - c2
-      u3 = zz - c3
-      dot_tmp = u1*yh1 + u2*yh2 + u3*yh3
-      u1 = u1 - dot_tmp*yh1
-      u2 = u2 - dot_tmp*yh2
-      u3 = u3 - dot_tmp*yh3
-      dist = sqrt(u1*u1 + u2*u2 + u3*u3)
-    else
-      dist = -(d_para + rb0)
-    end if
-
-  else if (d_para < 0._rp) then
-    if ((abs(bx) > rb0) .and. (abs(by) > rb0)) then
-      c1 = rb0 * (s1*xh1 + s2*yh1)
-      c2 = rb0 * (s1*xh2 + s2*yh2)
-      c3 = rb0 * (s1*xh3 + s2*yh3)
-      dist = sqrt((xperp1-c1)*(xperp1-c1) + (xperp2-c2)*(xperp2-c2) +         &
-                  (xperp3-c3)*(xperp3-c3))
-    else if ((abs(bx) <= rb0) .and. (abs(by) > rb0)) then
-      dist = abs(by) - rb0
-    else if ((abs(bx) > rb0) .and. (abs(by) <= rb0)) then
-      dist = abs(bx) - rb0
-    else
-      if (abs(d_para) > max(abs(bx), abs(by))) then
-        dist = -(rb0 - abs(d_para))
-      else
-        dist = max(abs(bx), abs(by)) - rb0
-      end if
-    end if
-
-  else if (d_para > l + rbl) then
-    if ((abs(bx) > rbl) .and. (abs(by) > rbl)) then
-      c1 = (l+rbl)*zh1 + rbl*(s1*xh1 + s2*yh1)
-      c2 = (l+rbl)*zh2 + rbl*(s1*xh2 + s2*yh2)
-      c3 = (l+rbl)*zh3 + rbl*(s1*xh3 + s2*yh3)
-      dist = sqrt((xx-c1)*(xx-c1) + (yy-c2)*(yy-c2) + (zz-c3)*(zz-c3))
-    else if ((abs(bx) <= rbl) .and. (abs(by) > rbl)) then
-      c1 = (l+rbl)*zh1 + rbl*s2*yh1
-      c2 = (l+rbl)*zh2 + rbl*s2*yh2
-      c3 = (l+rbl)*zh3 + rbl*s2*yh3
-      u1 = xx - c1
-      u2 = yy - c2
-      u3 = zz - c3
-      dot_tmp = u1*xh1 + u2*xh2 + u3*xh3
-      u1 = u1 - dot_tmp*xh1
-      u2 = u2 - dot_tmp*xh2
-      u3 = u3 - dot_tmp*xh3
-      dist = sqrt(u1*u1 + u2*u2 + u3*u3)
-    else if ((abs(bx) > rbl) .and. (abs(by) <= rbl)) then
-      c1 = (l+rbl)*zh1 + rbl*s1*xh1
-      c2 = (l+rbl)*zh2 + rbl*s1*xh2
-      c3 = (l+rbl)*zh3 + rbl*s1*xh3
-      u1 = xx - c1
-      u2 = yy - c2
-      u3 = zz - c3
-      dot_tmp = u1*yh1 + u2*yh2 + u3*yh3
-      u1 = u1 - dot_tmp*yh1
-      u2 = u2 - dot_tmp*yh2
-      u3 = u3 - dot_tmp*yh3
-      dist = sqrt(u1*u1 + u2*u2 + u3*u3)
-    else
-      dist = d_para - (l + rbl)
-    end if
-
-  else if (d_para >= l) then
-    if ((abs(bx) > rbl) .and. (abs(by) > rbl)) then
-      c1 = rbl * (s1*xh1 + s2*yh1)
-      c2 = rbl * (s1*xh2 + s2*yh2)
-      c3 = rbl * (s1*xh3 + s2*yh3)
-      mag_tmp = sqrt((xperp1-c1)*(xperp1-c1) + (xperp2-c2)*(xperp2-c2) +      &
-                     (xperp3-c3)*(xperp3-c3))
-      if (d_para - l > mag_tmp * tgt) then
-        dist = mag_tmp
-      else
-        u1 = (-s1*sine)*xh1 + (-s2*sine)*yh1 +               &
-             cosine*zh1
-        u2 = (-s1*sine)*xh2 + (-s2*sine)*yh2 +               &
-             cosine*zh2
-        u3 = (-s1*sine)*xh3 + (-s2*sine)*yh3 +               &
-             cosine*zh3
-        tmp = sqrt(u1*u1 + u2*u2 + u3*u3)
-        u1 = u1 / tmp
-        u2 = u2 / tmp
-        u3 = u3 / tmp
-        c1 = rb0 * (s1*xh1 + s2*yh1)
-        c2 = rb0 * (s1*xh2 + s2*yh2)
-        c3 = rb0 * (s1*xh3 + s2*yh3)
-        c1 = xx - c1
-        c2 = yy - c2
-        c3 = zz - c3
-        dot_tmp = c1*u1 + c2*u2 + c3*u3
-        c1 = c1 - dot_tmp*u1
-        c2 = c2 - dot_tmp*u2
-        c3 = c3 - dot_tmp*u3
-        dist = sqrt(c1*c1 + c2*c2 + c3*c3)
-      end if
-    else if ((abs(bx) <= rbl) .and. (abs(by) > rbl)) then
-      if (d_para - l > (abs(by) - rbl) * tgt) then
-        dist = abs(by) - rbl
-      else
-        dist = (abs(by) - rb) * cosine
-      end if
-    else if ((abs(bx) > rbl) .and. (abs(by) <= rbl)) then
-      if (d_para - l > (abs(bx) - rbl) * tgt) then
-        dist = abs(bx) - rbl
-      else
-        dist = (abs(bx) - rb) * cosine
-      end if
-    else
-      if (d_para - l > max(abs(bx), abs(by))) then
-        dist = -((l + rbl) - d_para)
-      else
-        dist = max(abs(bx), abs(by)) - rbl
-      end if
-    end if
-
-  else
-    if ((abs(bx) > rb) .and. (abs(by) > rb)) then
-      c1 = rb0 * (s1*xh1 + s2*yh1)
-      c2 = rb0 * (s1*xh2 + s2*yh2)
-      c3 = rb0 * (s1*xh3 + s2*yh3)
-      mag_tmp = sqrt((xperp1-c1)*(xperp1-c1) + (xperp2-c2)*(xperp2-c2) +      &
-                     (xperp3-c3)*(xperp3-c3))
-      if (d_para < mag_tmp * tgt) then
-        dist = sqrt((xx-c1)*(xx-c1) + (yy-c2)*(yy-c2) + (zz-c3)*(zz-c3))
-      else
-        u1 = (-s1*sine)*xh1 + (-s2*sine)*yh1 +               &
-             cosine*zh1
-        u2 = (-s1*sine)*xh2 + (-s2*sine)*yh2 +               &
-             cosine*zh2
-        u3 = (-s1*sine)*xh3 + (-s2*sine)*yh3 +               &
-             cosine*zh3
-        tmp = sqrt(u1*u1 + u2*u2 + u3*u3)
-        u1 = u1 / tmp
-        u2 = u2 / tmp
-        u3 = u3 / tmp
-        c1 = rb0 * (s1*xh1 + s2*yh1)
-        c2 = rb0 * (s1*xh2 + s2*yh2)
-        c3 = rb0 * (s1*xh3 + s2*yh3)
-        c1 = xx - c1
-        c2 = yy - c2
-        c3 = zz - c3
-        dot_tmp = c1*u1 + c2*u2 + c3*u3
-        c1 = c1 - dot_tmp*u1
-        c2 = c2 - dot_tmp*u2
-        c3 = c3 - dot_tmp*u3
-        dist = sqrt(c1*c1 + c2*c2 + c3*c3)
-      end if
-    else if ((abs(bx) <= rb) .and. (abs(by) > rb)) then
-      if (d_para < (abs(by) - rb0) * tgt) then
-        dist = sqrt((abs(by) - rb0)*(abs(by) - rb0) + d_para*d_para)
-      else
-        dist = (abs(by) - rb) * cosine
-      end if
-    else if ((abs(bx) > rb) .and. (abs(by) <= rb)) then
-      if (d_para < (abs(bx) - rb0) * tgt) then
-        dist = sqrt((abs(bx) - rb0)*(abs(bx) - rb0) + d_para*d_para)
-      else
-        dist = (abs(bx) - rb) * cosine
-      end if
-    else
-      dist = (max(abs(bx), abs(by)) - rb) * cosine
-    end if
-  end if
-
-  if (phi(i,j,k) >= 0._rp) then
-    if (dist < phi(i,j,k)) then
-      phi(i,j,k) = dist
-      if (dist <= 0._rp .and. k > 0) brident(i,j,k) = ident
-    end if
-  end if
-end do
-end do
-end do
-
-istat = cudaDeviceSynchronize()
-if (istat /= cudaSuccess) then
-  print *, 'sdistfcn_branch_square_gpu failed: ', istat
-  stop
-end if
-#else
 call error('sdistfcn_branch_square_gpu', 'CUDA path requested without CUDA')
-#endif
 
 end subroutine sdistfcn_branch_square_gpu
 

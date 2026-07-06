@@ -17,26 +17,13 @@ use param, only : ld, ny, nz, lbz, dy, dz
 #ifdef PPMPI
 use param, only : coord
 #endif
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 private
 public :: hit_cuda_enabled, hit_gpu_setup, hit_fringe_setup_gpu,              &
     hit_compute_plane_gpu, hit_apply_fringe_gpu
 
-#ifdef ENABLE_CUDA
-real(rprec), managed, save, allocatable, dimension(:) :: hit_x_cuda,          &
-    hit_y_cuda, hit_z_cuda
-real(rprec), managed, save, allocatable, dimension(:,:,:) :: hit_u_cuda,      &
-    hit_v_cuda, hit_w_cuda
-real(rprec), managed, save, allocatable, dimension(:,:) :: hit_u_plane_cuda,  &
-    hit_v_plane_cuda, hit_w_plane_cuda
-integer, managed, save, allocatable, dimension(:) :: hit_iwrap_cuda
-real(rprec), managed, save, allocatable, dimension(:) :: hit_alpha_cuda,      &
-    hit_beta_cuda
-#elif defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 real(rprec), save, allocatable, dimension(:) :: hit_x_cuda, hit_y_cuda,       &
     hit_z_cuda
 real(rprec), save, allocatable, dimension(:,:,:) :: hit_u_cuda, hit_v_cuda,   &
@@ -51,7 +38,7 @@ real(rprec), save, allocatable, dimension(:) :: hit_alpha_cuda, hit_beta_cuda
 !$acc declare create(hit_iwrap_cuda, hit_alpha_cuda, hit_beta_cuda)
 #endif
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 integer, save :: nx_hit_cuda = 0, ny_hit_cuda = 0, nz_hit_cuda = 0
 integer, save :: hit_fringe_nx_cuda = 0
 #endif
@@ -63,7 +50,7 @@ logical function hit_cuda_enabled()
 !*******************************************************************************
 implicit none
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 hit_cuda_enabled = .true.
 #else
 hit_cuda_enabled = .false.
@@ -79,7 +66,7 @@ real(rprec), intent(in) :: x(nx_hit), y(ny_hit), z(nz_hit)
 real(rprec), intent(in) :: u(nx_hit, ny_hit, nz_hit),                         &
     v(nx_hit, ny_hit, nz_hit), w(nx_hit, ny_hit, nz_hit)
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 if (allocated(hit_x_cuda)) deallocate(hit_x_cuda)
 if (allocated(hit_y_cuda)) deallocate(hit_y_cuda)
 if (allocated(hit_z_cuda)) deallocate(hit_z_cuda)
@@ -126,7 +113,7 @@ integer, intent(in) :: fringe_nx
 integer, intent(in) :: iwrap(fringe_nx)
 real(rprec), intent(in) :: alpha(fringe_nx), beta(fringe_nx)
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 if (allocated(hit_iwrap_cuda)) deallocate(hit_iwrap_cuda)
 if (allocated(hit_alpha_cuda)) deallocate(hit_alpha_cuda)
 if (allocated(hit_beta_cuda)) deallocate(hit_beta_cuda)
@@ -151,7 +138,7 @@ subroutine hit_compute_plane_gpu(xloc, ti_out, inflow_velocity)
 !*******************************************************************************
 real(rprec), intent(in) :: xloc, ti_out, inflow_velocity
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 integer :: i0, i1, j0, j1, k0, k1
 integer :: i0_x, i1_x
 integer :: i, j, k
@@ -206,12 +193,8 @@ endif
 !$acc& xp,yp,zp,zwp,xd,yd,zd,x0,x1,y0,y1,z0,z1,c00,c01,c10,c11,c0,c1)
 do k = 1, nz
     do j = 1, ny
-#elif defined(ENABLE_CUDA)
-!$cuf kernel do(2) <<<*, *>>>
-do k = 1, nz
-    do j = 1, ny
 #endif
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
         i0 = i0_x
         i1 = i1_x
         xd = xd_x
@@ -326,7 +309,7 @@ integer, intent(in) :: iwrap(fringe_nx)
 real(rprec), intent(in) :: alpha(fringe_nx), beta(fringe_nx)
 real(rprec), intent(inout) :: u(ld,ny,lbz:nz), v(ld,ny,lbz:nz), w(ld,ny,lbz:nz)
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 integer :: i, j, k, i_w
 real(rprec) :: alpha_i, beta_i
 
@@ -342,22 +325,6 @@ do k = 1, nz
             i_w = hit_iwrap_cuda(i)
             alpha_i = hit_alpha_cuda(i)
             beta_i = hit_beta_cuda(i)
-            u(i_w,j,k) = alpha_i * u(i_w,j,k) + beta_i * hit_u_plane_cuda(j,k)
-            v(i_w,j,k) = alpha_i * v(i_w,j,k) + beta_i * hit_v_plane_cuda(j,k)
-            w(i_w,j,k) = alpha_i * w(i_w,j,k) + beta_i * hit_w_plane_cuda(j,k)
-        enddo
-    enddo
-enddo
-#elif defined(ENABLE_CUDA)
-attributes(device) :: iwrap, alpha, beta, u, v, w
-
-!$cuf kernel do(3) <<<*, *>>>
-do k = 1, nz
-    do j = 1, ny
-        do i = 1, fringe_nx
-            i_w = iwrap(i)
-            alpha_i = alpha(i)
-            beta_i = beta(i)
             u(i_w,j,k) = alpha_i * u(i_w,j,k) + beta_i * hit_u_plane_cuda(j,k)
             v(i_w,j,k) = alpha_i * v(i_w,j,k) + beta_i * hit_v_plane_cuda(j,k)
             w(i_w,j,k) = alpha_i * w(i_w,j,k) + beta_i * hit_w_plane_cuda(j,k)

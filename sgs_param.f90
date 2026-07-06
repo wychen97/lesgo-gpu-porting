@@ -21,9 +21,6 @@
 module sgs_param
 !*******************************************************************************
 use types, only : rprec
-#if defined(ENABLE_CUDA) && !defined(PPSGS_GPU)
-use cudafor
-#endif
 
 save
 private rprec
@@ -39,26 +36,6 @@ integer, parameter :: SGS_MODEL_LAGRANGE_SCALE_DEP = 5
 ! For all sgs models
 integer ::jt_count
 real(rprec) :: delta, nu
-#if defined(ENABLE_CUDA) && !defined(PPSGS_GPU)
-real(rprec), managed, dimension(:,:,:), allocatable :: S11, S12, S22, S33, S13, S23
-! eddy viscosity
-real(rprec), managed, dimension(:,:,:), allocatable :: Nu_t
-! (C_s)^2, Dynamic Smag coeff
-real(rprec), managed, dimension(:,:,:), allocatable :: Cs_opt2
-real(rprec), managed, dimension(:,:),  allocatable :: S
-
-! For all dynamic models (SGS_MODEL_STANDARD_DYNAMIC through
-! SGS_MODEL_LAGRANGE_SCALE_DEP)
-real(rprec), managed, dimension(:,:,:), allocatable :: ee_now
-real(rprec), managed, dimension(:,:),  allocatable :: L11, L12, L13, L22, L23, L33
-real(rprec), managed, dimension(:,:),  allocatable :: M11, M12, M13, M22, M23, M33
-
-real(rprec), managed, dimension(:,:),  allocatable :: S11_bar, S12_bar, S13_bar
-real(rprec), managed, dimension(:,:),  allocatable :: S22_bar, S23_bar, S33_bar
-real(rprec), managed, dimension(:,:),  allocatable :: S_S11_bar, S_S12_bar, S_S13_bar
-real(rprec), managed, dimension(:,:),  allocatable :: S_S22_bar, S_S23_bar, S_S33_bar
-real(rprec), managed, dimension(:,:),  allocatable :: u_bar, v_bar, w_bar, S_bar
-#else
 real(rprec), dimension(:,:,:),allocatable :: S11, S12, S22, S33, S13, S23
 ! eddy viscosity
 real(rprec), dimension(:,:,:),allocatable :: Nu_t
@@ -77,56 +54,33 @@ real(rprec), dimension(:,:),  allocatable :: S22_bar, S23_bar, S33_bar
 real(rprec), dimension(:,:),  allocatable :: S_S11_bar, S_S12_bar, S_S13_bar
 real(rprec), dimension(:,:),  allocatable :: S_S22_bar, S_S23_bar, S_S33_bar
 real(rprec), dimension(:,:),  allocatable :: u_bar, v_bar, w_bar, S_bar
-#endif
 
 ! For Lagrangian models (SGS_MODEL_LAGRANGE_SIMILARITY and
 ! SGS_MODEL_LAGRANGE_SCALE_DEP)
 real(rprec) :: lagran_dt = 0._rprec
 ! (Meneveau, Lund, Cabot; JFM 1996)
 real(rprec), parameter :: opftime = 1.5_rprec
-#if defined(ENABLE_CUDA) && !defined(PPSGS_GPU)
-real(rprec), managed, dimension(:,:,:), allocatable :: F_LM, F_MM, F_QN, F_NN
-real(rprec), managed, dimension(:,:,:), allocatable :: Beta, Tn_all
-#else
 real(rprec), dimension(:,:,:), allocatable :: F_LM, F_MM, F_QN, F_NN
 real(rprec), dimension(:,:,:), allocatable :: Beta, Tn_all
-#endif
 
 ! For scale-dependent Lagrangian model SGS_MODEL_LAGRANGE_SCALE_DEP
-#if defined(ENABLE_CUDA) && !defined(PPSGS_GPU)
-real(rprec), managed, dimension(:,:), allocatable :: Q11, Q12, Q13, Q22, Q23, Q33
-real(rprec), managed, dimension(:,:), allocatable :: N11, N12, N13, N22, N23, N33
-#else
 real(rprec), dimension(:,:), allocatable :: Q11, Q12, Q13, Q22, Q23, Q33
 real(rprec), dimension(:,:), allocatable :: N11, N12, N13, N22, N23, N33
-#endif
 
 ! For scale-dependent models (SGS_MODEL_SCALE_DEP_DYNAMIC and
 ! SGS_MODEL_LAGRANGE_SCALE_DEP)
-#if defined(ENABLE_CUDA) && !defined(PPSGS_GPU)
-real(rprec), managed, dimension(:,:), allocatable :: S11_hat, S12_hat, S13_hat
-real(rprec), managed, dimension(:,:), allocatable :: S22_hat, S23_hat, S33_hat
-real(rprec), managed, dimension(:,:), allocatable :: S_S11_hat, S_S12_hat, S_S13_hat
-real(rprec), managed, dimension(:,:), allocatable :: S_S22_hat, S_S23_hat, S_S33_hat
-real(rprec), managed, dimension(:,:), allocatable :: u_hat, v_hat, w_hat, S_hat
-#else
 real(rprec), dimension(:,:), allocatable :: S11_hat, S12_hat, S13_hat
 real(rprec), dimension(:,:), allocatable :: S22_hat, S23_hat, S33_hat
 real(rprec), dimension(:,:), allocatable :: S_S11_hat, S_S12_hat, S_S13_hat
 real(rprec), dimension(:,:), allocatable :: S_S22_hat, S_S23_hat, S_S33_hat
 real(rprec), dimension(:,:), allocatable :: u_hat, v_hat, w_hat, S_hat
-#endif
 
 ! The following are for dynamically updating T, the timescale for Lagrangian averaging
 !   F_ee2 is the running average of (eij*eij)^2
 !   F_deedt2 is the running average of [d(eij*eij)/dt]^2
 !   ee_past is the array (eij*eij) for the past timestep
 #ifdef PPDYN_TN
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:,:,:), allocatable :: F_ee2, F_deedt2, ee_past
-#else
 real(rprec), dimension(:,:,:), allocatable :: F_ee2, F_deedt2, ee_past
-#endif
 #endif
 
 #ifdef PPSGS_GPU

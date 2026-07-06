@@ -23,9 +23,6 @@ module inflow
 use types, only : rprec
 use param, only : inflow_type
 use fringe
-#if defined(ENABLE_CUDA) && !defined(PPLES_GPU)
-use cudafor
-#endif
 #ifdef PPCPS
 use concurrent_precursor, only : synchronize_cps, inflow_cps
 #endif
@@ -37,16 +34,12 @@ implicit none
 
 private
 public :: inflow_init, apply_inflow
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 public :: inflow_cuda_enabled
 #endif
 
 type (fringe_t) :: uniform_fringe
-#if defined(ENABLE_CUDA) && !defined(PPLES_GPU)
-integer, managed, allocatable, dimension(:) :: uniform_iwrap_cuda
-real(rprec), managed, allocatable, dimension(:) :: uniform_alpha_cuda
-real(rprec), managed, allocatable, dimension(:) :: uniform_beta_cuda
-#elif defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 integer, allocatable, dimension(:) :: uniform_iwrap_cuda
 real(rprec), allocatable, dimension(:) :: uniform_alpha_cuda
 real(rprec), allocatable, dimension(:) :: uniform_beta_cuda
@@ -55,7 +48,7 @@ real(rprec), allocatable, dimension(:) :: uniform_beta_cuda
 
 contains
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 !*******************************************************************************
 logical function inflow_cuda_enabled()
 !*******************************************************************************
@@ -65,28 +58,6 @@ inflow_cuda_enabled = .true.
 
 end function inflow_cuda_enabled
 
-#if defined(ENABLE_CUDA) && !defined(PPLES_GPU)
-!*******************************************************************************
-subroutine inflow_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'inflow CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'inflow CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine inflow_cuda_sync
-#endif
 #endif
 
 !*******************************************************************************
@@ -98,7 +69,7 @@ select case (inflow_type)
     ! uniform
     case (1)
         uniform_fringe = fringe_t(fringe_region_end, fringe_region_len)
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
         if (allocated(uniform_iwrap_cuda)) deallocate(uniform_iwrap_cuda)
         if (allocated(uniform_alpha_cuda)) deallocate(uniform_alpha_cuda)
         if (allocated(uniform_beta_cuda)) deallocate(uniform_beta_cuda)
@@ -187,23 +158,6 @@ if (inflow_cuda_enabled()) then
     end do
     end do
 else
-#elif defined(ENABLE_CUDA)
-if (inflow_cuda_enabled()) then
-    !$cuf kernel do(3) <<<*,*>>>
-    do k = 1, nz
-    do j = 1, ny
-    do i = 1, uniform_nx
-        i_w = uniform_iwrap_cuda(i)
-        alpha_i = uniform_alpha_cuda(i)
-        beta_i = uniform_beta_cuda(i)
-        u(i_w,j,k) = alpha_i*u(i_w,j,k) + beta_i*inflow_velocity
-        v(i_w,j,k) = alpha_i*v(i_w,j,k)
-        w(i_w,j,k) = alpha_i*w(i_w,j,k)
-    end do
-    end do
-    end do
-    call inflow_cuda_sync('uniform inflow')
-else
 #endif
 !--skip istart since we know vel at istart, iend already
 do i = 1, uniform_fringe%nx
@@ -213,7 +167,7 @@ do i = 1, uniform_fringe%nx
     v(i_w,1:ny,1:nz) = uniform_fringe%alpha(i) * v(i_w,1:ny,1:nz)
     w(i_w,1:ny,1:nz) = uniform_fringe%alpha(i) * w(i_w,1:ny,1:nz)
 end do
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 end if
 #endif
 
