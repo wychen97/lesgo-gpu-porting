@@ -43,10 +43,6 @@ module scalars
 !     theta/RHS_T/psi_m.
 use types, only : rprec
 use param, only : path
-#ifdef ENABLE_CUDA
-use cudafor
-use cufft
-#endif
 #ifdef PPSCALARS_GPU
 use openacc
 use fft_gpu, only : fft_gpu_exec_d2z, fft_gpu_exec_z2d,                       &
@@ -64,32 +60,17 @@ private
 public :: scalars_init, ic_scal, buoyancy_force, scalars_transport,            &
     scalars_checkpoint, obukhov, scalars_deriv
 
-#ifdef ENABLE_CUDA
-real(rprec), managed, public, dimension(:,:,:), allocatable :: theta, dTdx,    &
-    dTdy, dTdz, RHS_T, RHS_Tf, u_big, v_big, w_big, dTdx_big, dTdy_big,        &
-    dTdz_big, RHS_big, pi_x, pi_y, pi_z, div_pi, temp_var
-#else
 real(rprec), public, dimension(:,:,:), allocatable :: theta, dTdx, dTdy, dTdz, &
     RHS_T, RHS_Tf, u_big, v_big, w_big, dTdx_big, dTdy_big, dTdz_big, RHS_big, &
     pi_x, pi_y, pi_z, div_pi, temp_var
-#endif
 
 ! SGS values
 real(rprec), public :: Pr_sgs = 0.5
-#ifdef ENABLE_CUDA
-real(rprec), managed, public, dimension(:,:,:), allocatable :: Kappa_t
-#else
 real(rprec), public, dimension(:,:,:), allocatable :: Kappa_t
-#endif
 
 ! Monin-Obukhov BC
-#ifdef ENABLE_CUDA
-real(rprec), managed, public, dimension(:,:), allocatable :: psi_m, phi_m,     &
-    psi_h, phi_h, L, tstar_lbc
-#else
 real(rprec), public, dimension(:,:), allocatable :: psi_m, phi_m, psi_h, phi_h,&
     L, tstar_lbc
-#endif
 
 ! Gravitational acceleration
 real(rprec), public :: g = 9.81_rprec
@@ -111,31 +92,16 @@ real(rprec), public :: T_scale = 300._rprec
 integer, public :: lbc_scal = 0
 real(rprec), public :: scal_bot = 300._rprec
 real(rprec), public :: flux_bot = 0._rprec
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:), allocatable, public :: ic_z, ic_theta
-#else
 real(rprec), dimension(:), allocatable, public :: ic_z, ic_theta
-#endif
 real(rprec), public :: ic_no_vel_noise_z
 integer, public :: ic_nloc
 real(rprec), public :: lapse_rate = 0._rprec
 logical, public :: read_lbc_scal = .false.
 
 ! Interpolation of bottom boundary condition
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:), allocatable :: t_interp, lbc_interp
-#else
 real(rprec), dimension(:), allocatable :: t_interp, lbc_interp
-#endif
 
-#ifdef ENABLE_CUDA
-integer, save :: scalars_plan_fw_s_lbz = 0
-integer, save :: scalars_plan_bk_b_lbz = 0
-integer, save :: scalars_plan_fw_b_nz1 = 0
-integer, save :: scalars_plan_bk_s_nz1 = 0
-logical, save :: scalars_cufft_initialized = .false.
-#endif
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
 integer, save :: scalars_stage_count = 0
 real(rprec), save :: scalars_time_copy_rhs = 0._rprec
 real(rprec), save :: scalars_time_to_big = 0._rprec
@@ -154,7 +120,7 @@ logical, save :: scalar_deriv_big_ready = .false.
 real(rprec), dimension(:), allocatable :: theta_bar_acc
 ! Scalar GPU path for the active LES GPU build.  This follows the explicit
 ! OpenACC residency model used by sim_param/sgs_param instead of the older
-! ENABLE_CUDA managed-memory branch above.
+! Legacy managed-memory branch removed.
 !$acc declare create(theta, dTdx, dTdy, dTdz, RHS_T, RHS_Tf)
 !$acc declare create(u_big, v_big, w_big, dTdx_big, dTdy_big, dTdz_big, RHS_big)
 !$acc declare create(pi_x, pi_y, pi_z, div_pi, temp_var, Kappa_t)
@@ -204,7 +170,6 @@ implicit none
 
 end subroutine scalars_acc_sync
 
-#ifndef ENABLE_CUDA
 !*******************************************************************************
 logical function scalars_stage_timing_enabled()
 !*******************************************************************************
@@ -278,7 +243,6 @@ write(*,'(1a,E15.7)') '    halo/top bc: ', scalars_time_halo
 write(*,'(1a,E15.7)') '  scalar transport total: ', scalars_time_total
 
 end subroutine scalars_stage_report
-#endif
 
 !*******************************************************************************
 subroutine scalars_deriv_xy_big_acc()
@@ -776,736 +740,6 @@ end if
 end subroutine scalars_rhs_theta_acc
 #endif
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function scalars_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-scalars_cuda_enabled = .true.
-
-end function scalars_cuda_enabled
-
-!*******************************************************************************
-subroutine scalars_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= cudaSuccess) then
-    print *, 'SCALARS CUDA sync failure at ', trim(where), ': ', istat
-    stop 1
-end if
-istat = cudaGetLastError()
-if (istat /= cudaSuccess) then
-    print *, 'SCALARS CUDA kernel failure at ', trim(where), ': ', istat
-    stop 1
-end if
-
-end subroutine scalars_cuda_sync
-
-!*******************************************************************************
-subroutine require_scalars_cufft(where, istat)
-!*******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer, intent(in) :: istat
-
-if (istat /= CUFFT_SUCCESS) then
-    print *, 'SCALARS cuFFT failure at ', trim(where), ': ', istat
-    stop 1
-end if
-
-end subroutine require_scalars_cufft
-
-!*******************************************************************************
-subroutine ensure_scalars_cufft()
-!*******************************************************************************
-use param, only : nx, ny, nx2, ny2, ld, ld_big, lbz, nz
-implicit none
-
-integer :: istat
-integer :: n_s(2), inem_s(2), onem_s(2)
-integer :: n_b(2), inem_b(2), onem_b(2)
-
-if (scalars_cufft_initialized) return
-
-n_s(1) = ny
-n_s(2) = nx
-inem_s(1) = ny
-inem_s(2) = ld
-onem_s(1) = ny
-onem_s(2) = ld / 2
-
-n_b(1) = ny2
-n_b(2) = nx2
-inem_b(1) = ny2
-inem_b(2) = ld_big
-onem_b(1) = ny2
-onem_b(2) = ld_big / 2
-
-istat = cufftPlanMany(scalars_plan_fw_s_lbz, 2, n_s, inem_s, 1, ld*ny,       &
-    onem_s, 1, (ld/2)*ny, CUFFT_D2Z, nz-lbz+1)
-call require_scalars_cufft('small forward lbz plan', istat)
-
-istat = cufftPlanMany(scalars_plan_bk_b_lbz, 2, n_b, onem_b, 1,              &
-    (ld_big/2)*ny2, inem_b, 1, ld_big*ny2, CUFFT_Z2D, nz-lbz+1)
-call require_scalars_cufft('big inverse lbz plan', istat)
-
-istat = cufftPlanMany(scalars_plan_fw_b_nz1, 2, n_b, inem_b, 1,              &
-    ld_big*ny2, onem_b, 1, (ld_big/2)*ny2, CUFFT_D2Z, nz-1)
-call require_scalars_cufft('big forward nz-1 plan', istat)
-
-istat = cufftPlanMany(scalars_plan_bk_s_nz1, 2, n_s, onem_s, 1,              &
-    (ld/2)*ny, inem_s, 1, ld*ny, CUFFT_Z2D, nz-1)
-call require_scalars_cufft('small inverse nz-1 plan', istat)
-
-scalars_cufft_initialized = .true.
-
-end subroutine ensure_scalars_cufft
-
-!*******************************************************************************
-subroutine scalars_padd_3d_gpu(a_big, a_small, kb_big, kb_small, k_start, k_end)
-!*******************************************************************************
-use param, only : ld, ld_big, nx, ny, ny2
-implicit none
-
-integer, intent(in) :: kb_big, kb_small, k_start, k_end
-real(rprec), intent(inout) :: a_big(ld_big, ny2, kb_big:*)
-real(rprec), intent(in) :: a_small(ld, ny, kb_small:*)
-attributes(device) :: a_big, a_small
-integer :: i, j, k
-integer :: ny_h, j_s, j_big_s
-
-ny_h = ny / 2
-j_s = ny_h + 2
-j_big_s = ny2 - ny_h + 2
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = k_start, k_end
-do j = 1, ny2
-do i = 1, ld_big
-    if (i <= nx .and. j <= ny_h) then
-        a_big(i,j,k) = a_small(i,j,k)
-    else if (i <= nx .and. j >= j_big_s) then
-        a_big(i,j,k) = a_small(i,j - j_big_s + j_s,k)
-    else
-        a_big(i,j,k) = 0._rprec
-    end if
-end do
-end do
-end do
-
-end subroutine scalars_padd_3d_gpu
-
-!*******************************************************************************
-subroutine scalars_unpadd_3d_gpu(a_small, a_big, kb_small, kb_big, k_start, k_end)
-!*******************************************************************************
-use param, only : ld, ld_big, nx, ny, ny2
-implicit none
-
-integer, intent(in) :: kb_small, kb_big, k_start, k_end
-real(rprec), intent(inout) :: a_small(ld, ny, kb_small:*)
-real(rprec), intent(in) :: a_big(ld_big, ny2, kb_big:*)
-attributes(device) :: a_small, a_big
-integer :: i, j, k
-integer :: ny_h, j_s, j_big_s
-
-ny_h = ny / 2
-j_s = ny_h + 2
-j_big_s = ny2 - ny_h + 2
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = k_start, k_end
-do j = 1, ny
-do i = 1, ld
-    if (i >= ld - 1 .or. j == ny_h + 1) then
-        a_small(i,j,k) = 0._rprec
-    else if (i <= nx .and. j <= ny_h) then
-        a_small(i,j,k) = a_big(i,j,k)
-    else if (i <= nx .and. j >= j_s) then
-        a_small(i,j,k) = a_big(i,j_big_s + j - j_s,k)
-    else
-        a_small(i,j,k) = 0._rprec
-    end if
-end do
-end do
-end do
-
-end subroutine scalars_unpadd_3d_gpu
-
-!*******************************************************************************
-subroutine scalars_to_big_gpu(a, a_big)
-!*******************************************************************************
-use param, only : lbz, ld, ld_big, nx, ny, ny2, nz
-implicit none
-
-real(rprec), intent(inout) :: a(ld, ny, lbz:nz)
-real(rprec), intent(inout) :: a_big(ld_big, ny2, lbz:nz)
-attributes(device) :: a, a_big
-integer :: i, j, k, istat
-real(rprec) :: const
-
-call ensure_scalars_cufft()
-
-const = 1._rprec/(nx*ny)
-!$cuf kernel do(3) <<<*,*>>>
-do k = lbz, nz
-do j = 1, ny
-do i = 1, ld
-    temp_var(i,j,k) = const*a(i,j,k)
-end do
-end do
-end do
-
-istat = cufftExecD2Z(scalars_plan_fw_s_lbz, temp_var(:,:,lbz), temp_var(:,:,lbz))
-call require_scalars_cufft('small forward lbz exec', istat)
-
-call scalars_padd_3d_gpu(a_big, temp_var, lbz, lbz, lbz, nz)
-
-istat = cufftExecZ2D(scalars_plan_bk_b_lbz, a_big(:,:,lbz), a_big(:,:,lbz))
-call require_scalars_cufft('big inverse lbz exec', istat)
-
-end subroutine scalars_to_big_gpu
-
-!*******************************************************************************
-subroutine scalars_return_rhs_gpu()
-!*******************************************************************************
-use param, only : lbz, nz
-implicit none
-
-integer :: istat
-
-call ensure_scalars_cufft()
-
-istat = cufftExecD2Z(scalars_plan_fw_b_nz1, RHS_big(:,:,1), RHS_big(:,:,1))
-call require_scalars_cufft('big forward nz-1 exec', istat)
-
-call scalars_unpadd_3d_gpu(RHS_T, RHS_big, lbz, lbz, 1, nz-1)
-
-istat = cufftExecZ2D(scalars_plan_bk_s_nz1, RHS_T(:,:,1), RHS_T(:,:,1))
-call require_scalars_cufft('small inverse nz-1 exec', istat)
-
-end subroutine scalars_return_rhs_gpu
-
-!*******************************************************************************
-logical function scalars_stage_timing_enabled()
-!*******************************************************************************
-implicit none
-
-logical, save :: initialized = .false.
-logical, save :: enabled = .false.
-
-if (.not. initialized) then
-    enabled = scalars_env_true_token_enabled('LESGO_SCALAR_STAGE_TIMING')
-    initialized = .true.
-end if
-
-scalars_stage_timing_enabled = enabled
-
-end function scalars_stage_timing_enabled
-
-!*******************************************************************************
-subroutine scalars_timer_start(t0)
-!*******************************************************************************
-implicit none
-
-real(rprec), intent(out) :: t0
-
-call scalars_cuda_sync('scalar timing start')
-call cpu_time(t0)
-
-end subroutine scalars_timer_start
-
-!*******************************************************************************
-subroutine scalars_timer_accum(t0, accum, where)
-!*******************************************************************************
-implicit none
-
-real(rprec), intent(inout) :: t0
-real(rprec), intent(inout) :: accum
-character(len=*), intent(in) :: where
-real(rprec) :: t1
-
-call scalars_cuda_sync(where)
-call cpu_time(t1)
-accum = accum + max(t1 - t0, 0._rprec)
-t0 = t1
-
-end subroutine scalars_timer_accum
-
-!*******************************************************************************
-subroutine scalars_stage_report(wbase_in)
-!*******************************************************************************
-use param, only : coord
-implicit none
-
-integer, intent(in) :: wbase_in
-
-if (coord /= 0) return
-if (wbase_in > 0) then
-    if (mod(scalars_stage_count, wbase_in) /= 0) return
-end if
-
-write(*,'(a,i8)') 'Scalar stage timing (rank 0 cumulative), call ',           &
-    scalars_stage_count
-write(*,'(1a,E15.7)') '  copy RHS: ', scalars_time_copy_rhs
-write(*,'(1a,E15.7)') '  to_big transforms: ', scalars_time_to_big
-write(*,'(1a,E15.7)') '  advective product: ', scalars_time_advective
-write(*,'(1a,E15.7)') '  return RHS transform: ', scalars_time_return
-write(*,'(1a,E15.7)') '  flux build: ', scalars_time_flux
-write(*,'(1a,E15.7)') '  div/update/halo: ', scalars_time_div_update
-write(*,'(1a,E15.7)') '    divergence: ', scalars_time_divergence
-write(*,'(1a,E15.7)') '    rhs/theta update: ', scalars_time_rhs_update
-write(*,'(1a,E15.7)') '    halo/top bc: ', scalars_time_halo
-write(*,'(1a,E15.7)') '  scalar transport total: ', scalars_time_total
-
-end subroutine scalars_stage_report
-
-!*******************************************************************************
-#if defined(PPSCALARS_GPU) && !defined(ENABLE_CUDA)
-!*******************************************************************************
-!$acc routine(calc_psi_m_acc) seq
-real(rprec) function calc_psi_m_acc(zeta, pi_l) result(res)
-!*******************************************************************************
-implicit none
-
-real(rprec), value, intent(in) :: zeta, pi_l
-real(rprec), parameter :: am=6.1_rprec
-real(rprec), parameter :: a=0.33_rprec, b=0.41_rprec
-real(rprec) :: y, yy, xx, psi_zero
-
-if (zeta < 0._rprec) then
-    y = -zeta
-
-    if (y > b**(-3._rprec) ) then
-        yy = b**(-3._rprec)
-        xx = (yy/a)**(1._rprec/3._rprec)
-        psi_zero = -log(a) + sqrt(3._rprec)*b*(a**(1._rprec/3._rprec))        &
-            * (pi_l/6._rprec)
-        res = log(a+yy) - 3._rprec*b*(yy**(1._rprec/3._rprec))               &
-            + (b*(a**(1._rprec/3._rprec))/2._rprec)                          &
-            * log(((1._rprec+xx)**2)/(1._rprec - xx + xx*xx))                &
-            + sqrt(3._rprec)*b*(a**(1._rprec/3._rprec))                      &
-            * atan(((2._rprec*xx)-1._rprec)/sqrt(3._rprec)) + psi_zero
-    else
-        xx = (y/a)**(1._rprec/3._rprec)
-        psi_zero = -log(a) + sqrt(3._rprec)*b*(a**(1._rprec/3._rprec))        &
-            * (pi_l/6._rprec)
-        res = log(a+y) - 3._rprec*b*(y**(1._rprec/3._rprec))                 &
-            + (b*(a**(1._rprec/3._rprec))/2._rprec)                          &
-            * log(((1._rprec+xx)**2)/(1._rprec - xx + xx*xx))                &
-            + sqrt(3._rprec)*b*(a**(1._rprec/3._rprec))                      &
-            * atan(((2._rprec*xx)-1._rprec)/sqrt(3._rprec)) + psi_zero
-    end if
-else
-    res = -am*log(zeta + (1._rprec + zeta**2.5_rprec)**0.4_rprec)
-end if
-
-end function calc_psi_m_acc
-
-!*******************************************************************************
-!$acc routine(calc_psi_h_acc) seq
-real(rprec) function calc_psi_h_acc(zeta) result(res)
-!*******************************************************************************
-implicit none
-
-real(rprec), value, intent(in) :: zeta
-real(rprec), parameter :: ah=5.3_rprec, bh=1.1_rprec
-real(rprec), parameter :: c=0.33_rprec, d=0.057_rprec, n=0.78_rprec
-real(rprec) :: y
-
-if (zeta < 0._rprec) then
-    y = -zeta
-    res = ((1._rprec-d)/n)*log((c+y**n)/c)
-else
-    res = -ah*log(zeta + (1._rprec + zeta**bh)**(1._rprec/bh))
-end if
-
-end function calc_psi_h_acc
-
-!*******************************************************************************
-!$acc routine(stability_acc) seq
-subroutine stability_acc(L_in, zo_s_in, dz_in, zo_in, pi_in, phi_m_out,       &
-    phi_h_out, psi_m_out, psi_h_out)
-!*******************************************************************************
-implicit none
-
-real(rprec), value, intent(in) :: L_in, zo_s_in, dz_in, zo_in, pi_in
-real(rprec), intent(out) :: phi_m_out, phi_h_out, psi_m_out, psi_h_out
-real(rprec), parameter :: am=6.1_rprec, bm=2.5_rprec, ah=5.3_rprec,           &
-    bh=1.1_rprec
-real(rprec), parameter :: a=0.33_rprec, b=0.41_rprec, c=0.33_rprec,           &
-    d=0.057_rprec, n=0.78_rprec
-real(rprec) :: zeta, y
-
-if (abs(L_in) > 1._rprec/epsilon(0._rprec)) then
-    phi_m_out = 1._rprec
-    phi_h_out = 1._rprec
-    psi_m_out = 0._rprec
-    psi_h_out = 0._rprec
-else
-    zeta = 0.5_rprec*dz_in/L_in
-    psi_m_out = -calc_psi_m_acc(zeta, pi_in)                                  &
-        + calc_psi_m_acc(zo_in/L_in, pi_in)
-    psi_h_out = -calc_psi_h_acc(zeta) + calc_psi_h_acc(zo_s_in/L_in)
-    if (zeta < 0._rprec) then
-        y = -zeta
-        if (y > b**(-3._rprec)) then
-            phi_m_out = 1._rprec
-        else
-            phi_m_out = (a + b*(y**(4._rprec/3._rprec)))/(a+y)
-        end if
-        phi_h_out = (c + d*(y**n))/(c + y**n)
-    else
-        phi_m_out = 1._rprec + am*(zeta + zeta**bm                            &
-            * ((1._rprec + zeta**bm)**(-1._rprec + 1._rprec/bm)))             &
-            / (zeta + ((1._rprec + zeta**bm)**(1._rprec/bm)))
-        phi_h_out = 1._rprec + ah*(zeta + zeta**bh                            &
-            * ((1._rprec + zeta**bh)**(-1._rprec + 1._rprec/bh)))             &
-            / (zeta + ((1._rprec + zeta**bh)**(1._rprec/bh)))
-    end if
-end if
-
-end subroutine stability_acc
-#endif
-
-attributes(device) real(rprec) function calc_psi_m_device(zeta, pi_l) result(res)
-!$acc routine seq
-!*******************************************************************************
-implicit none
-
-real(rprec), value, intent(in) :: zeta, pi_l
-real(rprec), parameter :: am=6.1_rprec
-real(rprec), parameter :: a=0.33_rprec, b=0.41_rprec
-real(rprec) :: y, yy, xx, psi_zero
-
-if (zeta < 0._rprec) then
-    y = -zeta
-
-    if (y > b**(-3._rprec) ) then
-        yy = b**(-3._rprec)
-        xx = (yy/a)**(1._rprec/3._rprec)
-        psi_zero = -log(a) + sqrt(3._rprec)*b*(a**(1._rprec/3._rprec))        &
-            * (pi_l/6._rprec)
-        res = log(a+yy) - 3._rprec*b*(yy**(1._rprec/3._rprec))               &
-            + (b*(a**(1._rprec/3._rprec))/2._rprec)                          &
-            * log(((1._rprec+xx)**2)/(1._rprec - xx + xx*xx))                &
-            + sqrt(3._rprec)*b*(a**(1._rprec/3._rprec))                      &
-            * atan(((2._rprec*xx)-1._rprec)/sqrt(3._rprec)) + psi_zero
-    else
-        xx = (y/a)**(1._rprec/3._rprec)
-        psi_zero = -log(a) + sqrt(3._rprec)*b*(a**(1._rprec/3._rprec))        &
-            * (pi_l/6._rprec)
-        res = log(a+y) - 3._rprec*b*(y**(1._rprec/3._rprec))                 &
-            + (b*(a**(1._rprec/3._rprec))/2._rprec)                          &
-            * log(((1._rprec+xx)**2)/(1._rprec - xx + xx*xx))                &
-            + sqrt(3._rprec)*b*(a**(1._rprec/3._rprec))                      &
-            * atan(((2._rprec*xx)-1._rprec)/sqrt(3._rprec)) + psi_zero
-    end if
-else
-    res = -am*log(zeta + (1._rprec + zeta**2.5_rprec)**0.4_rprec)
-end if
-
-end function calc_psi_m_device
-
-!*******************************************************************************
-attributes(device) real(rprec) function calc_psi_h_device(zeta) result(res)
-!$acc routine seq
-!*******************************************************************************
-implicit none
-
-real(rprec), value, intent(in) :: zeta
-real(rprec), parameter :: ah=5.3_rprec, bh=1.1_rprec
-real(rprec), parameter :: c=0.33_rprec, d=0.057_rprec, n=0.78_rprec
-real(rprec) :: y
-
-if (zeta < 0._rprec) then
-    y = -zeta
-    res = ((1._rprec-d)/n)*log((c+y**n)/c)
-else
-    res = -ah*log(zeta + (1._rprec + zeta**bh)**(1._rprec/bh))
-end if
-
-end function calc_psi_h_device
-
-!*******************************************************************************
-attributes(device) subroutine stability_device(L_in, zo_s_in, dz_in, zo_in,   &
-!$acc routine seq
-    pi_in, phi_m_out, phi_h_out, psi_m_out, psi_h_out)
-!*******************************************************************************
-implicit none
-
-real(rprec), value, intent(in) :: L_in, zo_s_in, dz_in, zo_in, pi_in
-real(rprec), intent(out) :: phi_m_out, phi_h_out, psi_m_out, psi_h_out
-real(rprec), parameter :: am=6.1_rprec, bm=2.5_rprec, ah=5.3_rprec,           &
-    bh=1.1_rprec
-real(rprec), parameter :: a=0.33_rprec, b=0.41_rprec, c=0.33_rprec,           &
-    d=0.057_rprec, n=0.78_rprec
-real(rprec) :: zeta, y
-
-if (abs(L_in) > 1._rprec/epsilon(0._rprec)) then
-    phi_m_out = 1._rprec
-    phi_h_out = 1._rprec
-    psi_m_out = 0._rprec
-    psi_h_out = 0._rprec
-else
-    zeta = 0.5_rprec*dz_in/L_in
-    psi_m_out = -calc_psi_m_device(zeta, pi_in)                               &
-        + calc_psi_m_device(zo_in/L_in, pi_in)
-    psi_h_out = -calc_psi_h_device(zeta) + calc_psi_h_device(zo_s_in/L_in)
-    if (zeta < 0._rprec) then
-        y = -zeta
-        if (y > b**(-3._rprec)) then
-            phi_m_out = 1._rprec
-        else
-            phi_m_out = (a + b*(y**(4._rprec/3._rprec)))/(a+y)
-        end if
-        phi_h_out = (c + d*(y**n))/(c + y**n)
-    else
-        phi_m_out = 1._rprec + am*(zeta + zeta**bm                            &
-            * ((1._rprec + zeta**bm)**(-1._rprec + 1._rprec/bm)))             &
-            / (zeta + ((1._rprec + zeta**bm)**(1._rprec/bm)))
-        phi_h_out = 1._rprec + ah*(zeta + zeta**bh                            &
-            * ((1._rprec + zeta**bh)**(-1._rprec + 1._rprec/bh)))             &
-            / (zeta + ((1._rprec + zeta**bh)**(1._rprec/bh)))
-    end if
-end if
-
-end subroutine stability_device
-
-!*******************************************************************************
-subroutine scalars_copy_rhs_gpu()
-!*******************************************************************************
-use param, only : lbz, ld, ny, nz
-implicit none
-
-integer :: i, j, k
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = lbz, nz
-do j = 1, ny
-do i = 1, ld
-    RHS_Tf(i,j,k) = RHS_T(i,j,k)
-end do
-end do
-end do
-
-end subroutine scalars_copy_rhs_gpu
-
-!*******************************************************************************
-subroutine scalars_advective_gpu(jz_min, jz_max, const)
-!*******************************************************************************
-use param, only : ld_big, ny2, nz, nproc, coord
-implicit none
-
-integer, intent(in) :: jz_min, jz_max
-real(rprec), intent(in) :: const
-integer :: i, j, k
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = jz_min, jz_max
-do j = 1, ny2
-do i = 1, ld_big
-    RHS_big(i,j,k) = const*(u_big(i,j,k)*dTdx_big(i,j,k)                       &
-        + v_big(i,j,k)*dTdy_big(i,j,k)                                         &
-        + 0.5_rprec*w_big(i,j,k+1)*dTdz_big(i,j,k+1)                           &
-        + 0.5_rprec*w_big(i,j,k)*dTdz_big(i,j,k))
-end do
-end do
-end do
-
-if (coord == 0) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny2
-    do i = 1, ld_big
-        RHS_big(i,j,1) = const*(u_big(i,j,1)*dTdx_big(i,j,1)                   &
-            + v_big(i,j,1)*dTdy_big(i,j,1)                                     &
-            + 0.5_rprec*w_big(i,j,2)*dTdz_big(i,j,2))
-    end do
-    end do
-end if
-
-if (coord == nproc-1) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny2
-    do i = 1, ld_big
-        RHS_big(i,j,nz-1) = const*(u_big(i,j,nz-1)*dTdx_big(i,j,nz-1)          &
-            + v_big(i,j,nz-1)*dTdy_big(i,j,nz-1)                               &
-            + 0.5_rprec*w_big(i,j,nz-1)*dTdz_big(i,j,nz-1))
-    end do
-    end do
-end if
-
-end subroutine scalars_advective_gpu
-
-!*******************************************************************************
-subroutine scalars_flux_gpu(jz_min, jz_max)
-!*******************************************************************************
-use param, only : lbz, ld, ny, nz, nproc, coord, lbc_mom, ubc_mom
-use sgs_param, only : Nu_t
-implicit none
-
-integer, intent(in) :: jz_min, jz_max
-integer :: i, j, k
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = lbz, nz
-do j = 1, ny
-do i = 1, ld
-    Kappa_t(i,j,k) = Nu_t(i,j,k)/Pr_sgs
-end do
-end do
-end do
-
-if (coord == 0) then
-    select case (lbc_mom)
-    case (0)
-        !$cuf kernel do(2) <<<*,*>>>
-        do j = 1, ny
-        do i = 1, ld
-            pi_x(i,j,1) = -0.5_rprec*(Kappa_t(i,j,1) + Kappa_t(i,j,2))*dTdx(i,j,1)
-            pi_y(i,j,1) = -0.5_rprec*(Kappa_t(i,j,1) + Kappa_t(i,j,2))*dTdy(i,j,1)
-        end do
-        end do
-    case (1:)
-        !$cuf kernel do(2) <<<*,*>>>
-        do j = 1, ny
-        do i = 1, ld
-            pi_x(i,j,1) = -Kappa_t(i,j,1)*dTdx(i,j,1)
-            pi_y(i,j,1) = -Kappa_t(i,j,1)*dTdy(i,j,1)
-        end do
-        end do
-    end select
-end if
-
-if (coord == nproc-1) then
-    select case (ubc_mom)
-    case (0)
-        !$cuf kernel do(2) <<<*,*>>>
-        do j = 1, ny
-        do i = 1, ld
-            pi_x(i,j,nz-1) = -0.5_rprec*(Kappa_t(i,j,nz-1) + Kappa_t(i,j,nz))*dTdx(i,j,nz-1)
-            pi_y(i,j,nz-1) = -0.5_rprec*(Kappa_t(i,j,nz-1) + Kappa_t(i,j,nz))*dTdy(i,j,nz-1)
-            pi_z(i,j,nz) = -Kappa_t(i,j,nz-1)*dTdz(i,j,nz)
-        end do
-        end do
-    case (1:)
-        !$cuf kernel do(2) <<<*,*>>>
-        do j = 1, ny
-        do i = 1, ld
-            pi_x(i,j,nz-1) = -Kappa_t(i,j,nz-1)*dTdx(i,j,nz-1)
-            pi_y(i,j,nz-1) = -Kappa_t(i,j,nz-1)*dTdy(i,j,nz-1)
-            pi_z(i,j,nz) = -Kappa_t(i,j,nz-1)*dTdz(i,j,nz)
-        end do
-        end do
-    end select
-end if
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = jz_min, jz_max
-do j = 1, ny
-do i = 1, ld
-    pi_x(i,j,k) = -0.5_rprec*(Kappa_t(i,j,k) + Kappa_t(i,j,k+1))*dTdx(i,j,k)
-    pi_y(i,j,k) = -0.5_rprec*(Kappa_t(i,j,k) + Kappa_t(i,j,k+1))*dTdy(i,j,k)
-    pi_z(i,j,k) = -Kappa_t(i,j,k)*dTdz(i,j,k)
-end do
-end do
-end do
-
-!$cuf kernel do(2) <<<*,*>>>
-do j = 1, ny
-do i = 1, ld
-    pi_z(i,j,jz_max+1) = -Kappa_t(i,j,jz_max+1)*dTdz(i,j,jz_max+1)
-end do
-end do
-
-end subroutine scalars_flux_gpu
-
-!*******************************************************************************
-subroutine scalars_rhs_theta_gpu()
-!*******************************************************************************
-use param, only : lbz, ld, nx, ny, nz, coord, nproc, jt_total, dt, tadv1, tadv2, dz
-implicit none
-
-integer :: i, j, k
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = lbz, nz
-do j = 1, ny
-do i = 1, ld
-    div_pi(i,j,k) = div_pi(i,j,k) + temp_var(i,j,k)
-end do
-end do
-end do
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = 1, nz-1
-do j = 1, ny
-do i = 1, nx
-    RHS_T(i,j,k) = -RHS_T(i,j,k) - div_pi(i,j,k)
-end do
-end do
-end do
-
-if ((jt_total == 1) .and. (inits)) then
-    call scalars_copy_rhs_gpu()
-end if
-
-!$cuf kernel do(3) <<<*,*>>>
-do k = 1, nz-1
-do j = 1, ny
-do i = 1, nx
-    theta(i,j,k) = theta(i,j,k) + dt*(tadv1*RHS_T(i,j,k) + tadv2*RHS_Tf(i,j,k))
-end do
-end do
-end do
-
-if (coord == nproc-1) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, ld
-        theta(i,j,nz) = theta(i,j,nz-1) + lapse_rate*dz
-    end do
-    end do
-end if
-
-end subroutine scalars_rhs_theta_gpu
-
-!*******************************************************************************
-subroutine buoyancy_force_gpu(jz_min)
-!*******************************************************************************
-use param, only : nx, ny, nz
-use sim_param, only : RHSz
-implicit none
-
-integer, intent(in) :: jz_min
-integer :: i, j, k
-real(rprec) :: theta_sum, theta_bar
-
-do k = jz_min, nz-1
-    theta_sum = 0._rprec
-    !$cuf kernel do(2) <<<*,*>>> reduction(+:theta_sum)
-    do j = 1, ny
-    do i = 1, nx
-        theta_sum = theta_sum + 0.5_rprec*(theta(i,j,k) + theta(i,j,k-1))
-    end do
-    end do
-    theta_bar = theta_sum/nx/ny
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        RHSz(i,j,k) = RHSz(i,j,k) + g*(0.5_rprec*(theta(i,j,k) + theta(i,j,k-1)) - theta_bar)
-    end do
-    end do
-end do
-
-end subroutine buoyancy_force_gpu
-#endif
 
     !*******************************************************************************
 subroutine scalars_init
@@ -1901,7 +1135,7 @@ real(rprec), dimension(nx, ny), intent(in) :: u_avg
 real(rprec), dimension(ld, ny) :: theta1
 
 integer :: i, j
-#if defined(PPSCALARS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSCALARS_GPU)
 real(rprec) :: zeta_acc, zeta_zo_acc, y_acc, yy_acc, xx_acc, psi_zero_acc
 real(rprec) :: psi_m_half_acc, psi_m_zo_acc, psi_h_half_acc, psi_h_zo_acc
 real(rprec), parameter :: am_acc=6.1_rprec, bm_acc=2.5_rprec
@@ -1910,17 +1144,12 @@ real(rprec), parameter :: a_acc=0.33_rprec, b_acc=0.41_rprec
 real(rprec), parameter :: c_acc=0.33_rprec, d_acc=0.057_rprec
 real(rprec), parameter :: n_acc=0.78_rprec
 #endif
-#ifdef ENABLE_CUDA
-logical, save :: obukhov_gpu_allocated = .false.
-real(rprec), managed, save, allocatable, dimension(:,:) :: theta1_gpu,         &
-    u_avg_gpu
-#endif
-#if defined(PPSCALARS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSCALARS_GPU)
 logical, save :: obukhov_acc_allocated = .false.
 real(rprec), save, allocatable, dimension(:,:) :: theta1_acc
 #endif
 
-#if defined(PPSCALARS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSCALARS_GPU)
 if (scalars_acc_enabled()) then
     if (.not. obukhov_acc_allocated) then
         allocate(theta1_acc(ld, ny))
@@ -2083,71 +1312,6 @@ if (scalars_acc_enabled()) then
 end if
 #endif
 
-#ifdef ENABLE_CUDA
-if (scalars_cuda_enabled()) then
-    if (.not. obukhov_gpu_allocated) then
-        allocate(theta1_gpu(ld, ny), u_avg_gpu(nx, ny))
-        obukhov_gpu_allocated = .true.
-    end if
-    u_avg_gpu = u_avg
-
-    if (passive_scalar) then
-        !$cuf kernel do(2) <<<*,*>>>
-        do j = 1, ny
-        do i = 1, nx
-            ustar_lbc(i,j) = u_avg_gpu(i,j)*vonk/log(0.5_rprec*dz/zo)
-        end do
-        end do
-        call scalars_cuda_sync('obukhov passive')
-        return
-    end if
-
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, ld
-        theta1_gpu(i,j) = theta(i,j,1)
-    end do
-    end do
-    call scalars_cuda_sync('obukhov copy theta')
-    call test_filter(theta1_gpu)
-
-    if (read_lbc_scal) then
-        if (lbc_scal == 0) then
-            scal_bot = linear_interp(t_interp, lbc_interp,                    &
-                mod(total_time_dim, repeat_interval))/T_scale
-        else
-            flux_bot = linear_interp(t_interp, lbc_interp,                    &
-                mod(total_time_dim, repeat_interval))/T_scale/u_star
-        end if
-    end if
-
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        ustar_lbc(i,j) = u_avg_gpu(i,j)*vonk/(log(0.5_rprec*dz/zo)            &
-            + psi_m(i,j))
-        tstar_lbc(i,j) = (theta1_gpu(i,j) - scal_bot)*vonk                   &
-            / (log(0.5_rprec*dz/zo_s) + psi_h(i,j))
-        L(i,j) = ustar_lbc(i,j)*ustar_lbc(i,j)*theta1_gpu(i,j)               &
-            / (vonk*g*tstar_lbc(i,j))
-        call stability_device(L(i,j), zo_s, dz, zo, pi, phi_m(i,j),           &
-            phi_h(i,j), psi_m(i,j), psi_h(i,j))
-        ustar_lbc(i,j) = u_avg_gpu(i,j)*vonk/(log(0.5_rprec*dz/zo)            &
-            + psi_m(i,j))
-        if (lbc_scal == 0) then
-            tstar_lbc(i,j) = (theta1_gpu(i,j) - scal_bot)*vonk               &
-                / (log(0.5_rprec*dz/zo_s) + psi_h(i,j))
-        else
-            tstar_lbc(i,j) = -flux_bot/ustar_lbc(i,j)
-        end if
-        dTdz(i,j,1) = tstar_lbc(i,j)/(vonk*dz*0.5_rprec)*phi_h(i,j)
-        pi_z(i,j,1) = -tstar_lbc(i,j)*ustar_lbc(i,j)
-    end do
-    end do
-    call scalars_cuda_sync('obukhov')
-    return
-end if
-#endif
 
 ! Use previous ustar_lbc to compute stability correction
 if (passive_scalar) then
@@ -2225,18 +1389,9 @@ use convec_gpu_m, only : convec_gpu_big_available,                            &
 
     integer :: k, jz_min, jz_max
     real(rprec) :: const
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     real(rprec) :: scalar_t0, scalar_t_stage, scalar_t_div0
     logical :: scalar_timing
-#endif
-#ifdef ENABLE_CUDA
-
-    scalar_timing = scalars_cuda_enabled() .and. scalars_stage_timing_enabled()
-    if (scalar_timing) then
-        scalars_stage_count = scalars_stage_count + 1
-        call scalars_timer_start(scalar_t0)
-        scalar_t_stage = scalar_t0
-    end if
 #endif
 #ifdef PPSCALARS_GPU
     logical :: scalar_acc
@@ -2281,19 +1436,11 @@ use convec_gpu_m, only : convec_gpu_big_available,                            &
         call scalars_copy_rhs_acc()
     else
 #endif
-#ifdef ENABLE_CUDA
-    if (scalars_cuda_enabled()) then
-        call scalars_copy_rhs_gpu()
-    else
-#endif
     RHS_Tf = RHS_T
-#ifdef ENABLE_CUDA
-    endif
-#endif
 #ifdef PPSCALARS_GPU
     endif
 #endif
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     if (scalar_timing) call scalars_timer_accum(scalar_t_stage,                &
         scalars_time_copy_rhs, 'scalar copy RHS')
 #endif
@@ -2322,29 +1469,16 @@ use convec_gpu_m, only : convec_gpu_big_available,                            &
         end if
     else
 #endif
-#ifdef ENABLE_CUDA
-    if (scalars_cuda_enabled()) then
-        call scalars_to_big_gpu(u, u_big)
-        call scalars_to_big_gpu(v, v_big)
-        call scalars_to_big_gpu(w, w_big)
-        call scalars_to_big_gpu(dTdx, dTdx_big)
-        call scalars_to_big_gpu(dTdy, dTdy_big)
-        call scalars_to_big_gpu(dTdz, dTdz_big)
-    else
-#endif
     call to_big(u, u_big)
     call to_big(v, v_big)
     call to_big(w, w_big)
     call to_big(dTdx, dTdx_big)
     call to_big(dTdy, dTdy_big)
     call to_big(dTdz, dTdz_big)
-#ifdef ENABLE_CUDA
-    endif
-#endif
 #ifdef PPSCALARS_GPU
     endif
 #endif
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     if (scalar_timing) call scalars_timer_accum(scalar_t_stage,                &
         scalars_time_to_big, 'scalar to_big transforms')
 #endif
@@ -2368,11 +1502,6 @@ const=1._rprec/(nx2*ny2)
 #endif
     else
 #endif
-#ifdef ENABLE_CUDA
-    if (scalars_cuda_enabled()) then
-        call scalars_advective_gpu(jz_min, jz_max, const)
-    else
-#endif
     do k = jz_min, jz_max
         RHS_big(:,:,k) = const*(u_big(:,:,k)*dTdx_big(:,:,k)                       &
             + v_big(:,:,k)*dTdy_big(:,:,k)                                         &
@@ -2391,13 +1520,10 @@ const=1._rprec/(nx2*ny2)
             + v_big(:,:,nz-1)*dTdy_big(:,:,nz-1)                                   &
             + 0.5_rprec*w_big(:,:,nz-1)*dTdz_big(:,:,nz-1))
     end if
-#ifdef ENABLE_CUDA
-    endif
-#endif
 #ifdef PPSCALARS_GPU
     endif
 #endif
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     if (scalar_timing) call scalars_timer_accum(scalar_t_stage,                &
         scalars_time_advective, 'scalar advective product')
 #endif
@@ -2408,11 +1534,6 @@ const=1._rprec/(nx2*ny2)
         call scalars_return_rhs_acc()
     else
 #endif
-#ifdef ENABLE_CUDA
-    if (scalars_cuda_enabled()) then
-        call scalars_return_rhs_gpu()
-    else
-#endif
     do k = 1, nz-1
         call dfftw_execute_dft_r2c(forw_big, RHS_big(:,:,k), RHS_big(:,:,k))
         call unpadd(RHS_T(:,:,k), RHS_big(:,:,k))
@@ -2421,10 +1542,7 @@ const=1._rprec/(nx2*ny2)
 #ifdef PPSCALARS_GPU
     endif
 #endif
-#ifdef ENABLE_CUDA
-    endif
-#endif
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     if (scalar_timing) call scalars_timer_accum(scalar_t_stage,                &
         scalars_time_return, 'scalar return transform')
 #endif
@@ -2437,11 +1555,6 @@ const=1._rprec/(nx2*ny2)
 #ifdef PPSCALARS_GPU
     if (scalar_acc) then
         call scalars_flux_acc(jz_min, jz_max)
-    else
-#endif
-#ifdef ENABLE_CUDA
-    if (scalars_cuda_enabled()) then
-        call scalars_flux_gpu(jz_min, jz_max)
     else
 #endif
     Kappa_t = Nu_t/Pr_sgs
@@ -2476,13 +1589,10 @@ const=1._rprec/(nx2*ny2)
         pi_z(:,:,k) = -Kappa_t(:,:,k)*dTdz(:,:,k)
     end do
     pi_z(:,:,jz_max+1) = -Kappa_t(:,:,jz_max+1)*dTdz(:,:,jz_max+1)
-#ifdef ENABLE_CUDA
-    endif
-#endif
 #ifdef PPSCALARS_GPU
     endif
 #endif
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     if (scalar_timing) then
         call scalars_timer_accum(scalar_t_stage, scalars_time_flux,             &
             'scalar flux build')
@@ -2508,18 +1618,13 @@ call ddz_w(pi_z, temp_var, lbz)
 #ifdef PPSCALARS_GPU
 end if
 #endif
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     if (scalar_timing) call scalars_timer_accum(scalar_t_stage,                &
         scalars_time_divergence, 'scalar divergence')
 #endif
 #ifdef PPSCALARS_GPU
     if (scalar_acc) then
         call scalars_rhs_theta_acc()
-    else
-#endif
-#ifdef ENABLE_CUDA
-    if (scalars_cuda_enabled()) then
-        call scalars_rhs_theta_gpu()
     else
 #endif
     div_pi = div_pi + temp_var
@@ -2534,14 +1639,11 @@ end if
 
     theta(1:nx,:,1:nz-1) = theta(1:nx,:,1:nz-1)                                    &
         + dt*(tadv1*RHS_T(1:nx,:,1:nz-1) + tadv2*RHS_Tf(1:nx,:,1:nz-1))
-#ifdef ENABLE_CUDA
-    endif
-#endif
 #ifdef PPSCALARS_GPU
     endif
 #endif
 
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     if (scalar_timing) call scalars_timer_accum(scalar_t_stage,                &
         scalars_time_rhs_update, 'scalar rhs/theta update')
 #endif
@@ -2591,19 +1693,13 @@ end if
     if (.not. scalar_acc) then
 #endif
     if (coord == nproc-1) then
-#ifdef ENABLE_CUDA
-        if (.not. scalars_cuda_enabled()) then
-#endif
             theta(:,:,nz) = theta(:,:,nz-1) + lapse_rate*dz
-#ifdef ENABLE_CUDA
-        end if
-#endif
     end if
 #ifdef PPSCALARS_GPU
     end if
 #endif
 
-#if defined(ENABLE_CUDA) || defined(PPSCALARS_GPU)
+#if defined(PPSCALARS_GPU)
     if (scalar_timing) then
         if (scalar_acc) then
             !$acc wait(1)
@@ -2654,7 +1750,7 @@ use sim_param, only :  RHSz
 
 integer :: i, j, k, jz_min
 real(rprec) :: theta_bar
-#if defined(PPSCALARS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSCALARS_GPU)
 real(rprec) :: theta_sum
 #endif
 
@@ -2673,7 +1769,7 @@ real(rprec) :: theta_sum
 
     ! Add to RHSz
     if ( .not.passive_scalar ) then
-#if defined(PPSCALARS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSCALARS_GPU)
         if (scalars_acc_enabled()) then
             !$acc parallel loop default(present) async(1)
             do k = jz_min, nz-1
@@ -2708,18 +1804,12 @@ real(rprec) :: theta_sum
             end do
             end do
         else
-#elif defined(ENABLE_CUDA)
-        if (scalars_cuda_enabled()) then
-            call buoyancy_force_gpu(jz_min)
-        else
 #endif
         do k = jz_min, nz-1
             theta_bar = sum(0.5_rprec*(theta(1:nx,:,k)+theta(1:nx,:,k-1)))/nx/ny
             RHSz(1:nx,:,k) = RHSz(1:nx,:,k) + g*(0.5_rprec*(theta(1:nx,:,k)+theta(1:nx,:,k-1)) - theta_bar)
         end do
-#if defined(PPSCALARS_GPU) && !defined(ENABLE_CUDA)
-        end if
-#elif defined(ENABLE_CUDA)
+#if defined(PPSCALARS_GPU)
         end if
 #endif
     end if

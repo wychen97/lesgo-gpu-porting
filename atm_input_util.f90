@@ -108,149 +108,55 @@ type turbineArray_t
 
     !!-- Important geometry data
     ! Collection of all the actuator points (blade, annular section, point, 3)
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: bladePoints
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: bladePoints_rigid
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: bladePoints
     real(rprec), allocatable, dimension(:,:,:,:) :: bladePoints_rigid
-#endif
     ! The solidity at each actuator section
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: solidity
-#else
     real(rprec), allocatable, dimension(:,:,:) :: solidity
-#endif
     ! Collection of radius of each point (different because of coning)
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: bladeRadius
-#else
     real(rprec), allocatable, dimension(:,:,:) :: bladeRadius
-#endif
     ! Twist angle along the blade
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: twistAng
-#else
     real(rprec), allocatable, dimension(:,:,:) :: twistAng
-#endif
     ! Chord along the blade
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: chord
-    real(rprec), managed, allocatable, dimension(:,:,:) :: EI_blade
-    real(rprec), managed, allocatable, dimension(:,:,:) :: EI_edge_blade
-    real(rprec), managed, allocatable, dimension(:,:,:) :: GJ_blade
-    real(rprec), managed, allocatable, dimension(:,:,:) :: rho_blade
-#else
     real(rprec), allocatable, dimension(:,:,:) :: chord
     real(rprec), allocatable, dimension(:,:,:) :: EI_blade
     real(rprec), allocatable, dimension(:,:,:) :: EI_edge_blade
     real(rprec), allocatable, dimension(:,:,:) :: GJ_blade
     real(rprec), allocatable, dimension(:,:,:) :: rho_blade
-#endif
     ! Section type along the blade
-#ifdef ENABLE_CUDA
-    integer, managed, allocatable, dimension(:,:,:) :: sectionType
-    integer, managed, allocatable, dimension(:,:,:) :: sectionTypeBlendLo
-    integer, managed, allocatable, dimension(:,:,:) :: sectionTypeBlendHi
-    real(rprec), managed, allocatable, dimension(:,:,:) :: sectionTypeBlendW
-#else
     integer,     allocatable, dimension(:,:,:) :: sectionType
     integer,     allocatable, dimension(:,:,:) :: sectionTypeBlendLo
     integer,     allocatable, dimension(:,:,:) :: sectionTypeBlendHi
     real(rprec), allocatable, dimension(:,:,:) :: sectionTypeBlendW
-#endif
     ! Forces on each actuator point (blade, annular section, point, 3)
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: bladeForces
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: bladeForces
-#endif
     ! Drag force of Nacelle
     real(rprec), dimension(3) :: nacelleForce
     ! Forces on each actuator point (blade, annular section, point, 3)
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: integratedBladeForces
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: integratedBladeForces
-#endif
     ! Vectors at each actuator point defining the local reference frame
     ! (blade, annular section, point, 3, 3) (three vectors)
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:,:) :: bladeAlignedVectors
-#else
     real(rprec), allocatable, dimension(:,:,:,:,:) :: bladeAlignedVectors
-#endif
     ! The wind U projected onto the bladeAlignedVectors plus rotational speed
     ! (blade, annular section, point, 3, 3) (three vectors)
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: windVectors
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: windVectors
-#endif
     ! Angle of attack at each each actuator point
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: alpha
-#else
     real(rprec), allocatable, dimension(:,:,:) :: alpha
-#endif
     ! Velocity magnitud at each each actuator point
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: Vmag
-#else
     real(rprec), allocatable, dimension(:,:,:) :: Vmag
-#endif
     ! Lift coefficient at each actuator point
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: Cl
-#else
     real(rprec), allocatable, dimension(:,:,:) :: Cl
-#endif
     ! Lift coefficient correction at each actuator point
     real(rprec), allocatable, dimension(:,:,:) :: dalpha
     ! Drag coeficient at each actuator point
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: Cd
-    real(rprec), managed, allocatable, dimension(:,:,:) :: Cm
-#else
     real(rprec), allocatable, dimension(:,:,:) :: Cd
     real(rprec), allocatable, dimension(:,:,:) :: Cm
-#endif
     ! Lift at each actuator point
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: lift
-#else
     real(rprec), allocatable, dimension(:,:,:) :: lift
-#endif
     ! Drag at each actuator point
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: drag
-#else
     real(rprec), allocatable, dimension(:,:,:) :: drag
-#endif
     ! Axial force at each actuator point
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: axialForce
-#else
     real(rprec), allocatable, dimension(:,:,:) :: axialForce
-#endif
     ! Tangential force at each actuator point
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: tangentialForce
-    real(rprec), managed, allocatable, dimension(:,:,:) :: pitchingMoment
-    real(rprec), managed, allocatable, dimension(:,:,:) :: elastic_twist
-    real(rprec), managed, allocatable, dimension(:,:,:) :: flap_disp
-    real(rprec), managed, allocatable, dimension(:,:,:) :: flap_vel
-    real(rprec), managed, allocatable, dimension(:,:,:) :: flap_acc
-    real(rprec), managed, allocatable, dimension(:,:,:) :: theta_disp
-    real(rprec), managed, allocatable, dimension(:,:,:) :: theta_vel
-    real(rprec), managed, allocatable, dimension(:,:,:) :: theta_acc
-    real(rprec), managed, allocatable, dimension(:,:,:) :: edge_disp
-    real(rprec), managed, allocatable, dimension(:,:,:) :: edge_vel
-    real(rprec), managed, allocatable, dimension(:,:,:) :: edge_acc
-    real(rprec), managed, allocatable, dimension(:,:,:) :: edge_theta_disp
-    real(rprec), managed, allocatable, dimension(:,:,:) :: edge_theta_vel
-    real(rprec), managed, allocatable, dimension(:,:,:) :: edge_theta_acc
-#else
     real(rprec), allocatable, dimension(:,:,:) :: tangentialForce
     real(rprec), allocatable, dimension(:,:,:) :: pitchingMoment
     real(rprec), allocatable, dimension(:,:,:) :: elastic_twist
@@ -266,105 +172,46 @@ type turbineArray_t
     real(rprec), allocatable, dimension(:,:,:) :: edge_theta_disp
     real(rprec), allocatable, dimension(:,:,:) :: edge_theta_vel
     real(rprec), allocatable, dimension(:,:,:) :: edge_theta_acc
-#endif
     ! The function G=1/2 * Cl * c * Vmag^2
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: G
-#else
     real(rprec), allocatable, dimension(:,:,:) :: G
-#endif
     ! The derivative of G
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: dG
-#else
     real(rprec), allocatable, dimension(:,:,:) :: dG
-#endif
     ! Cl base for the correction
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: Cl_b
-#else
     real(rprec), allocatable, dimension(:,:,:) :: Cl_b
-#endif
     ! Slope of the lift curve base (dCl/ d alpha)
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: dCldalpha
-#else
     real(rprec), allocatable, dimension(:,:,:) :: dCldalpha
-#endif
     ! The induced velocity in the LES
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: uy_LES
-#else
     real(rprec), allocatable, dimension(:,:,:) :: uy_LES
-#endif
     ! The induced velocity from the optimal solution
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: uy_opt
-#else
     real(rprec), allocatable, dimension(:,:,:) :: uy_opt
-#endif
     ! The induced velocity vector from the LES
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: uy_LES_vec
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: uy_LES_vec
-#endif
     ! The induced drag velocity vector from the optimal
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: ux_LES_vec
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: ux_LES_vec
-#endif
     ! The induced velocity vector from the optimal
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: uy_opt_vec
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: uy_opt_vec
-#endif
     ! The inflow velocity in the relative frame of reference
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: Uinf_vec
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: Uinf_vec
-#endif
     ! The change in induced velocity between epsilon_LES and epsilon_opt
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: du
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: du
-#endif
 
     ! These variables are to make corrections based on optimum value of epsilon
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: epsilon_opt
-#else
     real(rprec), allocatable, dimension(:,:,:) :: epsilon_opt
-#endif
 
 !~     ! The circulation needed for the correction
 !~     real(rprec), allocatable, dimension(:,:,:) :: Gamma
 
     ! Induction factor and u infinity
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:) :: induction_a
-    real(rprec), managed, allocatable, dimension(:,:,:) :: u_infinity
-#else
     real(rprec), allocatable, dimension(:,:,:) :: induction_a
     real(rprec), allocatable, dimension(:,:,:) :: u_infinity
-#endif
 
     ! These are dummies meant to be used for parallelization
     ! bladeVectorDummy store quantities along the blades which are vectors
     ! such as Force
     ! bladeScalarDummy will store scalar quantities along the blades such
     ! as lift coefficitent, angle of attack, etc
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:,:,:,:) :: bladeVectorDummy
-    real(rprec), managed, allocatable, dimension(:,:,:) :: bladeScalarDummy
-#else
     real(rprec), allocatable, dimension(:,:,:,:) :: bladeVectorDummy
     real(rprec), allocatable, dimension(:,:,:) :: bladeScalarDummy
-#endif
 
     ! An indicator of shaft direction.  The convention is that when viewed
     ! from upwind, the rotor turns clockwise for positive rotation angles,
@@ -389,11 +236,7 @@ type turbineArray_t
     real(rprec), dimension(3) :: uvTower
 
     ! Width of the actuator section
-#ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:) :: db
-#else
     real(rprec), allocatable, dimension(:) :: db
-#endif
 
     ! Sphere radius which defines a sphere from the center of the rotor and
     ! identifies the volume onto which forces are applied
@@ -447,11 +290,7 @@ type turbineModel_t
     integer, dimension(100) :: sectionType
 
     ! The airfoil type properties ( includes AOA, Cl, and Cd) Attempt 1
-#ifdef ENABLE_CUDA
-    type(airfoilType_t), managed, allocatable, dimension(:) :: airfoilType
-#else
     type(airfoilType_t), allocatable, dimension(:) :: airfoilType
-#endif
 
     ! Torque controller variables
     character(64) :: TorqueControllerType

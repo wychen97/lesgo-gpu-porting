@@ -22,9 +22,6 @@ module shifted_inflow
 !*******************************************************************************
 use types, only : rprec
 use fringe
-#if defined(ENABLE_CUDA) && !defined(PPLES_GPU)
-use cudafor
-#endif
 
 implicit none
 
@@ -34,13 +31,7 @@ public shifted_inflow_init, inflow_shifted
 type(fringe_t) :: sample_fringe
 type(fringe_t) :: apply_fringe
 
-#if defined(ENABLE_CUDA) && !defined(PPLES_GPU)
-integer, managed, allocatable, dimension(:) :: sample_iwrap_cuda
-integer, managed, allocatable, dimension(:) :: apply_iwrap_cuda
-real(rprec), managed, allocatable, dimension(:) :: apply_alpha_cuda
-real(rprec), managed, allocatable, dimension(:) :: apply_beta_cuda
-real(rprec), managed, allocatable, dimension(:,:,:) :: u_s, v_s, w_s
-#elif defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 integer, allocatable, dimension(:) :: sample_iwrap_cuda
 integer, allocatable, dimension(:) :: apply_iwrap_cuda
 real(rprec), allocatable, dimension(:) :: apply_alpha_cuda
@@ -53,19 +44,15 @@ real(rprec), allocatable, dimension(:,:,:) :: u_s, v_s, w_s
 real(rprec), allocatable, dimension(:,:,:) :: u_s, v_s, w_s
 #endif
 #ifdef PPSCALARS
-#if defined(ENABLE_CUDA) && !defined(PPLES_GPU)
-real(rprec), managed, allocatable, dimension(:,:,:) :: theta_s
-#else
 real(rprec), allocatable, dimension(:,:,:) :: theta_s
 #ifdef PPLES_GPU
 !$acc declare create(theta_s)
 #endif
 #endif
-#endif
 
 contains
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 !*******************************************************************************
 logical function shifted_inflow_cuda_enabled()
 !*******************************************************************************
@@ -75,28 +62,6 @@ shifted_inflow_cuda_enabled = .true.
 
 end function shifted_inflow_cuda_enabled
 
-#if defined(ENABLE_CUDA) && !defined(PPLES_GPU)
-!*******************************************************************************
-subroutine shifted_inflow_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'shifted inflow CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'shifted inflow CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine shifted_inflow_cuda_sync
-#endif
 #endif
 
 !*******************************************************************************
@@ -108,7 +73,7 @@ use param, only : shift_n, ny, nz
 sample_fringe = fringe_t(sampling_region_end, fringe_region_len)
 apply_fringe = fringe_t(fringe_region_end, fringe_region_len)
 
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 if (allocated(sample_iwrap_cuda)) deallocate(sample_iwrap_cuda)
 if (allocated(apply_iwrap_cuda)) deallocate(apply_iwrap_cuda)
 if (allocated(apply_alpha_cuda)) deallocate(apply_alpha_cuda)
@@ -151,7 +116,7 @@ use sim_param, only : u, v, w
 use scalars, only : theta
 #endif
 integer :: i, i_w, sample_nx, apply_nx
-#if defined(ENABLE_CUDA) || defined(PPLES_GPU)
+#if defined(PPLES_GPU)
 integer :: j, k
 #endif
 
@@ -206,61 +171,6 @@ if (shifted_inflow_cuda_enabled()) then
     end do
     end do
     end do
-    return
-end if
-#elif defined(ENABLE_CUDA)
-if (shifted_inflow_cuda_enabled()) then
-    !$cuf kernel do(3) <<<*,*>>>
-    do k = 1, nz
-    do j = shift_n+1, ny
-    do i = 1, sample_nx
-        u_s(i,j,k) = u(sample_iwrap_cuda(i),j-shift_n,k)
-        v_s(i,j,k) = v(sample_iwrap_cuda(i),j-shift_n,k)
-        w_s(i,j,k) = w(sample_iwrap_cuda(i),j-shift_n,k)
-#ifdef PPSCALARS
-        theta_s(i,j,k) = theta(sample_iwrap_cuda(i),j-shift_n,k)
-#endif
-    end do
-    end do
-    end do
-
-    !$cuf kernel do(3) <<<*,*>>>
-    do k = 1, nz
-    do j = 1, shift_n
-    do i = 1, sample_nx
-        u_s(i,j,k) = u(sample_iwrap_cuda(i),ny-shift_n+j,k)
-        v_s(i,j,k) = v(sample_iwrap_cuda(i),ny-shift_n+j,k)
-        w_s(i,j,k) = w(sample_iwrap_cuda(i),ny-shift_n+j,k)
-#ifdef PPSCALARS
-        theta_s(i,j,k) = theta(sample_iwrap_cuda(i),ny-shift_n+j,k)
-#endif
-    end do
-    end do
-    end do
-    call shifted_inflow_cuda_sync('sample shifted block')
-
-    !$cuf kernel do(3) <<<*,*>>>
-    do k = 1, nz
-    do j = 1, ny
-    do i = 1, apply_nx
-        u(apply_iwrap_cuda(i),j,k) = apply_alpha_cuda(i)                      &
-            * u(apply_iwrap_cuda(i),j,k)                                      &
-            + apply_beta_cuda(i) * u_s(i,j,k)
-        v(apply_iwrap_cuda(i),j,k) = apply_alpha_cuda(i)                      &
-            * v(apply_iwrap_cuda(i),j,k)                                      &
-            + apply_beta_cuda(i) * v_s(i,j,k)
-        w(apply_iwrap_cuda(i),j,k) = apply_alpha_cuda(i)                      &
-            * w(apply_iwrap_cuda(i),j,k)                                      &
-            + apply_beta_cuda(i) * w_s(i,j,k)
-#ifdef PPSCALARS
-        theta(apply_iwrap_cuda(i),j,k) = apply_alpha_cuda(i)                  &
-            * theta(apply_iwrap_cuda(i),j,k)                                  &
-            + apply_beta_cuda(i) * theta_s(i,j,k)
-#endif
-    end do
-    end do
-    end do
-    call shifted_inflow_cuda_sync('apply shifted inflow')
     return
 end if
 #endif

@@ -36,22 +36,13 @@ use sgs_param, only : S11, S12, S13, S22, S23, S33, delta, S, ee_now,          &
     u_hat, v_hat, w_hat,                                                       &
     S_hat, S11_hat, S12_hat, S13_hat, S22_hat, S23_hat, S33_hat,               &
     S_S11_hat, S_S12_hat, S_S13_hat, S_S22_hat, S_S23_hat, S_S33_hat
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 integer :: jx, jy, jz
 real(rprec), dimension(nz), intent (inout) :: Cs_1D
-#ifdef ENABLE_CUDA
-real(rprec), managed, save, allocatable, target, dimension(:,:) :: Q11, Q12, Q13, Q22,  &
-    Q23, Q33
-real(rprec), managed, save, dimension(:), allocatable :: beta
-#else
 real(rprec), save, allocatable, target, dimension(:,:) :: Q11, Q12, Q13, Q22,  &
     Q23, Q33
 real(rprec), save, dimension(:), allocatable :: beta
-#endif
 real(rprec), pointer, dimension(:,:) :: M11, M12, M13, M22, M23, M33
 logical, save :: arrays_allocated = .false.
 real(rprec) :: const
@@ -59,12 +50,6 @@ real(rprec), dimension(0:5) :: A
 real(rprec) :: a1, b1, c1, d1, e1, a2, b2, c2, d2, e2
 real(rprec) :: lm_sum, mm_sum, cs_val, beta_val
 real(rprec), dimension(ld,ny) :: LM,MM
-#ifdef ENABLE_CUDA
-logical :: scaledep_dynamic_cuda_enabled
-logical :: use_scaledep_cuda
-
-use_scaledep_cuda = scaledep_dynamic_cuda_enabled()
-#endif
 
 ! Allocate arrays
 if( .not. arrays_allocated ) then
@@ -83,252 +68,6 @@ M23 => Q23
 M33 => Q33
 
 do jz = 1, nz
-#ifdef ENABLE_CUDA
-    if (use_scaledep_cuda) then
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            if ((coord == 0) .and. (jz == 1)) then
-                L11(jx,jy) = u(jx,jy,1)*u(jx,jy,1)
-                L12(jx,jy) = u(jx,jy,1)*v(jx,jy,1)
-                L13(jx,jy) = u(jx,jy,1)*0.25_rprec*w(jx,jy,2)
-                L22(jx,jy) = v(jx,jy,1)*v(jx,jy,1)
-                L23(jx,jy) = v(jx,jy,jz)*0.25_rprec*w(jx,jy,2)
-                L33(jx,jy) = (0.25_rprec*w(jx,jy,2))**2
-                u_bar(jx,jy) = u(jx,jy,1)
-                v_bar(jx,jy) = v(jx,jy,1)
-                w_bar(jx,jy) = 0.25_rprec*w(jx,jy,2)
-            else
-                u_bar(jx,jy) = 0.5_rprec*(u(jx,jy,jz) + u(jx,jy,jz-1))
-                v_bar(jx,jy) = 0.5_rprec*(v(jx,jy,jz) + v(jx,jy,jz-1))
-                w_bar(jx,jy) = w(jx,jy,jz)
-                L11(jx,jy) = u_bar(jx,jy)*u_bar(jx,jy)
-                L12(jx,jy) = u_bar(jx,jy)*v_bar(jx,jy)
-                L13(jx,jy) = u_bar(jx,jy)*w_bar(jx,jy)
-                L22(jx,jy) = v_bar(jx,jy)*v_bar(jx,jy)
-                L23(jx,jy) = v_bar(jx,jy)*w_bar(jx,jy)
-                L33(jx,jy) = w_bar(jx,jy)*w_bar(jx,jy)
-            end if
-            u_hat(jx,jy) = u_bar(jx,jy)
-            v_hat(jx,jy) = v_bar(jx,jy)
-            w_hat(jx,jy) = w_bar(jx,jy)
-        end do
-        end do
-        call scaledep_dynamic_cuda_sync('velocity and L setup')
-
-        call test_filter_3 ( u_bar, v_bar, w_bar )
-        call test_filter_6 ( L11, L12, L13, L22, L23, L33 )
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            L11(jx,jy) = L11(jx,jy) - u_bar(jx,jy)*u_bar(jx,jy)
-            L12(jx,jy) = L12(jx,jy) - u_bar(jx,jy)*v_bar(jx,jy)
-            L13(jx,jy) = L13(jx,jy) - u_bar(jx,jy)*w_bar(jx,jy)
-            L22(jx,jy) = L22(jx,jy) - v_bar(jx,jy)*v_bar(jx,jy)
-            L23(jx,jy) = L23(jx,jy) - v_bar(jx,jy)*w_bar(jx,jy)
-            L33(jx,jy) = L33(jx,jy) - w_bar(jx,jy)*w_bar(jx,jy)
-            Q11(jx,jy) = u_bar(jx,jy)*u_bar(jx,jy)
-            Q12(jx,jy) = u_bar(jx,jy)*v_bar(jx,jy)
-            Q13(jx,jy) = u_bar(jx,jy)*w_bar(jx,jy)
-            Q22(jx,jy) = v_bar(jx,jy)*v_bar(jx,jy)
-            Q23(jx,jy) = v_bar(jx,jy)*w_bar(jx,jy)
-            Q33(jx,jy) = w_bar(jx,jy)*w_bar(jx,jy)
-        end do
-        end do
-        call scaledep_dynamic_cuda_sync('filtered Lij correction and Q setup')
-
-        call test_test_filter_3 ( u_hat, v_hat, w_hat )
-        call test_test_filter_6 ( Q11, Q12, Q13, Q22, Q23, Q33 )
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            Q11(jx,jy) = Q11(jx,jy) - u_hat(jx,jy)*u_hat(jx,jy)
-            Q12(jx,jy) = Q12(jx,jy) - u_hat(jx,jy)*v_hat(jx,jy)
-            Q13(jx,jy) = Q13(jx,jy) - u_hat(jx,jy)*w_hat(jx,jy)
-            Q22(jx,jy) = Q22(jx,jy) - v_hat(jx,jy)*v_hat(jx,jy)
-            Q23(jx,jy) = Q23(jx,jy) - v_hat(jx,jy)*w_hat(jx,jy)
-            Q33(jx,jy) = Q33(jx,jy) - w_hat(jx,jy)*w_hat(jx,jy)
-        end do
-        end do
-        call scaledep_dynamic_cuda_sync('filtered Qij correction')
-
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            S(jx,jy) = sqrt(2._rprec*(S11(jx,jy,jz)**2 + S22(jx,jy,jz)**2 +      &
-                S33(jx,jy,jz)**2 + 2._rprec*(S12(jx,jy,jz)**2 +                 &
-                S13(jx,jy,jz)**2 + S23(jx,jy,jz)**2)))
-            S11_bar(jx,jy) = S11(jx,jy,jz)
-            S12_bar(jx,jy) = S12(jx,jy,jz)
-            S13_bar(jx,jy) = S13(jx,jy,jz)
-            S22_bar(jx,jy) = S22(jx,jy,jz)
-            S23_bar(jx,jy) = S23(jx,jy,jz)
-            S33_bar(jx,jy) = S33(jx,jy,jz)
-            S11_hat(jx,jy) = S11_bar(jx,jy)
-            S12_hat(jx,jy) = S12_bar(jx,jy)
-            S13_hat(jx,jy) = S13_bar(jx,jy)
-            S22_hat(jx,jy) = S22_bar(jx,jy)
-            S23_hat(jx,jy) = S23_bar(jx,jy)
-            S33_hat(jx,jy) = S33_bar(jx,jy)
-            S_S11_bar(jx,jy) = S(jx,jy)*S11(jx,jy,jz)
-            S_S12_bar(jx,jy) = S(jx,jy)*S12(jx,jy,jz)
-            S_S13_bar(jx,jy) = S(jx,jy)*S13(jx,jy,jz)
-            S_S22_bar(jx,jy) = S(jx,jy)*S22(jx,jy,jz)
-            S_S23_bar(jx,jy) = S(jx,jy)*S23(jx,jy,jz)
-            S_S33_bar(jx,jy) = S(jx,jy)*S33(jx,jy,jz)
-            S_S11_hat(jx,jy) = S_S11_bar(jx,jy)
-            S_S12_hat(jx,jy) = S_S12_bar(jx,jy)
-            S_S13_hat(jx,jy) = S_S13_bar(jx,jy)
-            S_S22_hat(jx,jy) = S_S22_bar(jx,jy)
-            S_S23_hat(jx,jy) = S_S23_bar(jx,jy)
-            S_S33_hat(jx,jy) = S_S33_bar(jx,jy)
-        end do
-        end do
-        call scaledep_dynamic_cuda_sync('S setup')
-
-        call test_filter_6 ( S11_bar, S12_bar, S13_bar, S22_bar, S23_bar,      &
-            S33_bar )
-        call test_test_filter_6 ( S11_hat, S12_hat, S13_hat, S22_hat,          &
-            S23_hat, S33_hat )
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            S_bar(jx,jy) = sqrt(2._rprec*(S11_bar(jx,jy)**2 +                 &
-                S22_bar(jx,jy)**2 + S33_bar(jx,jy)**2 + 2._rprec*(            &
-                S12_bar(jx,jy)**2 + S13_bar(jx,jy)**2 + S23_bar(jx,jy)**2)))
-            S_hat(jx,jy) = sqrt(2._rprec*(S11_hat(jx,jy)**2 +                 &
-                S22_hat(jx,jy)**2 + S33_hat(jx,jy)**2 + 2._rprec*(            &
-                S12_hat(jx,jy)**2 + S13_hat(jx,jy)**2 + S23_hat(jx,jy)**2)))
-        end do
-        end do
-        call scaledep_dynamic_cuda_sync('filtered S magnitudes')
-
-        call test_filter_6 ( S_S11_bar, S_S12_bar, S_S13_bar, S_S22_bar,       &
-            S_S23_bar, S_S33_bar )
-        call test_test_filter_6 ( S_S11_hat, S_S12_hat, S_S13_hat, S_S22_hat,  &
-            S_S23_hat, S_S33_hat )
-
-        a1 = 0._rprec
-        b1 = 0._rprec
-        c1 = 0._rprec
-        d1 = 0._rprec
-        e1 = 0._rprec
-        a2 = 0._rprec
-        b2 = 0._rprec
-        c2 = 0._rprec
-        d2 = 0._rprec
-        e2 = 0._rprec
-!$cuf kernel do(2) <<<*,*>>> reduction(+:a1,b1,c1,d1,e1,a2,b2,c2,d2,e2)
-        do jy = 1, ny
-        do jx = 1, ld
-            a1 = a1 + S_bar(jx,jy)*(S11_bar(jx,jy)*L11(jx,jy) +                &
-                S22_bar(jx,jy)*L22(jx,jy) + S33_bar(jx,jy)*L33(jx,jy) +        &
-                2._rprec*(S12_bar(jx,jy)*L12(jx,jy) +                         &
-                S13_bar(jx,jy)*L13(jx,jy) + S23_bar(jx,jy)*L23(jx,jy)))
-            b1 = b1 + S_S11_bar(jx,jy)*L11(jx,jy) +                            &
-                S_S22_bar(jx,jy)*L22(jx,jy) + S_S33_bar(jx,jy)*L33(jx,jy) +    &
-                2._rprec*(S_S12_bar(jx,jy)*L12(jx,jy) +                       &
-                S_S13_bar(jx,jy)*L13(jx,jy) + S_S23_bar(jx,jy)*L23(jx,jy))
-            c1 = c1 + S_S11_bar(jx,jy)**2 + S_S22_bar(jx,jy)**2 +              &
-                S_S33_bar(jx,jy)**2 + 2._rprec*(S_S12_bar(jx,jy)**2 +          &
-                S_S13_bar(jx,jy)**2 + S_S23_bar(jx,jy)**2)
-            d1 = d1 + 0.5_rprec*S_bar(jx,jy)*S_bar(jx,jy)*                    &
-                S_bar(jx,jy)*S_bar(jx,jy)
-            e1 = e1 + S_bar(jx,jy)*(S11_bar(jx,jy)*S_S11_bar(jx,jy) +          &
-                S22_bar(jx,jy)*S_S22_bar(jx,jy) +                              &
-                S33_bar(jx,jy)*S_S33_bar(jx,jy) + 2._rprec*(                  &
-                S12_bar(jx,jy)*S_S12_bar(jx,jy) +                              &
-                S13_bar(jx,jy)*S_S13_bar(jx,jy) +                              &
-                S23_bar(jx,jy)*S_S23_bar(jx,jy)))
-            a2 = a2 + S_hat(jx,jy)*(S11_hat(jx,jy)*Q11(jx,jy) +                &
-                S22_hat(jx,jy)*Q22(jx,jy) + S33_hat(jx,jy)*Q33(jx,jy) +        &
-                2._rprec*(S12_hat(jx,jy)*Q12(jx,jy) +                         &
-                S13_hat(jx,jy)*Q13(jx,jy) + S23_hat(jx,jy)*Q23(jx,jy)))
-            b2 = b2 + S_S11_hat(jx,jy)*Q11(jx,jy) +                            &
-                S_S22_hat(jx,jy)*Q22(jx,jy) + S_S33_hat(jx,jy)*Q33(jx,jy) +    &
-                2._rprec*(S_S12_hat(jx,jy)*Q12(jx,jy) +                       &
-                S_S13_hat(jx,jy)*Q13(jx,jy) + S_S23_hat(jx,jy)*Q23(jx,jy))
-            c2 = c2 + S_S11_hat(jx,jy)**2 + S_S22_hat(jx,jy)**2 +              &
-                S_S33_hat(jx,jy)**2 + 2._rprec*(S_S12_hat(jx,jy)**2 +          &
-                S_S13_hat(jx,jy)**2 + S_S23_hat(jx,jy)**2)
-            d2 = d2 + 0.5_rprec*S_hat(jx,jy)*S_hat(jx,jy)*                    &
-                S_hat(jx,jy)*S_hat(jx,jy)
-            e2 = e2 + S_hat(jx,jy)*(S11_hat(jx,jy)*S_S11_hat(jx,jy) +          &
-                S22_hat(jx,jy)*S_S22_hat(jx,jy) +                              &
-                S33_hat(jx,jy)*S_S33_hat(jx,jy) + 2._rprec*(                  &
-                S12_hat(jx,jy)*S_S12_hat(jx,jy) +                              &
-                S13_hat(jx,jy)*S_S13_hat(jx,jy) +                              &
-                S23_hat(jx,jy)*S_S23_hat(jx,jy)))
-        end do
-        end do
-        call scaledep_dynamic_cuda_sync('A-coefficient reductions')
-
-        a1 = -2._rprec*(delta**2)*4._rprec*a1/(nx*ny)
-        b1 = -2._rprec*(delta**2)*b1/(nx*ny)
-        c1 = (2._rprec*delta**2)**2*c1/(nx*ny)
-        d1 = (2._rprec*delta**2)**2*16._rprec*d1/(nx*ny)
-        e1 = 2._rprec*(2._rprec*delta**2)**2*4._rprec*e1/(nx*ny)
-        a2 = -2._rprec*(delta**2)*16._rprec*a2/(nx*ny)
-        b2 = -2._rprec*(delta**2)*b2/(nx*ny)
-        c2 = (2._rprec*delta**2)**2*c2/(nx*ny)
-        d2 = (2._rprec*delta**2)**2*256._rprec*d2/(nx*ny)
-        e2 = 2._rprec*(2._rprec*delta**2)**2*16._rprec*e2/(nx*ny)
-
-        A(0) = b2*c1 - b1*c2
-        A(1) = a1*c2 - b2*e1
-        A(2) = b2*d1 + b1*e2 - a2*c1
-        A(3) = a2*e1 - a1*e2
-        A(4) = -a2*d1 - b1*d2
-        A(5) = a1*d2
-
-        beta_val = rtnewt(A,jz)
-        beta(jz) = beta_val
-
-        const = 2._rprec*delta**2
-        lm_sum = 0._rprec
-        mm_sum = 0._rprec
-!$cuf kernel do(2) <<<*,*>>> reduction(+:lm_sum,mm_sum)
-        do jy = 1, ny
-        do jx = 1, ld
-            Q11(jx,jy) = const*(S_S11_bar(jx,jy) -                              &
-                4._rprec*beta_val*S_bar(jx,jy)*S11_bar(jx,jy))
-            Q12(jx,jy) = const*(S_S12_bar(jx,jy) -                              &
-                4._rprec*beta_val*S_bar(jx,jy)*S12_bar(jx,jy))
-            Q13(jx,jy) = const*(S_S13_bar(jx,jy) -                              &
-                4._rprec*beta_val*S_bar(jx,jy)*S13_bar(jx,jy))
-            Q22(jx,jy) = const*(S_S22_bar(jx,jy) -                              &
-                4._rprec*beta_val*S_bar(jx,jy)*S22_bar(jx,jy))
-            Q23(jx,jy) = const*(S_S23_bar(jx,jy) -                              &
-                4._rprec*beta_val*S_bar(jx,jy)*S23_bar(jx,jy))
-            Q33(jx,jy) = const*(S_S33_bar(jx,jy) -                              &
-                4._rprec*beta_val*S_bar(jx,jy)*S33_bar(jx,jy))
-            lm_sum = lm_sum + L11(jx,jy)*Q11(jx,jy) + L22(jx,jy)*Q22(jx,jy) +    &
-                L33(jx,jy)*Q33(jx,jy) + 2._rprec*(L12(jx,jy)*Q12(jx,jy) +        &
-                L13(jx,jy)*Q13(jx,jy) + L23(jx,jy)*Q23(jx,jy))
-            mm_sum = mm_sum + Q11(jx,jy)**2 + Q22(jx,jy)**2 + Q33(jx,jy)**2 +    &
-                2._rprec*(Q12(jx,jy)**2 + Q13(jx,jy)**2 + Q23(jx,jy)**2)
-        end do
-        end do
-        call scaledep_dynamic_cuda_sync('Mij reductions')
-
-        cs_val = max(0._rprec, real(lm_sum/mm_sum,rprec))
-        Cs_1D(jz) = cs_val
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            ee_now(jx,jy,jz) = L11(jx,jy)**2 + L22(jx,jy)**2 +                  &
-                L33(jx,jy)**2 + 2._rprec*(L12(jx,jy)**2 + L13(jx,jy)**2 +        &
-                L23(jx,jy)**2) - 2._rprec*(L11(jx,jy)*Q11(jx,jy) +              &
-                L22(jx,jy)*Q22(jx,jy) + L33(jx,jy)*Q33(jx,jy) +                 &
-                2._rprec*(L12(jx,jy)*Q12(jx,jy) + L13(jx,jy)*Q13(jx,jy) +        &
-                L23(jx,jy)*Q23(jx,jy)))*cs_val + (Q11(jx,jy)**2 +               &
-                Q22(jx,jy)**2 + Q33(jx,jy)**2 + 2._rprec*(Q12(jx,jy)**2 +       &
-                Q13(jx,jy)**2 + Q23(jx,jy)**2))*cs_val**2
-        end do
-        end do
-        call scaledep_dynamic_cuda_sync('ee_now')
-    else
-#endif
     ! using L_ij as temp storage here
     if ( (coord == 0) .and. (jz == 1) ) then
         !!! watch the 0.25's: w = c*z**z near wall, so get 0.25
@@ -530,45 +269,9 @@ do jz = 1, nz
     MM = M11**2+M22**2+M33**2+2._rprec*(M12**2+M13**2+M23**2)
     ee_now(:,:,jz) = L11**2+L22**2+L33**2+2._rprec*(L12**2+L13**2+L23**2)      &
                     -2._rprec*LM*Cs_1D(jz) + MM*Cs_1D(jz)**2
-#ifdef ENABLE_CUDA
-    end if
-#endif
 end do
 
 ! Nullify pointers
 nullify( M11, M12, M13, M22, M23, M33 )
 
 end subroutine scaledep_dynamic
-
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function scaledep_dynamic_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-scaledep_dynamic_cuda_enabled = .true.
-
-end function scaledep_dynamic_cuda_enabled
-
-!*******************************************************************************
-subroutine scaledep_dynamic_cuda_sync(where)
-!*******************************************************************************
-use cudafor
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'scaledep_dynamic CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'scaledep_dynamic CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine scaledep_dynamic_cuda_sync
-#endif

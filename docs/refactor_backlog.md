@@ -10,14 +10,14 @@ structure, but they should be split only when a clean ownership boundary exists.
 
 | Priority | File | Current size | Refactor direction |
 | --- | --- | ---: | --- |
-| 1 | `atm_lesgo_interface.f90` | 290,960 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
-| 2 | `sgs_stag_util.f90` | 161,830 bytes | Separate SGS model dispatch, halo exchange, tensor assembly, and runtime-model validation helpers. |
-| 3 | `actuator_turbine_model.f90` | 149,062 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
-| 4 | `lagrange_Sdep_gpu.f90` | 93,203 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
-| 5 | `scalars.f90` | 92,395 bytes | Separate CPU scalar transport, GPU scalar transport, halo handling, and timing diagnostics. |
-| 6 | `press_stag_array.f90` | 86,608 bytes | Separate pressure RHS assembly, halo policy, tridiagonal solve orchestration, and diagnostics. |
-| 7 | `tridag_array.f90` | 81,504 bytes | Separate CPU tridiagonal path, GPU-aware MPI path, host-staged fallback path, and replicated validation path. |
-| 8 | `iwmles.f90` | 72,768 bytes | Separate CPU/OpenACC/CUDA wall-model paths after preserving identical `(i,j)` surface-field semantics. |
+| 1 | `atm_lesgo_interface.f90` | 140,848 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
+| 2 | `actuator_turbine_model.f90` | 117,817 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
+| 3 | `lagrange_Sdep_gpu.f90` | 93,203 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
+| 4 | `scalars.f90` | 63,152 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
+| 5 | `io.f90` | 60,448 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
+| 6 | `sgs_gpu.f90` | 55,422 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
+| 7 | `atm_input_util.f90` | 54,346 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |
+| 8 | `iwmles.f90` | 52,722 bytes | Separate wall-model paths after preserving identical `(i,j)` surface-field semantics. |
 
 `level_set.f90` and `trees_*_ls.f90` are intentionally lower priority because
 LVLSET is not part of the optimized production path.
@@ -28,7 +28,6 @@ the priority list does not silently drift as files are refactored.
 
 The current branch mixes several layers of build-time conditionals:
 
-- legacy `ENABLE_CUDA`;
 - production `PPLES_GPU`;
 - module flags such as `PPSGS_GPU`, `PPSCALARS_GPU`, `PPATM`, and `PPCPS`;
 - communication flags such as `PPMPI` and `PPGPU_AWARE_MPI`.

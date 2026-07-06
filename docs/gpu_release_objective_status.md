@@ -18,11 +18,11 @@ python3 tools/require_gpu_release_objective.py
 
 | Classification | Subprograms | Meaning |
 | --- | ---: | --- |
-| `gpu-marked` | 330 | Contains OpenACC, CUDA, GPU-aware MPI, or GPU preprocessor markers. |
-| `gpu-file-unmarked` | 1 | Helper inside a GPU source file but without a local marker. |
-| `host-boundary` | 99 | Setup, I/O, configuration, MPI definitions, or other expected host boundary. |
-| `host-or-diagnostic` | 52 | Diagnostics, initialization, reporting, restart, or low-frequency host work. |
-| `unmarked-runtime-candidate` | 91 | Needs runtime validation or profiling before broad GPU speed claims. |
+| `gpu-marked` | 147 | Contains OpenACC, CUDA, GPU-aware MPI, or GPU preprocessor markers. |
+| `gpu-file-unmarked` | 2 | Helper inside a GPU source file but without a local marker. |
+| `host-boundary` | 102 | Setup, I/O, configuration, MPI definitions, or other expected host boundary. |
+| `host-or-diagnostic` | 41 | Diagnostics, initialization, reporting, restart, or low-frequency host work. |
+| `unmarked-runtime-candidate` | 107 | Needs runtime validation or profiling before broad GPU speed claims. |
 
 ## Validation Evidence Summary
 
@@ -54,16 +54,16 @@ Release-proven parser keys: `133`
 
 | Review bucket | Candidates | Validation row states | Meaning |
 | --- | ---: | --- | --- |
-| `adm-cpu-fallback-profile` | 4 | `adm_disk`=release-proven, `adm_dynamic_controls`=release-proven | ADM/turbine CPU fallback or compatibility routines; profile before treating them as missing GPU work. |
-| `atm-host-model` | 30 | `atm_line`=release-proven, `large_windfarm`=release-proven | ATM blade, controller, structure, and small math helpers that remain host-side in the current hybrid design. |
+| `adm-cpu-fallback-profile` | 5 | `adm_disk`=release-proven, `adm_dynamic_controls`=release-proven | ADM/turbine CPU fallback or compatibility routines; profile before treating them as missing GPU work. |
+| `atm-host-model` | 35 | `atm_line`=release-proven, `large_windfarm`=release-proven | ATM blade, controller, structure, and small math helpers that remain host-side in the current hybrid design. |
 | `atm-mirror-lb-control` | 11 | `atm_line`=release-proven, `large_windfarm`=release-proven | ATM mirror, synchronization, cell-search, and load-balance control helpers around the GPU sampling/forcing path. |
-| `cpu-fallback-compat` | 10 | `les_core_channel`=release-proven, `hit_inflow`=release-proven | CPU fallback or host compatibility routines retained beside GPU production paths. |
-| `diagnostic-profiling` | 14 | `diagnostics_output`=release-proven | Profiling, timing, or audit helpers; not GPU hot-path kernels. |
+| `cpu-fallback-compat` | 27 | `les_core_channel`=release-proven, `hit_inflow`=release-proven | CPU fallback or host compatibility routines retained beside GPU production paths. |
+| `diagnostic-profiling` | 8 | `diagnostics_output`=release-proven | Profiling, timing, or audit helpers; not GPU hot-path kernels. |
 | `excluded-lvlset-bridge` | 1 | `lvlset`=excluded | LVLSET bridge code excluded from the current non-LVLSET scope. |
 | `generic-helper-profile` | 10 | `les_core_channel`=release-proven, `adm_disk`=release-proven, `atm_line`=release-proven | Generic interpolation/math helpers that may be CPU fallback or low-cost support code. |
 | `inflow-fringe-profile` | 2 | `hit_inflow`=release-proven, `shifted_inflow`=release-proven, `sponge_coriolis`=release-proven | Inflow/fringe helpers that need targeted runtime validation for nonstandard inflow configurations. |
 | `iwm-wallmodel-profile` | 1 | `iwm_wall_model`=release-proven | IWM wall-model candidate that needs an IWM-heavy correctness and timing case before broad speed claims. |
-| `scalar-init-fallback` | 8 | `scalar_passive`=release-proven, `scalar_active`=release-proven, `cps_scalar`=release-proven | Scalar initialization, stability helper, or CPU fallback routines; validate passive and active scalar cases separately. |
+| `scalar-init-fallback` | 7 | `scalar_passive`=release-proven, `scalar_active`=release-proven, `cps_scalar`=release-proven | Scalar initialization, stability helper, or CPU fallback routines; validate passive and active scalar cases separately. |
 
 ## Open Validation Rows
 

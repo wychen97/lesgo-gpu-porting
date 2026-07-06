@@ -3,9 +3,6 @@ module cuda_mpi_debug
 !*******************************************************************************
 use mpi
 use types, only : rprec
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 save
@@ -43,9 +40,6 @@ character(*), intent(in) :: context
 integer, intent(in) :: nproc_in, rank_in, coord_in, up_in, down_in, nz_in
 integer :: ierr_local
 integer :: world_rank, world_size
-#ifdef ENABLE_CUDA
-integer :: istat, last, dev, ndev
-#endif
 
 if (dbg_initialized) return
 dbg_initialized = .true.
@@ -86,20 +80,7 @@ call print_env('MPICH_GPU_IPC_ENABLED')
 call print_env('FI_PROVIDER')
 call print_env('LD_LIBRARY_PATH')
 
-#ifdef ENABLE_CUDA
-dev = -1
-ndev = -1
-istat = cudaGetDevice(dev)
-last = cudaGetLastError()
-write(*,*) 'CUDA_MPI_DEBUG cudaGetDevice status=', istat,                     &
-    ' last=', last, ' device=', dev
-istat = cudaGetDeviceCount(ndev)
-last = cudaGetLastError()
-write(*,*) 'CUDA_MPI_DEBUG cudaGetDeviceCount status=', istat,                &
-    ' last=', last, ' count=', ndev
-#else
-write(*,*) 'CUDA_MPI_DEBUG ENABLE_CUDA not defined'
-#endif
+write(*,*) 'CUDA_MPI_DEBUG legacy CUDA path removed'
 
 end subroutine cuda_mpi_debug_init
 
@@ -145,26 +126,11 @@ subroutine cuda_pre(label, verbose)
 character(*), intent(in) :: label
 logical, intent(in) :: verbose
 integer :: ierr_local, world_rank
-#ifdef ENABLE_CUDA
-integer :: istat, last
-#endif
 
 if (.not. sync_enabled) return
 if (verbose) call mpi_comm_rank(MPI_COMM_WORLD, world_rank, ierr_local)
-#ifdef ENABLE_CUDA
-istat = cudaDeviceSynchronize()
-last = cudaGetLastError()
-if (verbose) then
-    write(*,*) 'CUDA_MPI_DEBUG PRE ', trim(label), ' world_rank=', world_rank, &
-        ' cudaDeviceSynchronize=', istat, ' cudaGetLastError=', last
-else if (istat /= 0 .or. last /= 0) then
-    write(*,*) 'CUDA_MPI_SYNC PRE_ERROR ', trim(label),                       &
-        ' cudaDeviceSynchronize=', istat, ' cudaGetLastError=', last
-endif
-#else
 if (verbose) write(*,*) 'CUDA_MPI_DEBUG PRE ', trim(label),                   &
     ' world_rank=', world_rank, ' no CUDA'
-#endif
 
 end subroutine cuda_pre
 
@@ -175,28 +141,11 @@ character(*), intent(in) :: label
 integer, intent(in) :: mpi_ierr
 logical, intent(in) :: verbose
 integer :: ierr_local, world_rank
-#ifdef ENABLE_CUDA
-integer :: istat, last
-#endif
 
 if (.not. sync_enabled) return
 if (verbose) call mpi_comm_rank(MPI_COMM_WORLD, world_rank, ierr_local)
-#ifdef ENABLE_CUDA
-istat = cudaDeviceSynchronize()
-last = cudaGetLastError()
-if (verbose) then
-    write(*,*) 'CUDA_MPI_DEBUG POST ', trim(label), ' world_rank=', world_rank,&
-        ' mpi_ierr=', mpi_ierr, ' cudaDeviceSynchronize=', istat,             &
-        ' cudaGetLastError=', last
-else if (mpi_ierr /= 0 .or. istat /= 0 .or. last /= 0) then
-    write(*,*) 'CUDA_MPI_SYNC POST_ERROR ', trim(label),                      &
-        ' mpi_ierr=', mpi_ierr, ' cudaDeviceSynchronize=', istat,             &
-        ' cudaGetLastError=', last
-endif
-#else
 if (verbose .or. mpi_ierr /= 0) write(*,*) 'CUDA_MPI_DEBUG POST ',            &
     trim(label), ' world_rank=', world_rank, ' mpi_ierr=', mpi_ierr, ' no CUDA'
-#endif
 
 end subroutine cuda_post
 
@@ -205,24 +154,8 @@ subroutine probe_real(label, buf)
 !*******************************************************************************
 character(*), intent(in) :: label
 real(rprec), dimension(*) :: buf
-#ifdef ENABLE_CUDA
-type(cudaPointerAttributes) :: attr
-integer :: istat, last
-#endif
 
 if (.not. dbg_enabled) return
-#ifdef ENABLE_CUDA
-istat = cudaPointerGetAttributes(attr, buf)
-last = cudaGetLastError()
-if (istat == 0) then
-    write(*,*) 'CUDA_MPI_DEBUG PTR ', trim(label), ' kind=real',              &
-        ' attr_status=', istat, ' type=', attr%type, ' device=', attr%device, &
-        ' clear_last=', last
-else
-    write(*,*) 'CUDA_MPI_DEBUG PTR ', trim(label), ' kind=real',              &
-        ' attr_status=', istat, ' clear_last=', last
-endif
-#endif
 
 end subroutine probe_real
 
@@ -231,24 +164,8 @@ subroutine probe_complex(label, buf)
 !*******************************************************************************
 character(*), intent(in) :: label
 complex(rprec), dimension(*) :: buf
-#ifdef ENABLE_CUDA
-type(cudaPointerAttributes) :: attr
-integer :: istat, last
-#endif
 
 if (.not. dbg_enabled) return
-#ifdef ENABLE_CUDA
-istat = cudaPointerGetAttributes(attr, buf)
-last = cudaGetLastError()
-if (istat == 0) then
-    write(*,*) 'CUDA_MPI_DEBUG PTR ', trim(label), ' kind=complex',           &
-        ' attr_status=', istat, ' type=', attr%type, ' device=', attr%device, &
-        ' clear_last=', last
-else
-    write(*,*) 'CUDA_MPI_DEBUG PTR ', trim(label), ' kind=complex',           &
-        ' attr_status=', istat, ' clear_last=', last
-endif
-#endif
 
 end subroutine probe_complex
 

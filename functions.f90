@@ -32,9 +32,6 @@ module functions
 ! should stay in the module that owns the timestep dependency.
 use messages
 use types, only : rprec
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 save
@@ -60,37 +57,6 @@ end interface bilinear_interp
 
 contains
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function tau_wall_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-tau_wall_cuda_enabled = .true.
-
-end function tau_wall_cuda_enabled
-
-!*******************************************************************************
-subroutine tau_wall_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'tau wall CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'tau wall CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine tau_wall_cuda_sync
-#endif
 
 !*******************************************************************************
 function interp_to_uv_grid(var, lbz) result(var_uv)
@@ -938,7 +904,7 @@ integer :: jx, jy
 
 txsum = 0._rprec
 tysum = 0._rprec
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 !$acc wait(1)
 !$acc parallel loop collapse(2) default(present) reduction(+:txsum,tysum)
 do jx = 1, nx
@@ -951,27 +917,12 @@ twall = sqrt((txsum/(nx*ny))*(txsum/(nx*ny))                                  &
     + (tysum/(nx*ny))*(tysum/(nx*ny)))
 return
 #endif
-#ifdef ENABLE_CUDA
-if (tau_wall_cuda_enabled()) then
-    !$cuf kernel do(2) <<<*,*>>> reduction(+:txsum,tysum)
-    do jx = 1, nx
-    do jy = 1, ny
-        txsum = txsum + txz(jx,jy,1)
-        tysum = tysum + tyz(jx,jy,1)
-    enddo
-    enddo
-    call tau_wall_cuda_sync('get_tau_wall_bot')
-else
-#endif
 do jx = 1, nx
 do jy = 1, ny
     txsum = txsum + txz(jx,jy,1)
     tysum = tysum + tyz(jx,jy,1)
 enddo
 enddo
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 twall = sqrt((txsum/(nx*ny))*(txsum/(nx*ny))                                  &
     + (tysum/(nx*ny))*(tysum/(nx*ny)))
@@ -994,7 +945,7 @@ integer :: jx, jy
 
 txsum = 0._rprec
 tysum = 0._rprec
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 !$acc wait(1)
 !$acc parallel loop collapse(2) default(present) reduction(+:txsum,tysum)
 do jx = 1, nx
@@ -1007,27 +958,12 @@ twall = sqrt((txsum/(nx*ny))*(txsum/(nx*ny))                                  &
     + (tysum/(nx*ny))*(tysum/(nx*ny)))
 return
 #endif
-#ifdef ENABLE_CUDA
-if (tau_wall_cuda_enabled()) then
-    !$cuf kernel do(2) <<<*,*>>> reduction(+:txsum,tysum)
-    do jx = 1, nx
-    do jy = 1, ny
-        txsum = txsum + txz(jx,jy,nz)
-        tysum = tysum + tyz(jx,jy,nz)
-    enddo
-    enddo
-    call tau_wall_cuda_sync('get_tau_wall_top')
-else
-#endif
 do jx = 1, nx
 do jy = 1, ny
     txsum = txsum + txz(jx,jy,nz)
     tysum = tysum + tyz(jx,jy,nz)
 enddo
 enddo
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 twall = sqrt((txsum/(nx*ny))*(txsum/(nx*ny))                                  &
     + (tysum/(nx*ny))*(tysum/(nx*ny)))

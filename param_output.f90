@@ -87,11 +87,11 @@ write(2,c_fmt) 'TIMESTEP PARAMETERS'
 write(2,c_fmt) '---------------------------------------------------'
 write(2,i_fmt) 'nsteps : ', nsteps
 write(2,i_fmt) 'runtime : ', runtime
-#ifdef PPCFL_DT
-write(2,f_fmt) 'cfl : ', cfl
-#else
-write(2,f_fmt) 'dt : ', dt
-#endif
+if (use_cfl_dt) then
+    write(2,f_fmt) 'cfl : ', cfl
+else
+    write(2,f_fmt) 'dt : ', dt
+end if
 write(2,l_fmt) 'cumulative_time : ', cumulative_time
 write(2,c_fmt) ''
 write(2,c_fmt) '---------------------------------------------------'

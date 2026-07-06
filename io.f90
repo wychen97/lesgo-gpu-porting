@@ -38,9 +38,6 @@ use sgs_param , only : Cs_opt2
 use string_util
 use messages
 use time_average
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 #ifdef PPMPI
 use mpi
 #endif
@@ -121,49 +118,12 @@ real(rprec)::KE
 #ifdef PPMPI
 real(rprec) :: ke_global
 #endif
-#ifdef ENABLE_CUDA
-character(len=16) :: cuda_setting
-integer :: cuda_stat, istat
-logical, save :: cuda_initialized = .false.
-logical, save :: cuda_enabled = .true.
-#endif
 
 ! Initialize variables
 nan_count = 0
 ke = 0._rprec
 
-#ifdef ENABLE_CUDA
-if (.not. cuda_initialized) then
-    cuda_enabled = .true.
-    cuda_initialized = .true.
-end if
-
-if (cuda_enabled) then
-    !$cuf kernel do(3) <<<*,*>>> reduction(+:ke)
-    do jz = 1, nz-1
-    do jy = 1, ny
-    do jx = 1, nx
-        ke = ke + u(jx,jy,jz)*u(jx,jy,jz)                                     &
-            + v(jx,jy,jz)*v(jx,jy,jz)                                         &
-            + 0.25_rprec*(w(jx,jy,jz)+w(jx,jy,jz+1))                          &
-            * (w(jx,jy,jz)+w(jx,jy,jz+1))
-    end do
-    end do
-    end do
-
-    istat = cudaDeviceSynchronize()
-    if (istat /= 0) then
-        print *, 'energy CUDA sync failure: ', istat
-        stop
-    end if
-    istat = cudaGetLastError()
-    if (istat /= 0) then
-        print *, 'energy CUDA kernel failure: ', istat
-        stop
-    end if
-else
-#endif
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! Device-side reduction over the resident u,v,w - replaces the full-field
 ! D2H + host loop. Same summand; only the (diagnostic-only) parallel
 ! reduction order differs from the serial host sum.
@@ -189,9 +149,6 @@ do jx = 1, nx
 end do
 end do
 end do
-#endif
-#ifdef ENABLE_CUDA
-end if
 #endif
 
 ! Perform spatial averaging
@@ -798,7 +755,7 @@ integer, intent(in) :: itype
 character (64) :: fname
 integer :: n, i, j, k
 real(rprec), allocatable, dimension(:,:,:) :: ui, vi, wi,w_uv
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 integer :: p_i0, p_j0, p_k0, p_i1, p_j1, p_k1
 integer, allocatable, dimension(:) :: point_active, point_i, point_j, point_k
 real(rprec), allocatable, dimension(:) :: point_xd, point_yd, point_zd
@@ -845,7 +802,7 @@ y => grid % y
 z => grid % z
 zw => grid % zw
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! Fast path for single-rank point output: sample the resident device fields
 ! into a small buffer and transfer only O(point_nloc) values. Multi-rank point
 ! output still uses the host path below until a device halo-aware w_uv sampler
@@ -1587,7 +1544,7 @@ use param, only : jt_total, total_time, total_time_dim, dt,                    &
     use_cfl_dt, cfl, write_endian, inflow_type
 use cfl_util, only : get_max_cfl
 use string_util, only : string_concat
-#if PPUSE_TURBINES
+#ifdef PPTURBINES
 use turbines, only : turbines_checkpoint
 #endif
 #ifdef PPSCALARS
@@ -1604,7 +1561,7 @@ implicit none
 character(64) :: fname
 real(rprec) :: cfl_w
 
-#if defined(PPLES_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPLES_GPU)
 ! GPU build: the restart state (u/v/w, AB2 RHS history, Lagrangian SGS
 ! accumulators) lives on the device; the host copies were last written at
 ! initialization. Refresh them so vel.out carries the evolved state.
@@ -1659,7 +1616,7 @@ end if
     if (coord == 0 .and. inflow_type == 2) call hit_write_restart()
 #endif
 
-#if PPUSE_TURBINES
+#ifdef PPTURBINES
 call turbines_checkpoint
 #endif
 

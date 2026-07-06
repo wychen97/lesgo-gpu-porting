@@ -21,9 +21,6 @@
 module trees_global_fmask_ls
 use param, only : ld, nx, ny, nz, dx, dy, dz
 use trees_base_ls
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 save
@@ -52,11 +49,7 @@ integer :: np
 logical :: MPI_split
 
 !real (rp) :: global_fmask(ld, ny, nz)  !--experimental
-#ifdef ENABLE_CUDA
-real(rp), managed, allocatable, dimension(:,:,:) :: global_fmask
-#else
 real(rp), allocatable, dimension(:,:,:) :: global_fmask
-#endif
     !--nonzero where unres force is to be applied and contents may be filtered
     !--could dimension in a smarter way to save space
 
@@ -376,12 +369,6 @@ eps = epsilon ( 1._rp )  !--this is the fudge factor in our mask
 
 if ( use_loose_mask ) eps = eps + dx
 
-#ifdef ENABLE_CUDA
-if (global_fmask_cuda_enabled()) then
-    call calc_global_fmask_gpu(br % l, br % d, eps, br % x0, br % abs_dir)
-    return
-end if
-#endif
 
 !--unfortunately, loop over all points in the domain
 do k = 1, nz - 1
@@ -429,22 +416,10 @@ integer :: iimax, jjmax, kkmax
 real (rp) :: total_in, total
 real (rp) :: filtval
 !real (rp) :: x(nd), xp(nd)
-#ifdef ENABLE_CUDA
-real (rp), managed, allocatable :: wksp( :, :, : )
-#else
 real (rp), allocatable :: wksp( :, :, : )
-#endif
 
 !---------------------------------------------------------------------
 
-#ifdef ENABLE_CUDA
-if (global_fmask_cuda_enabled()) then
-  allocate ( wksp(ld, ny, nz) )
-  call filter_global_fmask_gpu(wksp)
-  deallocate ( wksp )
-  return
-end if
-#endif
 
 allocate ( wksp(ld, ny, nz) )
 
@@ -522,47 +497,7 @@ implicit none
 real(rp), intent(in) :: br_l, br_d, eps
 real(rp), intent(in) :: br_x0(nd), br_abs_dir(nd)
 
-#ifdef ENABLE_CUDA
-integer :: i, j, k, istat
-real(rp) :: x1, x2, x3, d_para, xp1, xp2, xp3
-real(rp) :: max_perp, half_d
-real(rp) :: x01, x02, x03, dir1, dir2, dir3
-
-half_d = 0.5_rp * br_d + eps
-x01 = br_x0(1)
-x02 = br_x0(2)
-x03 = br_x0(3)
-dir1 = br_abs_dir(1)
-dir2 = br_abs_dir(2)
-dir3 = br_abs_dir(3)
-
-!$cuf kernel do(3) <<<*, *>>>
-do k = 1, nz - 1
-do j = 1, ny
-do i = 1, nx
-  x1 = real(i - 1, rp) * dx - x01
-  x2 = real(j - 1, rp) * dy - x02
-  x3 = 0.5_rp*dz + real(k - 1, rp) * dz - x03
-  d_para = x1*dir1 + x2*dir2 + x3*dir3
-  if ((0._rp <= d_para) .and. (d_para <= br_l + eps)) then
-    xp1 = x1 - d_para*dir1
-    xp2 = x2 - d_para*dir2
-    xp3 = x3 - d_para*dir3
-    max_perp = max(abs(xp1), max(abs(xp2), abs(xp3)))
-    if (max_perp <= half_d) global_fmask(i,j,k) = 1.0_rp
-  end if
-end do
-end do
-end do
-
-istat = cudaDeviceSynchronize()
-if (istat /= cudaSuccess) then
-  print *, 'calc_global_fmask_gpu failed: ', istat
-  stop
-end if
-#else
 call error('calc_global_fmask_gpu', 'CUDA path requested without CUDA')
-#endif
 
 end subroutine calc_global_fmask_gpu
 
@@ -572,79 +507,7 @@ implicit none
 
 real(rp), intent(inout) :: wksp(ld, ny, nz)
 
-#ifdef ENABLE_CUDA
-attributes(device) :: wksp
-integer :: i, j, k, ii, jj, kk, iimin, iimax, jjmin, jjmax, kkmin, kkmax
-integer :: m
-integer, parameter :: m_max = (fratiomax * idelta)**2
-real(rp) :: filtval, total_in, total, scale, coeff
-
-total_in = 0._rp
-!$cuf kernel do(3) <<<*, *>>> reduction(+:total_in)
-do k = 1, nz
-do j = 1, ny
-do i = 1, ld
-  wksp(i,j,k) = global_fmask(i,j,k)
-  total_in = total_in + wksp(i,j,k)
-end do
-end do
-end do
-
-!$cuf kernel do(3) <<<*, *>>>
-do k = 1, nz - 1
-do j = 1, ny
-do i = 1, nx
-  filtval = 0.0_rp
-  kkmin = max(1, k - fratiomax * idelta)
-  kkmax = min(nz - 1, k + fratiomax * idelta)
-  jjmin = max(1, j - fratiomax * idelta)
-  jjmax = min(ny, j + fratiomax * idelta)
-  iimin = max(1, i - fratiomax * idelta)
-  iimax = min(nx, i + fratiomax * idelta)
-
-  do kk = kkmin, kkmax
-  do jj = jjmin, jjmax
-  do ii = iimin, iimax
-    m = (i-ii)*(i-ii) + (j-jj)*(j-jj) + (k-kk)*(k-kk)
-    if (m <= m_max) then
-      coeff = exp(-6.0_rp * real(m, rp) / real(idelta*idelta, rp))
-      filtval = filtval + coeff * wksp(ii,jj,kk)
-    end if
-  end do
-  end do
-  end do
-
-  global_fmask(i,j,k) = filtval
-end do
-end do
-end do
-
-total = 0._rp
-!$cuf kernel do(3) <<<*, *>>> reduction(+:total)
-do k = 1, nz
-do j = 1, ny
-do i = 1, ld
-  if (global_fmask(i,j,k) < epsilon(1.0_rp)) global_fmask(i,j,k) = 0.0_rp
-  total = total + global_fmask(i,j,k)
-end do
-end do
-end do
-
-if (total /= 0._rp) then
-  scale = total_in / total
-  !$cuf kernel do(3) <<<*, *>>>
-  do k = 1, nz
-  do j = 1, ny
-  do i = 1, ld
-    global_fmask(i,j,k) = global_fmask(i,j,k) * scale
-  end do
-  end do
-  end do
-end if
-
-#else
 call error('filter_global_fmask_gpu', 'CUDA path requested without CUDA')
-#endif
 
 end subroutine filter_global_fmask_gpu
 

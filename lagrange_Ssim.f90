@@ -45,36 +45,18 @@ use sgs_param, only:F_ee2,F_deedt2,ee_past
 #ifdef PPMPI
 use mpi_defs, only:mpi_sync_real_array,MPI_SYNC_DOWNUP
 #endif
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 
 implicit none
 
 character(*), parameter :: sub_name = 'lagrange_Ssim'
 
 real(rprec), parameter :: eps = 1.e-32_rprec
-#ifdef ENABLE_CUDA
-real(rprec), managed, allocatable, save, dimension(:,:) :: fourbeta
-real(rprec), managed, allocatable, save, dimension(:,:) :: LM, MM, Tn, epsi, dumfac
-#else
 real(rprec), dimension(ld,ny) :: fourbeta
 real(rprec), dimension(ld,ny) :: LM, MM, Tn, epsi, dumfac
-#endif
 real(rprec) :: const
 real(rprec) :: opftdelta
 integer :: istart, iend, iend_mod, jx, jy, jz, ii, i
 logical, save :: F_LM_MM_init = .false.
-#ifdef ENABLE_CUDA
-logical :: lagrange_ssim_cuda_enabled
-logical :: use_lag_ssim_cuda
-
-if (.not. allocated(fourbeta)) then
-    allocate(fourbeta(ld,ny), LM(ld,ny), MM(ld,ny), Tn(ld,ny), epsi(ld,ny),      &
-        dumfac(ld,ny))
-end if
-use_lag_ssim_cuda = lagrange_ssim_cuda_enabled()
-#endif
 
 ! Set coefficients
 opftdelta = opftime*delta
@@ -83,23 +65,7 @@ const = 2._rprec*delta*delta
 #ifdef PPLVLSET
 call level_set_lag_dyn (S11, S12, S13, S22, S23, S33)
 #else
-#ifdef ENABLE_CUDA
-if (use_lag_ssim_cuda) then
-!$cuf kernel do(3) <<<*,*>>>
-    do jz = 1, nz
-    do jy = 1, ny
-    do jx = 1, ld
-        Beta(jx,jy,jz) = 1._rprec
-    end do
-    end do
-    end do
-    call lagrange_ssim_cuda_sync('initialize Beta')
-else
-#endif
 Beta = 1._rprec
-#ifdef ENABLE_CUDA
-end if
-#endif
 #endif
 
 ! "Rearrange" F_LM, F_MM, F_ee2, F_deedt2 (running averages) so that
@@ -114,31 +80,6 @@ do jz = 1,nz
     ! Calculate Lij
     ! Interp u,v,w onto w-nodes and store result as u_bar,v_bar,w_bar
     ! (except for very first level which should be on uvp-nodes)
-#ifdef ENABLE_CUDA
-    if (use_lag_ssim_cuda) then
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            if ((coord == 0) .and. (jz == 1)) then
-                u_bar(jx,jy) = u(jx,jy,1)
-                v_bar(jx,jy) = v(jx,jy,1)
-                w_bar(jx,jy) = 0.25_rprec*w(jx,jy,2)
-            else
-                u_bar(jx,jy) = 0.5_rprec*(u(jx,jy,jz) + u(jx,jy,jz-1))
-                v_bar(jx,jy) = 0.5_rprec*(v(jx,jy,jz) + v(jx,jy,jz-1))
-                w_bar(jx,jy) = w(jx,jy,jz)
-            end if
-            L11(jx,jy) = u_bar(jx,jy)*u_bar(jx,jy)
-            L12(jx,jy) = u_bar(jx,jy)*v_bar(jx,jy)
-            L13(jx,jy) = u_bar(jx,jy)*w_bar(jx,jy)
-            L23(jx,jy) = v_bar(jx,jy)*w_bar(jx,jy)
-            L22(jx,jy) = v_bar(jx,jy)*v_bar(jx,jy)
-            L33(jx,jy) = w_bar(jx,jy)*w_bar(jx,jy)
-        end do
-        end do
-        call lagrange_ssim_cuda_sync('velocity and L setup')
-    else
-#endif
     if ( ( coord == 0 ) .and. (jz == 1) ) then  ! uvp-nodes
         u_bar(:,:) = u(:,:,1)
         v_bar(:,:) = v(:,:,1)
@@ -156,29 +97,9 @@ do jz = 1,nz
     L23 = v_bar*w_bar
     L22 = v_bar*v_bar
     L33 = w_bar*w_bar
-#ifdef ENABLE_CUDA
-    end if
-#endif
 
     ! Filter first term and add the second term to get the final value
     call test_filter_3 ( u_bar, v_bar, w_bar )   ! in-place filtering
-#ifdef ENABLE_CUDA
-    if (use_lag_ssim_cuda) then
-        call test_filter_6 ( L11, L12, L13, L22, L23, L33 )
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            L11(jx,jy) = L11(jx,jy) - u_bar(jx,jy)*u_bar(jx,jy)
-            L12(jx,jy) = L12(jx,jy) - u_bar(jx,jy)*v_bar(jx,jy)
-            L13(jx,jy) = L13(jx,jy) - u_bar(jx,jy)*w_bar(jx,jy)
-            L22(jx,jy) = L22(jx,jy) - v_bar(jx,jy)*v_bar(jx,jy)
-            L23(jx,jy) = L23(jx,jy) - v_bar(jx,jy)*w_bar(jx,jy)
-            L33(jx,jy) = L33(jx,jy) - w_bar(jx,jy)*w_bar(jx,jy)
-        end do
-        end do
-        call lagrange_ssim_cuda_sync('filtered Lij correction')
-    else
-#endif
     call test_filter ( L11 )
     L11 = L11 - u_bar*u_bar
     call test_filter ( L12 )
@@ -191,47 +112,8 @@ do jz = 1,nz
     L23 = L23 - v_bar*w_bar
     call test_filter ( L33 )
     L33 = L33 - w_bar*w_bar
-#ifdef ENABLE_CUDA
-    end if
-#endif
 
     ! Calculate |S|
-#ifdef ENABLE_CUDA
-    if (use_lag_ssim_cuda) then
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            S(jx,jy) = sqrt(2._rprec*(S11(jx,jy,jz)**2 + S22(jx,jy,jz)**2 +    &
-                S33(jx,jy,jz)**2 + 2._rprec*(S12(jx,jy,jz)**2 +               &
-                S13(jx,jy,jz)**2 + S23(jx,jy,jz)**2)))
-            S11_bar(jx,jy) = S11(jx,jy,jz)
-            S12_bar(jx,jy) = S12(jx,jy,jz)
-            S13_bar(jx,jy) = S13(jx,jy,jz)
-            S22_bar(jx,jy) = S22(jx,jy,jz)
-            S23_bar(jx,jy) = S23(jx,jy,jz)
-            S33_bar(jx,jy) = S33(jx,jy,jz)
-            S_S11_bar(jx,jy) = S(jx,jy)*S11(jx,jy,jz)
-            S_S12_bar(jx,jy) = S(jx,jy)*S12(jx,jy,jz)
-            S_S13_bar(jx,jy) = S(jx,jy)*S13(jx,jy,jz)
-            S_S22_bar(jx,jy) = S(jx,jy)*S22(jx,jy,jz)
-            S_S23_bar(jx,jy) = S(jx,jy)*S23(jx,jy,jz)
-            S_S33_bar(jx,jy) = S(jx,jy)*S33(jx,jy,jz)
-        end do
-        end do
-        call lagrange_ssim_cuda_sync('S setup')
-        call test_filter_6 ( S11_bar, S12_bar, S13_bar, S22_bar, S23_bar,      &
-            S33_bar )
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            S_bar(jx,jy) = sqrt(2._rprec*(S11_bar(jx,jy)**2 +                 &
-                S22_bar(jx,jy)**2 + S33_bar(jx,jy)**2 + 2._rprec*(            &
-                S12_bar(jx,jy)**2 + S13_bar(jx,jy)**2 + S23_bar(jx,jy)**2)))
-        end do
-        end do
-        call lagrange_ssim_cuda_sync('filtered S magnitude')
-    else
-#endif
     S(:,:) = sqrt(2._rprec*(S11(:,:,jz)**2+S22(:,:,jz)**2+S33(:,:,jz)**2+&
         2._rprec*(S12(:,:,jz)**2+S13(:,:,jz)**2+S23(:,:,jz)**2)))
 
@@ -262,46 +144,11 @@ do jz = 1,nz
     S_S22_bar(:,:) = S(:,:)*S22(:,:,jz)
     S_S23_bar(:,:) = S(:,:)*S23(:,:,jz)
     S_S33_bar(:,:) = S(:,:)*S33(:,:,jz)
-#ifdef ENABLE_CUDA
-    end if
-#endif
 
     call test_filter_6 ( S_S11_bar, S_S12_bar, S_S13_bar, S_S22_bar,           &
         S_S23_bar, S_S33_bar )
 
     ! Calculate Mij
-#ifdef ENABLE_CUDA
-    if (use_lag_ssim_cuda) then
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            fourbeta(jx,jy) = 4._rprec*Beta(jx,jy,jz)
-            M11(jx,jy) = const*(S_S11_bar(jx,jy) -                             &
-                fourbeta(jx,jy)*S_bar(jx,jy)*S11_bar(jx,jy))
-            M12(jx,jy) = const*(S_S12_bar(jx,jy) -                             &
-                fourbeta(jx,jy)*S_bar(jx,jy)*S12_bar(jx,jy))
-            M13(jx,jy) = const*(S_S13_bar(jx,jy) -                             &
-                fourbeta(jx,jy)*S_bar(jx,jy)*S13_bar(jx,jy))
-            M22(jx,jy) = const*(S_S22_bar(jx,jy) -                             &
-                fourbeta(jx,jy)*S_bar(jx,jy)*S22_bar(jx,jy))
-            M23(jx,jy) = const*(S_S23_bar(jx,jy) -                             &
-                fourbeta(jx,jy)*S_bar(jx,jy)*S23_bar(jx,jy))
-            M33(jx,jy) = const*(S_S33_bar(jx,jy) -                             &
-                fourbeta(jx,jy)*S_bar(jx,jy)*S33_bar(jx,jy))
-            LM(jx,jy) = L11(jx,jy)*M11(jx,jy) + L22(jx,jy)*M22(jx,jy) +        &
-                L33(jx,jy)*M33(jx,jy) + 2._rprec*(L12(jx,jy)*M12(jx,jy) +      &
-                L13(jx,jy)*M13(jx,jy) + L23(jx,jy)*M23(jx,jy))
-            MM(jx,jy) = M11(jx,jy)**2 + M22(jx,jy)**2 + M33(jx,jy)**2 +        &
-                2._rprec*(M12(jx,jy)**2 + M13(jx,jy)**2 + M23(jx,jy)**2)
-            ee_now(jx,jy,jz) = L11(jx,jy)**2 + L22(jx,jy)**2 +                &
-                L33(jx,jy)**2 + 2._rprec*(L12(jx,jy)**2 + L13(jx,jy)**2 +      &
-                L23(jx,jy)**2) - 2._rprec*LM(jx,jy)*Cs_opt2(jx,jy,jz) +        &
-                MM(jx,jy)*Cs_opt2(jx,jy,jz)**2
-        end do
-        end do
-        call lagrange_ssim_cuda_sync('M contractions')
-    else
-#endif
     fourbeta=4._rprec*Beta(:,:,jz)
 
     M11 = const*(S_S11_bar - fourbeta*S_bar*S11_bar)
@@ -318,38 +165,15 @@ do jz = 1,nz
     ! Calculate ee_now (the current value of eij*eij)
     ee_now(:,:,jz) = L11**2+L22**2+L33**2+2._rprec*(L12**2+L13**2+L23**2)      &
         -2._rprec*LM*Cs_opt2(:,:,jz) + MM*Cs_opt2(:,:,jz)**2
-#ifdef ENABLE_CUDA
-    end if
-#endif
 
     ! Using local time counter to reinitialize SGS quantities when restarting
     if (inilag) then
         if ((.not. F_LM_MM_init) .and. (jt == cs_count .or. jt == DYN_init)) then
             print *,'F_MM and F_LM initialized'
-#ifdef ENABLE_CUDA
-            if (use_lag_ssim_cuda) then
-!$cuf kernel do(2) <<<*,*>>>
-                do jy = 1, ny
-                do jx = 1, ld
-                    if (jx >= ld-1) then
-                        F_MM(jx,jy,jz) = 1._rprec
-                        F_LM(jx,jy,jz) = 1._rprec
-                    else
-                        F_MM(jx,jy,jz) = MM(jx,jy)
-                        F_LM(jx,jy,jz) = 0.025_rprec*MM(jx,jy)
-                    end if
-                end do
-                end do
-                call lagrange_ssim_cuda_sync('initialize F_LM/F_MM')
-            else
-#endif
             F_MM (:,:,jz) = MM
             F_LM (:,:,jz) = 0.025_rprec*MM
             F_MM(ld-1:ld,:,jz)=1._rprec
             F_LM(ld-1:ld,:,jz)=1._rprec
-#ifdef ENABLE_CUDA
-            end if
-#endif
 
             if (jz == 1) then
                 if (coord == 0) then
@@ -373,34 +197,6 @@ do jz = 1,nz
         iend = floor (fringe_region_end * nx + 1._rprec)
         istart = floor ((fringe_region_end - fringe_region_len) * nx + 1._rprec)
 
-#ifdef ENABLE_CUDA
-        if (use_lag_ssim_cuda) then
-            if (istart > iend) then
-                write (*, *) 'lagrange_Ssim: istart > iend'
-                stop
-            endif
-            iend_mod = modulo(iend - 1, nx) + 1
-!$cuf kernel do(2) <<<*,*>>>
-            do jy = 1, ny
-            do jx = 1, ld
-                Tn(jx,jy) = max(MM(jx,jy), 0.1_rprec*const*S(jx,jy)**2)
-                MM(jx,jy) = Tn(jx,jy)
-                if (iend <= nx) then
-                    if ((jx >= istart) .and. (jx <= iend)) then
-                        LM(jx,jy) = 0._rprec
-                        F_LM(jx,jy,jz) = 0._rprec
-                    end if
-                else
-                    if ((jx >= istart) .or. (jx <= iend_mod)) then
-                        LM(jx,jy) = 0._rprec
-                        F_LM(jx,jy,jz) = 0._rprec
-                    end if
-                end if
-            end do
-            end do
-            call lagrange_ssim_cuda_sync('inflow SGS damping')
-        else
-#endif
         Tn = merge(.1_rprec*const*S**2,MM,MM.le..1_rprec*const*S**2)
         MM = Tn
 
@@ -413,38 +209,10 @@ do jz = 1,nz
             LM(ii, :) = 0._rprec
             F_LM(ii, :, jz) = 0._rprec
         enddo
-#ifdef ENABLE_CUDA
-        end if
-#endif
     endif
 
     ! Update running averages (F_LM, F_MM, F_ee2, F_deedt2)
     ! Determine averaging timescale
-#ifdef ENABLE_CUDA
-#ifndef PPDYN_TN
-    if (use_lag_ssim_cuda) then
-!$cuf kernel do(2) <<<*,*>>>
-        do jy = 1, ny
-        do jx = 1, ld
-            Tn(jx,jy) = max(F_LM(jx,jy,jz)*F_MM(jx,jy,jz), eps)
-            Tn(jx,jy) = opftdelta/sqrt(sqrt(sqrt(Tn(jx,jy))))
-            dumfac(jx,jy) = lagran_dt/Tn(jx,jy)
-            epsi(jx,jy) = dumfac(jx,jy)/(1._rprec + dumfac(jx,jy))
-            F_LM(jx,jy,jz) = epsi(jx,jy)*LM(jx,jy) +                            &
-                (1._rprec-epsi(jx,jy))*F_LM(jx,jy,jz)
-            F_MM(jx,jy,jz) = epsi(jx,jy)*MM(jx,jy) +                            &
-                (1._rprec-epsi(jx,jy))*F_MM(jx,jy,jz)
-            F_LM(jx,jy,jz) = max(eps, F_LM(jx,jy,jz))
-            Cs_opt2(jx,jy,jz) = F_LM(jx,jy,jz)/(F_MM(jx,jy,jz) + eps)
-            if (jx >= ld-1) Cs_opt2(jx,jy,jz) = 0._rprec
-            Cs_opt2(jx,jy,jz) = max(eps, Cs_opt2(jx,jy,jz))
-            Tn_all(jx,jy,jz) = Tn(jx,jy)
-        end do
-        end do
-        call lagrange_ssim_cuda_sync('update F_LM/F_MM and Cs')
-    else
-#endif
-#endif
 #ifdef PPDYN_TN
     ! based on Taylor timescale
     Tn = 4._rprec*pi*sqrt(F_ee2(:,:,jz)/F_deedt2(:,:,jz))
@@ -500,11 +268,6 @@ do jz = 1,nz
 
     ! Save Tn to 3D array for use with tavg_sgs
     Tn_all(:,:,jz) = Tn(:,:)
-#ifdef ENABLE_CUDA
-#ifndef PPDYN_TN
-    end if
-#endif
-#endif
 end do
 
 ! Share new data between overlapping nodes
@@ -527,36 +290,3 @@ call level_set_Cs_lag_dyn ()
 if( use_cfl_dt ) lagran_dt = 0._rprec
 
 end subroutine lagrange_Ssim
-
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function lagrange_ssim_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-lagrange_ssim_cuda_enabled = .true.
-
-end function lagrange_ssim_cuda_enabled
-
-!*******************************************************************************
-subroutine lagrange_ssim_cuda_sync(where)
-!*******************************************************************************
-use cudafor
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'lagrange_Ssim CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'lagrange_Ssim CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine lagrange_ssim_cuda_sync
-#endif

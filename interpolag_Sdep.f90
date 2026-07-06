@@ -42,9 +42,6 @@ use sgs_param, only: F_ee2, F_deedt2, ee_past
 use sim_param, only : u,v,w
 use grid_m
 use functions, only : trilinear_interp_w
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 #ifdef PPMPI
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWNUP
 #endif
@@ -52,199 +49,15 @@ use cfl_util, only : get_max_cfl
 implicit none
 
 real(rprec), dimension(3) :: xyz_past
-#ifdef ENABLE_CUDA
-real(rprec), managed, allocatable, save, dimension(:,:,:) :: tempF_LM
-real(rprec), managed, allocatable, save, dimension(:,:,:) :: tempF_MM
-real(rprec), managed, allocatable, save, dimension(:,:,:) :: tempF_QN
-real(rprec), managed, allocatable, save, dimension(:,:,:) :: tempF_NN
-#else
 real(rprec), dimension(ld,ny,lbz:nz) :: tempF_LM, tempF_MM, tempF_QN, tempF_NN
-#endif
 #ifdef PPDYN_TN
 real(rprec), dimension(ld,ny,lbz:nz) :: tempF_ee2, tempF_deedt2, tempee_past
 #endif
 integer :: i, j, k, kmin
 real(rprec) :: lcfl
 real(rprec), pointer, dimension(:) :: x,y,z,zw
-#ifdef ENABLE_CUDA
-integer :: i1, j1, k1
-real(rprec) :: px, py, pz, xdiff, ydiff, zdiff
-real(rprec) :: wxgt, wygt, wzgt
-real(rprec) :: c000, c100, c010, c110, c001, c101, c011, c111
-real(rprec) :: xloc, yloc, zloc, zwloc, thresh
-logical :: interpolag_sdep_cuda_enabled
-#endif
 
 nullify(x,y,z,zw)
-#ifdef ENABLE_CUDA
-#ifndef PPDYN_TN
-if (.not. allocated(tempF_LM)) then
-    allocate(tempF_LM(ld,ny,lbz:nz))
-    allocate(tempF_MM(ld,ny,lbz:nz))
-    allocate(tempF_QN(ld,ny,lbz:nz))
-    allocate(tempF_NN(ld,ny,lbz:nz))
-end if
-
-if (interpolag_sdep_cuda_enabled()) then
-!$cuf kernel do(3) <<<*,*>>>
-    do k = lbz, nz
-    do j = 1, ny
-    do i = 1, ld
-        tempF_LM(i,j,k) = F_LM(i,j,k)
-        tempF_MM(i,j,k) = F_MM(i,j,k)
-        tempF_QN(i,j,k) = F_QN(i,j,k)
-        tempF_NN(i,j,k) = F_NN(i,j,k)
-    end do
-    end do
-    end do
-    call interpolag_sdep_cuda_sync('copy running averages')
-
-    thresh = 1.e-9_rprec
-!$cuf kernel do(3) <<<*,*>>>
-    do k = 1, nz
-    do j = 1, ny
-    do i = 1, nx
-        if ((k <= nz-1) .or. (coord == nproc-1)) then
-            xloc = real(i - 1, rprec)*dx
-            yloc = real(j - 1, rprec)*dy
-
-            if ((coord == 0) .and. (k == 1)) then
-                if (lbc_mom == 0) then
-                    px = xloc - u(i,j,1)*lagran_dt
-                    py = yloc - v(i,j,1)*lagran_dt
-                    pz = 0._rprec
-                else
-                    px = xloc - u(i,j,1)*lagran_dt
-                    py = yloc - v(i,j,1)*lagran_dt
-                    pz = 0.5_rprec*dz - 0.25_rprec*w(i,j,2)*lagran_dt
-                end if
-            else if ((coord == nproc-1) .and. (k == nz)) then
-                if (ubc_mom == 0) then
-                    px = xloc - u(i,j,nz-1)*lagran_dt
-                    py = yloc - v(i,j,nz-1)*lagran_dt
-                    pz = real(coord*(nz-1) + nz - 1, rprec)*dz
-                else
-                    px = xloc - u(i,j,nz-1)*lagran_dt
-                    py = yloc - v(i,j,nz-1)*lagran_dt
-                    pz = real(coord*(nz-1) + nz - 1, rprec)*dz                 &
-                        - 0.5_rprec*dz - 0.25_rprec*w(i,j,nz-1)*lagran_dt
-                end if
-            else
-                px = xloc - 0.5_rprec*(u(i,j,k-1) + u(i,j,k))*lagran_dt
-                py = yloc - 0.5_rprec*(v(i,j,k-1) + v(i,j,k))*lagran_dt
-                pz = real(coord*(nz-1) + k - 1, rprec)*dz - w(i,j,k)*lagran_dt
-            end if
-
-            px = modulo(px, L_x)
-            if (abs(px)/L_x < thresh) then
-                i1 = 1
-            else if (abs(px - L_x)/L_x < thresh) then
-                i1 = nx
-            else
-                i1 = floor(px/dx) + 1
-            end if
-            if (i1 < 1) i1 = 1
-            if (i1 > nx) i1 = nx
-            xdiff = px - real(i1 - 1, rprec)*dx
-
-            py = modulo(py, L_y)
-            if (abs(py)/L_y < thresh) then
-                j1 = 1
-            else if (abs(py - L_y)/L_y < thresh) then
-                j1 = ny
-            else
-                j1 = floor(py/dy) + 1
-            end if
-            if (j1 < 1) j1 = 1
-            if (j1 > ny) j1 = ny
-            ydiff = py - real(j1 - 1, rprec)*dy
-
-            if ((coord == 0) .and. (lbc_mom > 0) .and. (pz < dz)) then
-                if (pz < 0.5_rprec*dz) then
-                    k1 = 1
-                    zdiff = 0._rprec
-                else
-                    k1 = 1
-                    zdiff = 2._rprec*(pz - 0.5_rprec*dz)
-                end if
-            else if ((coord == nproc-1) .and. (ubc_mom > 0) .and.              &
-                (pz > real(coord*(nz-1) + nz - 2, rprec)*dz)) then
-                zloc = real(coord*(nz-1) + nz - 1, rprec)*dz - 0.5_rprec*dz
-                if (pz > zloc) then
-                    k1 = nz
-                    zdiff = 0._rprec
-                else
-                    k1 = nz - 1
-                    zdiff = 2._rprec*(pz - real(coord*(nz-1) + k1 - 1, rprec)*dz)
-                end if
-            else
-                zwloc = real(coord*(nz-1) + nz - 1, rprec)*dz
-                if (abs(pz - zwloc)/L_z < thresh) then
-                    k1 = nz - 1
-                else
-                    k1 = floor((pz - real(coord*(nz-1), rprec)*dz)/dz) + 1
-                end if
-                if (k1 < lbz) k1 = lbz
-                if (k1 > nz-1) k1 = nz-1
-                zdiff = pz - real(coord*(nz-1) + k1 - 1, rprec)*dz
-            end if
-
-            wxgt = xdiff/dx
-            wygt = ydiff/dy
-            wzgt = zdiff/dz
-            c000 = (1._rprec-wxgt)*(1._rprec-wygt)*(1._rprec-wzgt)
-            c100 = wxgt*(1._rprec-wygt)*(1._rprec-wzgt)
-            c010 = (1._rprec-wxgt)*wygt*(1._rprec-wzgt)
-            c110 = wxgt*wygt*(1._rprec-wzgt)
-            c001 = (1._rprec-wxgt)*(1._rprec-wygt)*wzgt
-            c101 = wxgt*(1._rprec-wygt)*wzgt
-            c011 = (1._rprec-wxgt)*wygt*wzgt
-            c111 = wxgt*wygt*wzgt
-
-            F_LM(i,j,k) = c000*tempF_LM(i1,j1,k1)                              &
-                + c100*tempF_LM(merge(1,i1+1,i1==nx),j1,k1)                    &
-                + c010*tempF_LM(i1,merge(1,j1+1,j1==ny),k1)                    &
-                + c110*tempF_LM(merge(1,i1+1,i1==nx),merge(1,j1+1,j1==ny),k1)  &
-                + c001*tempF_LM(i1,j1,merge(k1,k1+1,k1==nz))                   &
-                + c101*tempF_LM(merge(1,i1+1,i1==nx),j1,merge(k1,k1+1,k1==nz)) &
-                + c011*tempF_LM(i1,merge(1,j1+1,j1==ny),merge(k1,k1+1,k1==nz)) &
-                + c111*tempF_LM(merge(1,i1+1,i1==nx),merge(1,j1+1,j1==ny),     &
-                    merge(k1,k1+1,k1==nz))
-            F_MM(i,j,k) = c000*tempF_MM(i1,j1,k1)                              &
-                + c100*tempF_MM(merge(1,i1+1,i1==nx),j1,k1)                    &
-                + c010*tempF_MM(i1,merge(1,j1+1,j1==ny),k1)                    &
-                + c110*tempF_MM(merge(1,i1+1,i1==nx),merge(1,j1+1,j1==ny),k1)  &
-                + c001*tempF_MM(i1,j1,merge(k1,k1+1,k1==nz))                   &
-                + c101*tempF_MM(merge(1,i1+1,i1==nx),j1,merge(k1,k1+1,k1==nz)) &
-                + c011*tempF_MM(i1,merge(1,j1+1,j1==ny),merge(k1,k1+1,k1==nz)) &
-                + c111*tempF_MM(merge(1,i1+1,i1==nx),merge(1,j1+1,j1==ny),     &
-                    merge(k1,k1+1,k1==nz))
-            F_QN(i,j,k) = c000*tempF_QN(i1,j1,k1)                              &
-                + c100*tempF_QN(merge(1,i1+1,i1==nx),j1,k1)                    &
-                + c010*tempF_QN(i1,merge(1,j1+1,j1==ny),k1)                    &
-                + c110*tempF_QN(merge(1,i1+1,i1==nx),merge(1,j1+1,j1==ny),k1)  &
-                + c001*tempF_QN(i1,j1,merge(k1,k1+1,k1==nz))                   &
-                + c101*tempF_QN(merge(1,i1+1,i1==nx),j1,merge(k1,k1+1,k1==nz)) &
-                + c011*tempF_QN(i1,merge(1,j1+1,j1==ny),merge(k1,k1+1,k1==nz)) &
-                + c111*tempF_QN(merge(1,i1+1,i1==nx),merge(1,j1+1,j1==ny),     &
-                    merge(k1,k1+1,k1==nz))
-            F_NN(i,j,k) = c000*tempF_NN(i1,j1,k1)                              &
-                + c100*tempF_NN(merge(1,i1+1,i1==nx),j1,k1)                    &
-                + c010*tempF_NN(i1,merge(1,j1+1,j1==ny),k1)                    &
-                + c110*tempF_NN(merge(1,i1+1,i1==nx),merge(1,j1+1,j1==ny),k1)  &
-                + c001*tempF_NN(i1,j1,merge(k1,k1+1,k1==nz))                   &
-                + c101*tempF_NN(merge(1,i1+1,i1==nx),j1,merge(k1,k1+1,k1==nz)) &
-                + c011*tempF_NN(i1,merge(1,j1+1,j1==ny),merge(k1,k1+1,k1==nz)) &
-                + c111*tempF_NN(merge(1,i1+1,i1==nx),merge(1,j1+1,j1==ny),     &
-                    merge(k1,k1+1,k1==nz))
-        end if
-    end do
-    end do
-    end do
-    call interpolag_sdep_cuda_sync('lagrangian interpolation')
-else
-#endif
-#endif
 x  => grid % x
 y  => grid % y
 z  => grid % z
@@ -426,11 +239,6 @@ if (coord.eq.nproc-1) then
 #ifdef PPMPI
 endif
 #endif
-#ifdef ENABLE_CUDA
-#ifndef PPDYN_TN
-end if
-#endif
-#endif
 
 ! Share new data between overlapping nodes
 #ifdef PPMPI
@@ -460,36 +268,3 @@ endif
 nullify(x,y,z,zw)
 
 end subroutine interpolag_Sdep
-
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function interpolag_sdep_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-interpolag_sdep_cuda_enabled = .true.
-
-end function interpolag_sdep_cuda_enabled
-
-!*******************************************************************************
-subroutine interpolag_sdep_cuda_sync(where)
-!*******************************************************************************
-use cudafor
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'interpolag_Sdep CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'interpolag_Sdep CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine interpolag_sdep_cuda_sync
-#endif

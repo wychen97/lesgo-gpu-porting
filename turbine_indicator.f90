@@ -22,10 +22,6 @@ module turbine_indicator
 !*******************************************************************************
 use types, only : rprec
 use param, only : nx, ny, nz, lh
-#ifdef ENABLE_CUDA
-use cudafor
-use cufft
-#endif
 
 private
 public :: turb_ind_func_t
@@ -94,12 +90,6 @@ real(rprec), dimension(:,:), allocatable :: g, fx, ft, h, t
 
 integer*8 plan
 complex(rprec), dimension(:,:), allocatable :: ghat, fxhat, fthat, hhat, that
-#ifdef ENABLE_CUDA
-real(rprec), managed, dimension(:), allocatable :: rtab, r2tab, r2ttab
-integer :: plan_fw, plan_bk, istat
-integer :: ci, cj
-real(rprec) :: norm, msum
-#endif
 
 ! Units for all values
 this%ell = 0.5_rprec * dia
@@ -113,142 +103,6 @@ L = 1 + 10*this%delta2/sqrt(12._rprec)
 N = 2 * 1024
 d = 2 * L / N
 
-#ifdef ENABLE_CUDA
-if (turbine_indicator_cuda_enabled()) then
-    allocate(yz(N))
-    !$cuf kernel do(1) <<<*, *>>>
-    do i = 1, N
-        yz(i) = -L + d * (real(i, rprec) - 0.5_rprec)
-    end do
-
-    allocate(h(N, N))
-    allocate(t(N, N))
-    allocate(g(N, N))
-    !$cuf kernel do(2) <<<*, *>>>
-    do j = 1, N
-    do i = 1, N
-        g(i,j) = 6._rprec/(pi*this%delta2*this%delta2)                       &
-            * exp(-6._rprec*(yz(i)*yz(i)+yz(j)*yz(j))                        &
-            /(this%delta2*this%delta2))
-        if (sqrt(yz(i)*yz(i) + yz(j)*yz(j)) < 1._rprec) then
-            h(i,j) = 1.0_rprec / pi
-            t(i,j) = yz(j) / (pi * max(yz(i)*yz(i) + yz(j)*yz(j),             &
-                0.000001_rprec))
-        else
-            h(i,j) = 0._rprec
-            t(i,j) = 0._rprec
-        end if
-    end do
-    end do
-    istat = cudaDeviceSynchronize()
-    if (istat /= cudaSuccess) then
-        print *, 'turbine_indicator init kernel failed: ', istat
-        stop
-    end if
-
-    allocate(ghat(N/2+1, N))
-    allocate(hhat(N/2+1, N))
-    allocate(fxhat(N/2+1, N))
-    allocate(fthat(N/2+1, N))
-    allocate(that(N/2+1, N))
-    allocate(fx(N, N))
-    allocate(ft(N, N))
-
-    istat = cufftPlan2d(plan_fw, N, N, CUFFT_D2Z)
-    if (istat /= CUFFT_SUCCESS) then
-        print *, 'turbine_indicator forward cuFFT plan failed: ', istat
-        stop
-    end if
-    istat = cufftPlan2d(plan_bk, N, N, CUFFT_Z2D)
-    if (istat /= CUFFT_SUCCESS) then
-        print *, 'turbine_indicator inverse cuFFT plan failed: ', istat
-        stop
-    end if
-
-    istat = cufftExecD2Z(plan_fw, g, ghat)
-    if (istat /= CUFFT_SUCCESS) then
-        print *, 'turbine_indicator g cuFFT failed: ', istat
-        stop
-    end if
-    istat = cufftExecD2Z(plan_fw, h, hhat)
-    if (istat /= CUFFT_SUCCESS) then
-        print *, 'turbine_indicator h cuFFT failed: ', istat
-        stop
-    end if
-    istat = cufftExecD2Z(plan_fw, t, that)
-    if (istat /= CUFFT_SUCCESS) then
-        print *, 'turbine_indicator t cuFFT failed: ', istat
-        stop
-    end if
-
-    !$cuf kernel do(2) <<<*, *>>>
-    do cj = 1, N
-    do ci = 1, N/2+1
-        fxhat(ci,cj) = ghat(ci,cj) * hhat(ci,cj) * d*d
-        fthat(ci,cj) = ghat(ci,cj) * that(ci,cj) * d*d
-    end do
-    end do
-
-    istat = cufftExecZ2D(plan_bk, fxhat, fx)
-    if (istat /= CUFFT_SUCCESS) then
-        print *, 'turbine_indicator fx inverse cuFFT failed: ', istat
-        stop
-    end if
-    istat = cufftExecZ2D(plan_bk, fthat, ft)
-    if (istat /= CUFFT_SUCCESS) then
-        print *, 'turbine_indicator ft inverse cuFFT failed: ', istat
-        stop
-    end if
-
-    allocate(rtab(N/2))
-    allocate(r2tab(N/2))
-    allocate(r2ttab(N/2))
-    !$cuf kernel do(1) <<<*, *>>>
-    do i = 1, N/2
-        rtab(i) = yz(i) + L
-        r2tab(i) = fx(1,i) / real(N*N, rprec)
-        r2ttab(i) = ft(1,i) / real(N*N, rprec)
-    end do
-    istat = cudaDeviceSynchronize()
-    if (istat /= cudaSuccess) then
-        print *, 'turbine_indicator lookup kernel failed: ', istat
-        stop
-    end if
-
-    dr = rtab(2) - rtab(1)
-    norm = 0._rprec
-    !$cuf kernel do(1) <<<*, *>>> reduction(+:norm)
-    do i = 1, N/2
-        norm = norm + 2._rprec*pi*rtab(i)*r2tab(i)*dr
-    end do
-
-    !$cuf kernel do(1) <<<*, *>>>
-    do i = 1, N/2
-        r2ttab(i) = r2ttab(i) / norm
-        r2tab(i) = r2tab(i) / norm
-    end do
-
-    msum = 0._rprec
-    !$cuf kernel do(1) <<<*, *>>> reduction(+:msum)
-    do i = 1, N/2
-        msum = msum + 2._rprec*pi*rtab(i)*r2tab(i)*r2tab(i)*dr
-    end do
-    this%M = msum * pi
-
-    allocate(this%r(N/2))
-    allocate(this%R2(N/2))
-    allocate(this%R2_t(N/2))
-    this%r = rtab
-    this%R2 = r2tab
-    this%R2_t = r2ttab
-
-    istat = cufftDestroy(plan_fw)
-    istat = cufftDestroy(plan_bk)
-    deallocate(yz, h, t, g, ghat, hhat, fxhat, fthat, that, fx, ft)
-    deallocate(rtab, r2tab, r2ttab)
-    return
-end if
-#endif
 
 ! Create yz grid
 allocate(yz(N))

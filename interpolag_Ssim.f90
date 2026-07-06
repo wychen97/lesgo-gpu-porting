@@ -42,9 +42,6 @@ use messages
 use sim_param, only : u,v,w
 use grid_m
 use functions, only:trilinear_interp
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 #ifdef PPMPI
 use mpi_defs, only:mpi_sync_real_array,MPI_SYNC_DOWNUP
 #endif
@@ -52,12 +49,7 @@ use cfl_util, only : get_max_cfl
 implicit none
 
 real(rprec), dimension(3) :: xyz_past
-#ifdef ENABLE_CUDA
-real(rprec), managed, allocatable, save, dimension(:,:,:) :: tempF_LM
-real(rprec), managed, allocatable, save, dimension(:,:,:) :: tempF_MM
-#else
 real(rprec), dimension(ld,ny,lbz:nz) :: tempF_LM, tempF_MM
-#endif
 #ifdef PPDYN_TN
 real(rprec), dimension(ld,ny,lbz:nz) :: tempF_ee2, tempF_deedt2, tempee_past
 #endif
@@ -66,126 +58,8 @@ integer :: i,j,k,kmin
 real (rprec) :: lcfl
 
 real(rprec), pointer, dimension(:) :: x,y,z
-#ifdef ENABLE_CUDA
-integer :: i1, j1, k1, i2, j2, k2
-real(rprec) :: px, py, pz, xdiff, ydiff, zdiff
-real(rprec) :: wxgt, wygt, wzgt
-real(rprec) :: c000, c100, c010, c110, c001, c101, c011, c111
-real(rprec) :: xloc, yloc, zloc, thresh
-logical :: interpolag_ssim_cuda_enabled
-#endif
 
 nullify(x,y,z)
-#ifdef ENABLE_CUDA
-if (.not. allocated(tempF_LM)) then
-    allocate(tempF_LM(ld,ny,lbz:nz))
-    allocate(tempF_MM(ld,ny,lbz:nz))
-end if
-
-#ifndef PPDYN_TN
-if (interpolag_ssim_cuda_enabled()) then
-!$cuf kernel do(3) <<<*,*>>>
-    do k = lbz, nz
-    do j = 1, ny
-    do i = 1, ld
-        tempF_LM(i,j,k) = F_LM(i,j,k)
-        tempF_MM(i,j,k) = F_MM(i,j,k)
-    end do
-    end do
-    end do
-    call interpolag_ssim_cuda_sync('copy running averages')
-
-    thresh = 1.e-9_rprec
-!$cuf kernel do(3) <<<*,*>>>
-    do k = 1, nz
-    do j = 1, ny
-    do i = 1, nx
-        if (((coord /= 0) .or. (k >= 2)) .and.                         &
-            ((k <= nz-1) .or. ((coord == nproc-1) .and. (k == nz)))) then
-            xloc = real(i - 1, rprec)*dx
-            yloc = real(j - 1, rprec)*dy
-
-            px = xloc - 0.5_rprec*(u(i,j,k-1) + u(i,j,k))*lagran_dt
-            py = yloc - 0.5_rprec*(v(i,j,k-1) + v(i,j,k))*lagran_dt
-            if ((coord == nproc-1) .and. (k == nz)) then
-                pz = real(coord*(nz-1), rprec)*dz +                     &
-                    real(k, rprec)*dz - 0.5_rprec*dz -                  &
-                    max(0.0_rprec, w(i,j,k))*lagran_dt
-            else
-                pz = real(coord*(nz-1), rprec)*dz +                     &
-                    real(k, rprec)*dz - 0.5_rprec*dz - w(i,j,k)*lagran_dt
-            end if
-
-            px = modulo(px, L_x)
-            if (abs(px)/L_x < thresh) then
-                i1 = 1
-            else if (abs(px - L_x)/L_x < thresh) then
-                i1 = nx
-            else
-                i1 = floor(px/dx) + 1
-            end if
-            if (i1 < 1) i1 = 1
-            if (i1 > nx) i1 = nx
-            xdiff = px - real(i1 - 1, rprec)*dx
-
-            py = modulo(py, L_y)
-            if (abs(py)/L_y < thresh) then
-                j1 = 1
-            else if (abs(py - L_y)/L_y < thresh) then
-                j1 = ny
-            else
-                j1 = floor(py/dy) + 1
-            end if
-            if (j1 < 1) j1 = 1
-            if (j1 > ny) j1 = ny
-            ydiff = py - real(j1 - 1, rprec)*dy
-
-            zloc = real(coord*(nz-1), rprec)*dz + 0.5_rprec*dz
-            if (abs(pz - (real(coord*(nz-1), rprec)*dz +                 &
-                real(nz, rprec)*dz - 0.5_rprec*dz))/L_z < thresh) then
-                k1 = nz - 1
-            else
-                k1 = floor((pz - zloc)/dz) + 1
-            end if
-            if (k1 < lbz) k1 = lbz
-            if (k1 > nz-1) k1 = nz - 1
-            zdiff = pz - (real(coord*(nz-1), rprec)*dz +                 &
-                real(k1, rprec)*dz - 0.5_rprec*dz)
-
-            i2 = i1 + 1
-            if (i2 > nx) i2 = 1
-            j2 = j1 + 1
-            if (j2 > ny) j2 = 1
-            k2 = k1 + 1
-
-            wxgt = xdiff/dx
-            wygt = ydiff/dy
-            wzgt = zdiff/dz
-            c000 = (1._rprec-wxgt)*(1._rprec-wygt)*(1._rprec-wzgt)
-            c100 = wxgt*(1._rprec-wygt)*(1._rprec-wzgt)
-            c010 = (1._rprec-wxgt)*wygt*(1._rprec-wzgt)
-            c110 = wxgt*wygt*(1._rprec-wzgt)
-            c001 = (1._rprec-wxgt)*(1._rprec-wygt)*wzgt
-            c101 = wxgt*(1._rprec-wygt)*wzgt
-            c011 = (1._rprec-wxgt)*wygt*wzgt
-            c111 = wxgt*wygt*wzgt
-
-            F_LM(i,j,k) = c000*tempF_LM(i1,j1,k1) + c100*tempF_LM(i2,j1,k1) &
-                + c010*tempF_LM(i1,j2,k1) + c110*tempF_LM(i2,j2,k1)         &
-                + c001*tempF_LM(i1,j1,k2) + c101*tempF_LM(i2,j1,k2)         &
-                + c011*tempF_LM(i1,j2,k2) + c111*tempF_LM(i2,j2,k2)
-            F_MM(i,j,k) = c000*tempF_MM(i1,j1,k1) + c100*tempF_MM(i2,j1,k1) &
-                + c010*tempF_MM(i1,j2,k1) + c110*tempF_MM(i2,j2,k1)         &
-                + c001*tempF_MM(i1,j1,k2) + c101*tempF_MM(i2,j1,k2)         &
-                + c011*tempF_MM(i1,j2,k2) + c111*tempF_MM(i2,j2,k2)
-        end if
-    end do
-    end do
-    end do
-    call interpolag_ssim_cuda_sync('lagrangian interpolation')
-else
-#endif
-#endif
 x => grid % x
 y => grid % y
 z => grid % z
@@ -262,11 +136,6 @@ if (coord.eq.nproc-1) then
 #ifdef PPMPI
 endif
 #endif
-#ifdef ENABLE_CUDA
-#ifndef PPDYN_TN
-end if
-#endif
-#endif
 
 ! Share new data between overlapping nodes
 #ifdef PPMPI
@@ -294,36 +163,3 @@ endif
 nullify(x,y,z)
 
 end subroutine interpolag_Ssim
-
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function interpolag_ssim_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-interpolag_ssim_cuda_enabled = .true.
-
-end function interpolag_ssim_cuda_enabled
-
-!*******************************************************************************
-subroutine interpolag_ssim_cuda_sync(where)
-!*******************************************************************************
-use cudafor
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'interpolag_Ssim CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'interpolag_Ssim CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine interpolag_ssim_cuda_sync
-#endif

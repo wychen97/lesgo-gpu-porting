@@ -42,17 +42,9 @@ type fringe_t
     ! Length of fringe region as a fraction of L_x
     real(rprec) :: l_len
     ! Wrapped locations
-    #ifdef ENABLE_CUDA
-    integer, managed, allocatable, dimension(:) :: iwrap
-    #else
     integer, allocatable, dimension(:) :: iwrap
-    #endif
     ! Weighting functions
-    #ifdef ENABLE_CUDA
-    real(rprec), managed, allocatable, dimension(:) :: alpha, beta
-    #else
     real(rprec), allocatable, dimension(:) :: alpha, beta
-    #endif
 contains
 
 end type fringe_t

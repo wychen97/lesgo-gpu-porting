@@ -49,9 +49,6 @@ use param, only : ubc_mom, coord, nproc, nz ! these necessary only for upper bc
 use messages, only : error
 use iwmles, only : iwm_wallstress
 use sim_param, only : txz, tyz, dudz, dvdz
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 character(*), parameter :: sub_name = 'wallstress'
 
@@ -106,37 +103,6 @@ end if
 
 contains
 
-#ifdef ENABLE_CUDA
-!*******************************************************************************
-logical function wallstress_cuda_enabled()
-!*******************************************************************************
-implicit none
-
-wallstress_cuda_enabled = .true.
-
-end function wallstress_cuda_enabled
-
-!*******************************************************************************
-subroutine wallstress_cuda_sync(where)
-!*******************************************************************************
-implicit none
-
-character(len=*), intent(in) :: where
-integer :: istat
-
-istat = cudaDeviceSynchronize()
-if (istat /= 0) then
-    print *, 'wallstress CUDA sync failure at ', trim(where), ': ', istat
-    stop
-end if
-istat = cudaGetLastError()
-if (istat /= 0) then
-    print *, 'wallstress CUDA kernel failure at ', trim(where), ': ', istat
-    stop
-end if
-
-end subroutine wallstress_cuda_sync
-#endif
 
 !*******************************************************************************
 subroutine ws_free_lbc
@@ -145,7 +111,7 @@ use param, only : nx, ny
 implicit none
 integer :: i, j
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 ! Device-resident wall plane (explicit-residency build): same arithmetic as
 ! the host loop below, on the async(1) queue so it orders with the SGS kernels.
 !$acc parallel loop collapse(2) default(present) async(1)
@@ -160,27 +126,10 @@ end do
 return
 #endif
 
-#ifdef ENABLE_CUDA
-if (wallstress_cuda_enabled()) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        txz(i,j,1) = 0._rprec
-        tyz(i,j,1) = 0._rprec
-        dudz(i,j,1) = 0._rprec
-        dvdz(i,j,1) = 0._rprec
-    end do
-    end do
-    call wallstress_cuda_sync('ws_free_lbc')
-else
-#endif
 txz(:, :, 1) = 0._rprec
 tyz(:, :, 1) = 0._rprec
 dudz(:, :, 1) = 0._rprec
 dvdz(:, :, 1) = 0._rprec
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 end subroutine ws_free_lbc
 
@@ -191,7 +140,7 @@ use param, only : nx, ny
 implicit none
 integer :: i, j
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc parallel loop collapse(2) default(present) async(1)
 do j = 1, ny
 do i = 1, nx
@@ -204,27 +153,10 @@ end do
 return
 #endif
 
-#ifdef ENABLE_CUDA
-if (wallstress_cuda_enabled()) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        txz(i,j,nz) = 0._rprec
-        tyz(i,j,nz) = 0._rprec
-        dudz(i,j,nz) = 0._rprec
-        dvdz(i,j,nz) = 0._rprec
-    end do
-    end do
-    call wallstress_cuda_sync('ws_free_ubc')
-else
-#endif
 txz(:, :,nz) = 0._rprec
 tyz(:, :,nz) = 0._rprec
 dudz(:,:,nz) = 0._rprec
 dvdz(:,:,nz) = 0._rprec
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 end subroutine ws_free_ubc
 
@@ -237,7 +169,7 @@ use sim_param , only : u, v
 implicit none
 integer :: i, j
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc parallel loop collapse(2) default(present) async(1)
 do j = 1, ny
 do i = 1, nx
@@ -250,20 +182,6 @@ end do
 return
 #endif
 
-#ifdef ENABLE_CUDA
-if (wallstress_cuda_enabled()) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        dudz(i,j,1) = (u(i,j,1) - ubot) / (0.5_rprec*dz)
-        dvdz(i,j,1) = v(i,j,1) / (0.5_rprec*dz)
-        txz(i,j,1) = -nu_molec/(z_i*u_star)*dudz(i,j,1)
-        tyz(i,j,1) = -nu_molec/(z_i*u_star)*dvdz(i,j,1)
-    end do
-    end do
-    call wallstress_cuda_sync('ws_dns_lbc')
-else
-#endif
 do j = 1, ny
     do i = 1, nx
         dudz(i,j,1) = ( u(i,j,1) - ubot ) / (0.5_rprec*dz)
@@ -272,9 +190,6 @@ do j = 1, ny
         tyz(i,j,1) = -nu_molec/(z_i*u_star)*dvdz(i,j,1)
     end do
 end do
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 end subroutine ws_dns_lbc
 
@@ -287,7 +202,7 @@ use sim_param , only : u, v
 implicit none
 integer :: i, j
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 !$acc parallel loop collapse(2) default(present) async(1)
 do j = 1, ny
 do i = 1, nx
@@ -300,20 +215,6 @@ end do
 return
 #endif
 
-#ifdef ENABLE_CUDA
-if (wallstress_cuda_enabled()) then
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        dudz(i,j,nz) = (utop - u(i,j,nz-1)) / (0.5_rprec*dz)
-        dvdz(i,j,nz) = -v(i,j,nz-1) / (0.5_rprec*dz)
-        txz(i,j,nz) = -nu_molec/(z_i*u_star)*dudz(i,j,nz)
-        tyz(i,j,nz) = -nu_molec/(z_i*u_star)*dvdz(i,j,nz)
-    end do
-    end do
-    call wallstress_cuda_sync('ws_dns_ubc')
-else
-#endif
 do j = 1, ny
     do i = 1, nx
         dudz(i,j,nz) = ( utop - u(i,j,nz-1) ) / (0.5_rprec*dz)
@@ -322,9 +223,6 @@ do j = 1, ny
         tyz(i,j,nz) = -nu_molec/(z_i*u_star)*dvdz(i,j,nz)
     end do
 end do
-#ifdef ENABLE_CUDA
-end if
-#endif
 
 end subroutine ws_dns_ubc
 
@@ -344,18 +242,13 @@ integer :: i, j
 real(rprec), dimension(nx, ny) :: denom, u_avg
 real(rprec), dimension(ld, ny) :: u1, v1
 real(rprec) :: const
-#ifdef ENABLE_CUDA
-logical, save :: eq_lbc_allocated = .false.
-real(rprec), managed, save, allocatable, dimension(:,:) :: u1_gpu, v1_gpu,     &
-    u_avg_gpu
-#endif
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 logical, save :: eq_lbc_acc_alloc = .false.
 real(rprec), save, allocatable, dimension(:,:) :: u1_acc, v1_acc, u_avg_acc
 real(rprec) :: u_avg_pt
 #endif
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 ! Device-resident equilibrium wall model for explicit-residency builds.
 ! In scalar builds, obukhov() handles both passive and active stability cases.
 if (.not. eq_lbc_acc_alloc) then
@@ -413,60 +306,6 @@ end do
 return
 #endif
 
-#ifdef ENABLE_CUDA
-if (wallstress_cuda_enabled()) then
-    if (.not. eq_lbc_allocated) then
-        allocate(u1_gpu(ld,ny), v1_gpu(ld,ny), u_avg_gpu(nx,ny))
-        eq_lbc_allocated = .true.
-    end if
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, ld
-        u1_gpu(i,j) = u(i,j,1)
-        v1_gpu(i,j) = v(i,j,1)
-    end do
-    end do
-    call wallstress_cuda_sync('ws_equilibrium_lbc copy')
-    call test_filter(u1_gpu)
-    call test_filter(v1_gpu)
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        u_avg_gpu(i,j) = sqrt(u1_gpu(i,j)*u1_gpu(i,j)                         &
-            + v1_gpu(i,j)*v1_gpu(i,j))
-#ifndef PPSCALARS
-        ustar_lbc(i,j) = u_avg_gpu(i,j)*vonk/log(0.5_rprec*dz/zo)
-#endif
-    end do
-    end do
-#ifdef PPSCALARS
-    call obukhov(u_avg_gpu)
-#endif
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        const = -(ustar_lbc(i,j)*ustar_lbc(i,j))/u_avg_gpu(i,j)
-        txz(i,j,1) = const*u1_gpu(i,j)
-        tyz(i,j,1) = const*v1_gpu(i,j)
-#ifdef PPSCALARS
-        dudz(i,j,1) = ustar_lbc(i,j)/(0.5_rprec*dz*vonk)                     &
-            * u(i,j,1)/u_avg_gpu(i,j) * phi_m(i,j)
-        dvdz(i,j,1) = ustar_lbc(i,j)/(0.5_rprec*dz*vonk)                     &
-            * v(i,j,1)/u_avg_gpu(i,j) * phi_m(i,j)
-#else
-        dudz(i,j,1) = ustar_lbc(i,j)/(0.5_rprec*dz*vonk)                     &
-            * u(i,j,1)/u_avg_gpu(i,j)
-        dvdz(i,j,1) = ustar_lbc(i,j)/(0.5_rprec*dz*vonk)                     &
-            * v(i,j,1)/u_avg_gpu(i,j)
-#endif
-        dudz(i,j,1) = merge(0._rprec,dudz(i,j,1),u(i,j,1).eq.0._rprec)
-        dvdz(i,j,1) = merge(0._rprec,dvdz(i,j,1),v(i,j,1).eq.0._rprec)
-    end do
-    end do
-    call wallstress_cuda_sync('ws_equilibrium_lbc')
-    return
-end if
-#endif
 
 u1 = u(:,:,1)
 v1 = v(:,:,1)
@@ -513,18 +352,13 @@ integer :: i, j
 real(rprec), dimension(nx, ny) :: denom, u_avg, ustar
 real(rprec), dimension(ld, ny) :: u1, v1
 real(rprec) :: const
-#ifdef ENABLE_CUDA
-logical, save :: eq_ubc_allocated = .false.
-real(rprec), managed, save, allocatable, dimension(:,:) :: u1_gpu, v1_gpu,     &
-    u_avg_gpu, ustar_gpu
-#endif
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 logical, save :: eq_ubc_acc_alloc = .false.
 real(rprec), save, allocatable, dimension(:,:) :: u1t_acc, v1t_acc
 real(rprec) :: u_avg_pt, ustar_pt
 #endif
 
-#if defined(PPSGS_GPU) && !defined(ENABLE_CUDA)
+#if defined(PPSGS_GPU)
 ! Device-resident equilibrium wall model for the top boundary.
 if (.not. eq_ubc_acc_alloc) then
     allocate(u1t_acc(ld,ny), v1t_acc(ld,ny))
@@ -560,46 +394,6 @@ end do
 return
 #endif
 
-#ifdef ENABLE_CUDA
-if (wallstress_cuda_enabled()) then
-    if (.not. eq_ubc_allocated) then
-        allocate(u1_gpu(ld,ny), v1_gpu(ld,ny), u_avg_gpu(nx,ny),              &
-            ustar_gpu(nx,ny))
-        eq_ubc_allocated = .true.
-    end if
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, ld
-        u1_gpu(i,j) = u(i,j,nz-1)
-        v1_gpu(i,j) = v(i,j,nz-1)
-    end do
-    end do
-    call wallstress_cuda_sync('ws_equilibrium_ubc copy')
-    call test_filter(u1_gpu)
-    call test_filter(v1_gpu)
-    !$cuf kernel do(2) <<<*,*>>>
-    do j = 1, ny
-    do i = 1, nx
-        u_avg_gpu(i,j) = sqrt(u1_gpu(i,j)*u1_gpu(i,j)                         &
-            + v1_gpu(i,j)*v1_gpu(i,j))
-        ustar_gpu(i,j) = u_avg_gpu(i,j)*vonk/log(0.5_rprec*dz/zo)
-        const = (ustar_gpu(i,j)*ustar_gpu(i,j))/u_avg_gpu(i,j)
-        txz(i,j,nz) = const*u1_gpu(i,j)
-        tyz(i,j,nz) = const*v1_gpu(i,j)
-        dudz(i,j,nz) = -ustar_gpu(i,j)/(0.5_rprec*dz*vonk)                   &
-            * u(i,j,nz-1)/u_avg_gpu(i,j)
-        dvdz(i,j,nz) = -ustar_gpu(i,j)/(0.5_rprec*dz*vonk)                   &
-            * v(i,j,nz-1)/u_avg_gpu(i,j)
-        dudz(i,j,nz) = merge(0._rprec,dudz(i,j,nz),                          &
-            u(i,j,nz-1).eq.0._rprec)
-        dvdz(i,j,nz) = merge(0._rprec,dvdz(i,j,nz),                          &
-            v(i,j,nz-1).eq.0._rprec)
-    end do
-    end do
-    call wallstress_cuda_sync('ws_equilibrium_ubc')
-    return
-end if
-#endif
 
 u1 = u(:,:,nz-1)
 v1 = v(:,:,nz-1)

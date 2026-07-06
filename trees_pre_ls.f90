@@ -30,9 +30,6 @@ use trees_base_ls, only : grid_initialize, pt_of_grid
 use trees_setup_ls, only : fill_tree_array, sdistfcn_tree_array
 use trees_io_ls, only : draw_tree_array
 use trees_global_fmask_ls, only : global_fmask_init, calc_global_fmask_ta
-#ifdef ENABLE_CUDA
-use cudafor
-#endif
 implicit none
 
 character (128) :: fdraw_out
@@ -59,15 +56,9 @@ character (128) :: fbrindex_out_MPI, fbrindex_raw_out_MPI
 integer :: ip, ipmin, ipmax
 integer :: i, j, k, ktot
 integer :: lbz, ubz
-#ifdef ENABLE_CUDA
-integer, managed, allocatable :: brindex(:, :, :)
-
-real (rprec), managed, allocatable :: phi(:, :, :)
-#else
 integer, allocatable :: brindex(:, :, :)
 
 real (rprec), allocatable :: phi(:, :, :)
-#endif
 real (rprec) :: x, y, z
 
 !---------------------------------------------------------------------
