@@ -16,7 +16,8 @@
 #
 # This script validates isolated optional features and common paired feature
 # combinations.  It intentionally excludes LVLSET because the public optimized
-# branch does not support or claim LVLSET validation.
+# branch does not support or claim LVLSET validation.  A small serial/non-MPI
+# group is included because `USE_MPI=OFF` changes many Fortran import guards.
 
 set -euo pipefail
 
@@ -75,6 +76,28 @@ gpu_common=(
 
 cpu_common=(
     "${base_common[@]}"
+    -DUSE_CPU_BUILD=ON
+    -DUSE_LES_GPU=OFF
+    -DUSE_GPU_AWARE_MPI=OFF
+)
+
+serial_base_common=(
+    -Dhostname=derecho
+    -DUSE_MPI=OFF
+    -DUSE_CPS=OFF
+    -DUSE_LVLSET=OFF
+    -DUSE_CGNS=OFF
+)
+
+serial_gpu_common=(
+    "${serial_base_common[@]}"
+    -DUSE_CPU_BUILD=OFF
+    -DUSE_LES_GPU=ON
+    -DUSE_GPU_AWARE_MPI=OFF
+)
+
+serial_cpu_common=(
+    "${serial_base_common[@]}"
     -DUSE_CPU_BUILD=ON
     -DUSE_LES_GPU=OFF
     -DUSE_GPU_AWARE_MPI=OFF
@@ -193,6 +216,48 @@ run_config dyntn_gpu \
     -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
     -DUSE_CPS=OFF -DUSE_HIT=OFF -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
     -DUSE_DYN_TN=ON
+
+run_config serial_core_gpu \
+    "${serial_gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_HIT=OFF -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config serial_core_cpu \
+    "${serial_cpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_HIT=OFF -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config serial_hit_gpu \
+    "${serial_gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_HIT=ON -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config serial_scalars_gpu \
+    "${serial_gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=ON \
+    -DUSE_DYN_TN=OFF
+
+run_config serial_scalars_cpu \
+    "${serial_cpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config serial_atm_gpu \
+    "${serial_gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=ON \
+    -DUSE_HIT=OFF -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config serial_turbines_gpu \
+    "${serial_gpu_common[@]}" \
+    -DUSE_TURBINES=ON -DUSE_ATM=OFF \
+    -DUSE_HIT=OFF -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
 
 printf '\nAll optional Derecho compile profiles passed.\n'
 REMOTE
