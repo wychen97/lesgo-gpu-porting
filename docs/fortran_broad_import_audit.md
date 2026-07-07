@@ -8,14 +8,13 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `109`
+Total broad imports: `100`
 
 ## Highest-Count Files
 
 | File | Broad imports |
 | --- | ---: |
 | `level_set.f90` | 17 |
-| `main.f90` | 11 |
 | `turbines.f90` | 10 |
 | `input_util.f90` | 8 |
 | `atm_lesgo_interface.f90` | 4 |
@@ -31,6 +30,7 @@ Total broad imports: `109`
 | `fft_gpu.f90` | 2 |
 | `forcing.f90` | 2 |
 | `io.f90` | 2 |
+| `main.f90` | 2 |
 | `param_output.f90` | 2 |
 | `tools/validate_filt_da_cufft.F90` | 2 |
 | `trees_setup_ls.f90` | 2 |
@@ -96,17 +96,8 @@ Total broad imports: `109`
 | `level_set.f90` | 2915 | `level_set::smooth` | `grid_m` |
 | `level_set.f90` | 4257 | `level_set::level_set_forcing` | `sim_param` |
 | `level_set.f90` | 4397 | `level_set::safe_cd` | `grid_m` |
-| `main.f90` | 40 | `(file scope)` | `clock_m` |
 | `main.f90` | 41 | `(file scope)` | `param` |
 | `main.f90` | 42 | `(file scope)` | `sim_param` |
-| `main.f90` | 43 | `(file scope)` | `grid_m` |
-| `main.f90` | 46 | `(file scope)` | `fft` |
-| `main.f90` | 48 | `(file scope)` | `test_filtermodule` |
-| `main.f90` | 49 | `(file scope)` | `cfl_util` |
-| `main.f90` | 51 | `(file scope)` | `forcing` |
-| `main.f90` | 61 | `(file scope)` | `mpi` |
-| `main.f90` | 91 | `(file scope)` | `sponge` |
-| `main.f90` | 93 | `(file scope)` | `messages` |
 | `mpi_defs.f90` | 23 | `mpi_defs` | `mpi` |
 | `mpi_defs.f90` | 55 | `mpi_defs::initialize_mpi` | `param` |
 | `mpi_defs.f90` | 58 | `mpi_defs::initialize_mpi` | `cgns` |

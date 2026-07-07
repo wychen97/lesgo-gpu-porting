@@ -37,18 +37,15 @@ program main
 ! logic belong in their owning modules unless the dependency is truly global.
 
 use types, only : rprec
-use clock_m
+use clock_m, only : clock_t
 use param
 use sim_param
-use grid_m
 use io, only : energy, output_loop, output_final, jt_total
 use io, only : write_tau_wall_bot, write_tau_wall_top
-use fft
 use derivatives, only : filt_da_vel, ddz_vel
-use test_filtermodule
-use cfl_util
+use cfl_util, only : get_cfl_dt, get_max_cfl
 use sgs_stag_util, only : sgs_stag
-use forcing
+use forcing, only : forcing_random, forcing_applied, forcing_induced, project
 use functions, only: get_tau_wall_bot, get_tau_wall_top
 
 use iwmles, only : iwm_lhs_update_due
@@ -58,7 +55,8 @@ use sgs_param, only : SGS_MODEL_SMAGORINSKY, SGS_MODEL_STANDARD_DYNAMIC,      &
                       SGS_MODEL_LAGRANGE_SCALE_DEP
 
 #ifdef PPMPI
-use mpi
+use mpi, only : mpi_init, mpi_sendrecv, mpi_allreduce, mpi_barrier, MPI_MAX,  &
+    MPI_SUM, MPI_COMM_WORLD
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWN
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_r
 #endif
@@ -88,9 +86,9 @@ use scalars, only : buoyancy_force, scalars_transport, scalars_deriv,        &
     passive_scalar
 #endif
 
-use sponge
+use sponge, only : sponge_force
 use coriolis, only : coriolis_calc, coriolis_forcing, alpha, G, phi_actual
-use messages
+use messages, only : error, mesg
 
 #ifdef PPCONVEC_GPU
 use convec_gpu_m, only : convec_gpu
