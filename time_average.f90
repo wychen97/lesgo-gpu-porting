@@ -74,8 +74,7 @@ contains
 !*******************************************************************************
 subroutine init(this)
 !*******************************************************************************
-use messages
-use string_util
+use string_util, only : string_concat
 use param, only : read_endian, coord, path
 implicit none
 
@@ -462,9 +461,9 @@ end subroutine compute
 !*******************************************************************************
 subroutine finalize(this)
 !*******************************************************************************
-use grid_m
+use grid_m, only : grid
 use param, only : write_endian, lbz, path, coord, nproc, nz_tot
-use string_util
+use string_util, only : string_concat, string_splice
 #ifdef PPMPI
 use mpi_defs, only : mpi_sync_real_array,MPI_SYNC_DOWNUP
 use param, only : ierr,comm
@@ -821,7 +820,7 @@ subroutine checkpoint(this)
 ! simulation.
 !
 use param, only : write_endian, coord
-use string_util
+use string_util, only : string_concat
 implicit none
 
 class(tavg_t), intent(inout) :: this

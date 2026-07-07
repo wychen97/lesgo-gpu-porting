@@ -28,16 +28,16 @@ use types, only : rprec
 use param, only : path, inflow_type
 use param, only : USE_MPI, coord, dt, jt_total, nsteps
 use param, only : use_cfl_dt, cfl, cfl_f, dt_dim, z_i, u_star
-use iwmles
+use iwmles, only : iwm_init
 use param, only : lbc_mom
-use sponge
+use sponge, only : sponge_init
 #ifdef PPMPI
 use param, only : MPI_COMM_WORLD, ierr
 #else
 use param, only : chcoord, nproc
 #endif
 
-use cfl_util
+use cfl_util, only : get_cfl_dt
 use io, only : output_init
 use sgs_param, only : sgs_param_init
 use input_util, only : read_input_conf
@@ -58,13 +58,13 @@ use lagrange_Sdep_gpu_m, only : lagrange_Sdep_gpu_init
 use param, only : sgs_model
 use sgs_param, only : SGS_MODEL_LAGRANGE_SIMILARITY
 #endif
-use grid_m
+use grid_m, only : grid
 use fft, only : init_fft
 #ifdef PPLES_GPU
 use fft_gpu, only : init_fft_gpu
 #endif
 use io, only : openfiles
-use coriolis
+use coriolis, only : coriolis_init
 use inflow, only : inflow_init
 
 #ifdef PPMPI

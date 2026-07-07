@@ -20,7 +20,7 @@
 !*******************************************************************************
 subroutine initial()
 !*******************************************************************************
-use iwmles
+use iwmles, only : iwm_read_checkPoint
 use types,only:rprec
 use param
 use sim_param, only : u, v, w, RHSx, RHSy, RHSz
@@ -247,8 +247,8 @@ subroutine ic_interp()
 ! interpolates onto the current grid
 !
 use param, only : path
-use grid_m
-use functions
+use grid_m, only : grid
+use functions, only : binary_search
 integer :: nproc_f, Nx_f, Ny_f, Nz_f
 real(rprec) :: Lx_f, Ly_f, Lz_f
 integer :: i, j, k, z1, z2, ld_f, lh_f, Nz_tot_f

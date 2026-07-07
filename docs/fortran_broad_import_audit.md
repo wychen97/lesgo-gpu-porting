@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `159`
+Total broad imports: `144`
 
 ## Highest-Count Files
 
@@ -20,20 +20,20 @@ Total broad imports: `159`
 | `io.f90` | 11 |
 | `main.f90` | 11 |
 | `turbines.f90` | 10 |
-| `initial.f90` | 6 |
-| `time_average.f90` | 6 |
-| `initialize.f90` | 5 |
 | `atm_lesgo_interface.f90` | 4 |
 | `derivatives.f90` | 4 |
 | `lagrange_Sdep_gpu.f90` | 4 |
 | `sgs_stag_util.f90` | 4 |
 | `concurrent_precursor.f90` | 3 |
+| `initial.f90` | 3 |
 | `mpi_defs.f90` | 3 |
 | `press_stag_array.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
 | `fft_gpu.f90` | 2 |
 | `forcing.f90` | 2 |
-| `interpolag_Sdep.f90` | 2 |
+| `iwmles.f90` | 2 |
+| `lagrange_Sdep.f90` | 2 |
+| `lagrange_Ssim.f90` | 2 |
 
 ## Full List
 
@@ -58,17 +58,9 @@ Total broad imports: `159`
 | `fft_gpu.f90` | 46 | `fft_gpu` | `openacc` |
 | `forcing.f90` | 385 | `forcing::project` | `param` |
 | `forcing.f90` | 386 | `forcing::project` | `sim_param` |
-| `initial.f90` | 23 | `initial` | `iwmles` |
 | `initial.f90` | 25 | `initial` | `param` |
-| `initial.f90` | 250 | `initial::ic_interp` | `grid_m` |
-| `initial.f90` | 251 | `initial::ic_interp` | `functions` |
 | `initial.f90` | 391 | `initial::ic_dns` | `param` |
 | `initial.f90` | 482 | `initial::ic_les` | `param` |
-| `initialize.f90` | 31 | `initialize` | `iwmles` |
-| `initialize.f90` | 33 | `initialize` | `sponge` |
-| `initialize.f90` | 40 | `initialize` | `cfl_util` |
-| `initialize.f90` | 61 | `initialize` | `grid_m` |
-| `initialize.f90` | 67 | `initialize` | `coriolis` |
 | `input_util.f90` | 65 | `input_util::read_input_conf` | `param` |
 | `input_util.f90` | 66 | `input_util::read_input_conf` | `messages` |
 | `input_util.f90` | 149 | `input_util::read_input_conf::domain_block` | `param` |
@@ -85,9 +77,7 @@ Total broad imports: `159`
 | `input_util.f90` | 953 | `input_util::parse_vector_real` | `messages` |
 | `input_util.f90` | 988 | `input_util::parse_vector_point3d` | `messages` |
 | `interpolag_Sdep.f90` | 37 | `interpolag_sdep` | `param` |
-| `interpolag_Sdep.f90` | 43 | `interpolag_sdep` | `grid_m` |
 | `interpolag_Ssim.f90` | 36 | `interpolag_ssim` | `param` |
-| `interpolag_Ssim.f90` | 42 | `interpolag_ssim` | `grid_m` |
 | `io.f90` | 38 | `io` | `string_util` |
 | `io.f90` | 39 | `io` | `messages` |
 | `io.f90` | 40 | `io` | `time_average` |
@@ -174,11 +164,6 @@ Total broad imports: `159`
 | `test_filtermodule.f90` | 155 | `test_filtermodule::test_filter` | `fft` |
 | `test_filtermodule.f90` | 212 | `test_filtermodule::test_test_filter` | `fft` |
 | `time_average.f90` | 36 | `time_average` | `cgns` |
-| `time_average.f90` | 77 | `time_average::init` | `messages` |
-| `time_average.f90` | 78 | `time_average::init` | `string_util` |
-| `time_average.f90` | 465 | `time_average::finalize` | `grid_m` |
-| `time_average.f90` | 467 | `time_average::finalize` | `string_util` |
-| `time_average.f90` | 824 | `time_average::checkpoint` | `string_util` |
 | `tools/validate_filt_da_cufft.F90` | 2 | `(file scope)` | `cudafor` |
 | `tools/validate_filt_da_cufft.F90` | 3 | `(file scope)` | `cufft` |
 | `trees_global_fmask_ls.f90` | 23 | `trees_global_fmask_ls` | `trees_base_ls` |

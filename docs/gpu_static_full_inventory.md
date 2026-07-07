@@ -381,11 +381,11 @@ claims.
 | `test_filtermodule.f90:335` | `test_filter_plane_gpu` | `gpu-marked` |  |  |
 | `test_filtermodule.f90:362` | `test_test_filter_plane_gpu` | `gpu-marked` |  |  |
 | `time_average.f90:75` | `init` | `gpu-marked` |  |  |
-| `time_average.f90:202` | `compute` | `gpu-marked` |  |  |
-| `time_average.f90:463` | `finalize` | `gpu-marked` |  |  |
-| `time_average.f90:816` | `checkpoint` | `gpu-marked` |  |  |
-| `time_average.f90:882` | `write_parallel_cgns` | `host-or-diagnostic` |  |  |
-| `time_average.f90:1052` | `write_null_cgns` | `host-or-diagnostic` |  |  |
+| `time_average.f90:201` | `compute` | `gpu-marked` |  |  |
+| `time_average.f90:462` | `finalize` | `gpu-marked` |  |  |
+| `time_average.f90:815` | `checkpoint` | `gpu-marked` |  |  |
+| `time_average.f90:881` | `write_parallel_cgns` | `host-or-diagnostic` |  |  |
+| `time_average.f90:1051` | `write_null_cgns` | `host-or-diagnostic` |  |  |
 | `tridag_array.f90:43` | `tridag_array` | `gpu-marked` |  |  |
 | `tridag_array.f90:195` | `tridag_apply_env_enabled_unless_false` | `host-or-diagnostic` |  |  |
 | `tridag_array.f90:223` | `tridag_apply_env_true_token` | `host-or-diagnostic` |  |  |
