@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `206`
+Total broad imports: `202`
 
 ## Highest-Count Files
 
@@ -45,8 +45,6 @@ Total broad imports: `206`
 | `atm_lesgo_interface.f90` | 70 | `atm_lesgo_interface` | `mpi` |
 | `atm_lesgo_interface.f90` | 81 | `atm_lesgo_interface` | `atm_base` |
 | `atm_lesgo_interface.f90` | 82 | `atm_lesgo_interface` | `actuator_turbine_model` |
-| `cfl_util.f90` | 49 | `cfl_util::get_max_cfl` | `mpi` |
-| `cfl_util.f90` | 109 | `cfl_util::get_cfl_dt` | `mpi` |
 | `concurrent_precursor.f90` | 24 | `concurrent_precursor` | `mpi_defs` |
 | `concurrent_precursor.f90` | 25 | `concurrent_precursor` | `fringe` |
 | `concurrent_precursor.f90` | 27 | `concurrent_precursor` | `openacc` |
@@ -58,7 +56,6 @@ Total broad imports: `206`
 | `coriolis.f90` | 25 | `coriolis` | `pid_m` |
 | `coriolis.f90` | 88 | `coriolis::coriolis_init` | `grid_m` |
 | `coriolis.f90` | 182 | `coriolis::coriolis_calc` | `mpi` |
-| `cuda_mpi_debug.f90` | 4 | `cuda_mpi_debug` | `mpi` |
 | `derivatives.f90` | 96 | `derivatives::ddx` | `fft` |
 | `derivatives.f90` | 139 | `derivatives::ddy` | `fft` |
 | `derivatives.f90` | 182 | `derivatives::ddxy` | `fft` |
@@ -170,7 +167,6 @@ Total broad imports: `206`
 | `main.f90` | 61 | `(file scope)` | `mpi` |
 | `main.f90` | 91 | `(file scope)` | `sponge` |
 | `main.f90` | 93 | `(file scope)` | `messages` |
-| `messages.f90` | 32 | `messages` | `mpi` |
 | `mpi_defs.f90` | 23 | `mpi_defs` | `mpi` |
 | `mpi_defs.f90` | 55 | `mpi_defs::initialize_mpi` | `param` |
 | `mpi_defs.f90` | 58 | `mpi_defs::initialize_mpi` | `cgns` |

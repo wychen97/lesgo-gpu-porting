@@ -28,9 +28,6 @@ module messages
 !   mesg:       writes a simple message
 !
 use types, only : rprec
-#ifdef PPMPI
-use mpi
-#endif
 implicit none
 
 save

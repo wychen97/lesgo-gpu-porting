@@ -49,6 +49,8 @@ mechanical patches.
   symbols;
 - added module-scope `implicit none` to modules that only had procedure-local
   `implicit none`;
+- narrowed low-risk MPI imports in CFL/debug helpers and removed an unused MPI
+  import from `messages.f90`;
 - removed repeated scoped imports in `atm_lesgo_interface.f90`, `initial.f90`,
   and `forcing.f90`;
 - regenerated static inventory and refactor-hotspot documentation after source

@@ -1,7 +1,8 @@
 !*******************************************************************************
 module cuda_mpi_debug
 !*******************************************************************************
-use mpi
+use mpi, only : MPI_COMM_WORLD, MPI_STATUS_SIZE, mpi_comm_rank,              &
+    mpi_comm_size, mpi_recv, mpi_send, mpi_sendrecv
 use types, only : rprec
 implicit none
 
@@ -309,4 +310,3 @@ endif
 end subroutine mpi_dbg_recv_r
 
 end module cuda_mpi_debug
-

@@ -46,7 +46,7 @@ use param, only : dt, dx, dy, dz, nx, ny, nz
 use sim_param, only : u,v,w
 
 #ifdef PPMPI
-use mpi
+use mpi, only : MPI_COMM_WORLD, MPI_MAX, mpi_allreduce
 use param, only : ierr, MPI_RPREC
 #endif
 
@@ -106,7 +106,7 @@ use param, only : cfl, dx, dy, dz, nx, ny, nz
 use sim_param, only : u,v,w
 
 #ifdef PPMPI
-use mpi
+use mpi, only : MPI_COMM_WORLD, MPI_MIN, mpi_allreduce
 use param, only : ierr, MPI_RPREC
 #endif
 
