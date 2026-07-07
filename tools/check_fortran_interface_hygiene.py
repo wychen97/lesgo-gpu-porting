@@ -16,6 +16,10 @@ Fortran codebase:
 * ``use module, only: symbol`` imports that are not actually exported by a
   tracked module, including symbols that were previously re-exported through a
   broad module import.
+* ``use mpi, only:`` imports of MPI procedures that are not portable across
+  the Derecho NVHPC/Cray MPI module interface;
+* direct calls to specific ``test_filtermodule`` procedures without importing
+  those specific procedure names.
 """
 
 from __future__ import annotations
@@ -31,6 +35,38 @@ ROOT = Path(__file__).resolve().parents[1]
 CMAKE_PATH = ROOT / "CMakeLists.txt"
 ALLOWED_COMPILER_MACROS = {"__INTEL_COMPILER", "PPXLF"}
 MAX_ISSUES = 200
+MPI_PROCEDURE_NAMES = {
+    "mpi_abort",
+    "mpi_allreduce",
+    "mpi_barrier",
+    "mpi_cart_coords",
+    "mpi_cart_create",
+    "mpi_cart_rank",
+    "mpi_cart_shift",
+    "mpi_comm_rank",
+    "mpi_comm_size",
+    "mpi_comm_split",
+    "mpi_get_processor_name",
+    "mpi_init",
+    "mpi_intercomm_create",
+    "mpi_irecv",
+    "mpi_isend",
+    "mpi_recv",
+    "mpi_reduce",
+    "mpi_send",
+    "mpi_sendrecv",
+    "mpi_wait",
+    "mpi_waitall",
+    "mpi_wtime",
+}
+TEST_FILTER_SPECIFIC_PROCEDURES = {
+    "test_filter_3",
+    "test_filter_6",
+    "test_filter_plane_gpu",
+    "test_test_filter_3",
+    "test_test_filter_6",
+    "test_test_filter_plane_gpu",
+}
 
 
 @dataclass
@@ -615,6 +651,124 @@ def check_repeated_scope_imports(paths: list[Path]) -> list[str]:
     return issues
 
 
+def check_mpi_procedure_only_imports(paths: list[Path]) -> list[str]:
+    issues: list[str] = []
+
+    for path in paths:
+        for line_no, line in logical_lines(path):
+            match = re.match(
+                r"^use\s*(?:,\s*[^:]+::\s*)?mpi\s*,\s*only\s*:\s*(.+)$",
+                line,
+                flags=re.I,
+            )
+            if not match:
+                continue
+
+            procedures = sorted(
+                {
+                    clean_symbol(name)
+                    for name in split_names(match.group(1))
+                    if clean_symbol(name) in MPI_PROCEDURE_NAMES
+                }
+            )
+            if procedures:
+                rel = path.relative_to(ROOT)
+                issues.append(
+                    f"{rel}:{line_no}: imports MPI procedure(s) with `use mpi, only:` "
+                    + ", ".join(f"`{procedure}`" for procedure in procedures)
+                    + "; use broad `use mpi` for Derecho NVHPC/Cray MPI portability"
+                )
+
+    return issues
+
+
+def check_test_filter_specific_imports(paths: list[Path]) -> list[str]:
+    issues: list[str] = []
+    call_re = re.compile(
+        r"^\s*call\s+("
+        + "|".join(re.escape(name) for name in sorted(TEST_FILTER_SPECIFIC_PROCEDURES))
+        + r")\b",
+        flags=re.I,
+    )
+
+    for path in paths:
+        scope_name = "<file>"
+        imports: set[str] = set()
+        module_imports: set[str] = set()
+        in_module = False
+        in_module_contains = False
+
+        for line_no, line in logical_lines(path):
+            lower = line.lower()
+            module_match = re.match(r"^module\s+(?!procedure\b)(\w+)", lower)
+            if module_match:
+                scope_name = "<file>"
+                imports = set()
+                module_imports = set()
+                in_module = True
+                in_module_contains = False
+                continue
+
+            if re.match(r"^end\s+module\b", lower):
+                scope_name = "<file>"
+                imports = set()
+                module_imports = set()
+                in_module = False
+                in_module_contains = False
+                continue
+
+            if in_module and lower == "contains":
+                in_module_contains = True
+                continue
+
+            procedure_match = re.match(
+                r"^(?:(?:recursive|pure|elemental|impure)\s+)*"
+                r"(?:(?:integer|real|logical|complex|character|type|class)"
+                r"\s*(?:\([^)]*\))?\s+)?(subroutine|function)\s+(\w+)",
+                lower,
+            )
+            if procedure_match:
+                scope_name = procedure_match.group(2)
+                imports = set(module_imports) if in_module else set()
+                continue
+
+            use_match = re.match(
+                r"^use\s*(?:,\s*[^:]+::\s*)?test_filtermodule"
+                r"(?:\s*,\s*only\s*:\s*(.+))?$",
+                line,
+                flags=re.I,
+            )
+            if use_match:
+                import_list = use_match.group(1)
+                if import_list is None:
+                    imports.add("*")
+                else:
+                    imports.update(
+                        local_symbol(name)
+                        for name in split_names(import_list)
+                        if local_symbol(name)
+                    )
+                if in_module and not in_module_contains and scope_name == "<file>":
+                    module_imports.update(imports)
+                continue
+
+            call_match = call_re.match(line)
+            if call_match:
+                called = call_match.group(1).lower()
+                if "*" not in imports and called not in imports:
+                    rel = path.relative_to(ROOT)
+                    issues.append(
+                        f"{rel}:{line_no}: `{scope_name}` calls `{called}` but "
+                        "does not import that specific `test_filtermodule` procedure"
+                    )
+
+            if re.match(r"^end\s+(subroutine|function)\b", lower):
+                scope_name = "<file>"
+                imports = set()
+
+    return issues
+
+
 def check_public_api_symbols(paths: list[Path]) -> list[str]:
     modules = collect_modules(paths)
     issues: list[str] = []
@@ -661,6 +815,8 @@ def main() -> int:
         + check_use_only_imports_resolve(paths)
         + check_duplicate_use_only_symbols(paths)
         + check_repeated_scope_imports(paths)
+        + check_mpi_procedure_only_imports(paths)
+        + check_test_filter_specific_imports(paths)
         + check_public_api_symbols(paths)
     )
 
@@ -676,7 +832,8 @@ def main() -> int:
         "Fortran interface hygiene check passed "
         f"({len(paths)} files, no stale/unused macros, missing module/program "
         "implicit-none statements, private-export mismatches, bare flag conditions, "
-        "unresolved tracked-module imports, duplicate/repeated imports, or stale "
+        "unresolved tracked-module imports, duplicate/repeated imports, unsafe MPI "
+        "procedure-only imports, missing test-filter procedure bindings, or stale "
         "public API names)."
     )
     return 0

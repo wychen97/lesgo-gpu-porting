@@ -216,6 +216,61 @@ def test_missing_module_implicit_none_is_reported(tmpdir: Path) -> None:
     assert_contains(issues, "does not declare `implicit none`")
 
 
+def test_mpi_procedure_only_import_is_reported(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "mpi_only_proc.f90",
+        """
+        subroutine mpi_only_proc()
+        use mpi, only : MPI_SUM, mpi_isend
+        implicit none
+        end subroutine mpi_only_proc
+        """,
+    )
+
+    issues = hygiene.check_mpi_procedure_only_imports([path])
+    assert_contains(issues, "imports MPI procedure(s) with `use mpi, only:`")
+
+
+def test_missing_test_filter_specific_import_is_reported(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "missing_test_filter_specific.f90",
+        """
+        subroutine missing_test_filter_specific()
+        use test_filtermodule, only : test_filter
+        implicit none
+        call test_filter_3(a, b, c)
+        end subroutine missing_test_filter_specific
+        """,
+    )
+
+    issues = hygiene.check_test_filter_specific_imports([path])
+    assert_contains(issues, "calls `test_filter_3`")
+
+
+def test_module_scope_test_filter_import_satisfies_contained_call(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "module_scope_test_filter.f90",
+        """
+        module module_scope_test_filter_m
+        use test_filtermodule, only : test_filter_plane_gpu
+        implicit none
+        contains
+        subroutine contained_call()
+        implicit none
+        call test_filter_plane_gpu(a)
+        end subroutine contained_call
+        end module module_scope_test_filter_m
+        """,
+    )
+
+    issues = hygiene.check_test_filter_specific_imports([path])
+    if issues:
+        raise AssertionError(f"valid module-scope import failed: {issues!r}")
+
+
 def main() -> int:
     tmpdir = Path(tempfile.mkdtemp(prefix=".fortran_hygiene_selftest_", dir=ROOT))
     try:
@@ -227,10 +282,13 @@ def main() -> int:
         test_repeated_scope_imports_are_reported(tmpdir)
         test_bare_flag_condition_is_reported(tmpdir)
         test_missing_module_implicit_none_is_reported(tmpdir)
+        test_mpi_procedure_only_import_is_reported(tmpdir)
+        test_missing_test_filter_specific_import_is_reported(tmpdir)
+        test_module_scope_test_filter_import_satisfies_contained_call(tmpdir)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    print("Fortran interface hygiene self-test passed (8 synthetic cases).")
+    print("Fortran interface hygiene self-test passed (11 synthetic cases).")
     return 0
 
 

@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `91`
+Total broad imports: `92`
 
 ## Highest-Count Files
 
@@ -33,12 +33,13 @@ Total broad imports: `91`
 | `param_output.f90` | 2 |
 | `tools/validate_filt_da_cufft.F90` | 2 |
 | `trees_setup_ls.f90` | 2 |
-| `concurrent_precursor.f90` | 1 |
+| `atm_lesgo_interface.f90` | 1 |
 
 ## Full List
 
 | File | Line | Scope | Module |
 | --- | ---: | --- | --- |
+| `atm_lesgo_interface.f90` | 69 | `atm_lesgo_interface` | `mpi` |
 | `cfl_util.f90` | 49 | `cfl_util::get_max_cfl` | `mpi` |
 | `cfl_util.f90` | 109 | `cfl_util::get_cfl_dt` | `mpi` |
 | `clocks.f90` | 50 | `clock_m::start` | `mpi` |

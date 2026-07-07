@@ -66,9 +66,7 @@ use grid_m, only : grid
 
 ! MPI implementation from LESGO
 #ifdef PPMPI
-  use mpi, only : MPI_INTEGER, MPI_MAX, MPI_MIN, MPI_STATUS_SIZE, MPI_SUM,    &
-                  mpi_allreduce, mpi_barrier, mpi_comm_create, mpi_comm_group, &
-                  mpi_group_incl, mpi_sendrecv
+  use mpi
   use param, only : ierr, mpi_rprec, comm, up, down
 #endif
 
