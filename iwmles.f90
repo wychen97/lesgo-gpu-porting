@@ -358,7 +358,7 @@ use grid_m, only : grid
 use types,only : rprec
 use param,only : nx,ny,dx,dy,ld
 use sim_param,only : u,v,w,p
-use test_filtermodule, only : test_filter
+use test_filtermodule, only : test_filter, test_filter_plane_gpu
 implicit none
 
 ! Wrapped horizontal-neighbor indices from the grid module.

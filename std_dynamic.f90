@@ -26,7 +26,7 @@ subroutine std_dynamic(Cs_1D)
 !
 use types, only : rprec
 use param, only : ld, ny, nz, coord
-use test_filtermodule, only : test_filter
+use test_filtermodule, only : test_filter, test_filter_3, test_filter_6
 use sim_param, only : u, v, w
 use sgs_param, only : ee_now, S11, S12, S13, S22, S23, S33, delta, S,          &
     u_bar, v_bar, w_bar, L11, L12, L13, L22, L23, L33,                         &

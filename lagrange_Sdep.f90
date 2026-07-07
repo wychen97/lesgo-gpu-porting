@@ -38,7 +38,8 @@ use sgs_param, only : F_LM, F_MM, F_QN, F_NN, beta, Cs_opt2, opftime,          &
     Q11, Q12, Q13, Q22, Q23, Q33, N11, N12, N13, N22, N23, N33,                &
     S_hat, S11_hat, S12_hat,S13_hat, S22_hat, S23_hat, S33_hat,                &
     S_S11_hat, S_S12_hat, S_S13_hat, S_S22_hat, S_S23_hat, S_S33_hat
-use test_filtermodule, only : test_filter, test_test_filter
+use test_filtermodule, only : test_filter, test_filter_3, test_filter_6,      &
+    test_test_filter, test_test_filter_3, test_test_filter_6
 use string_util, only : string_concat
 #ifdef PPDYN_TN
 use sgs_param, only : F_ee2, F_deedt2, ee_past

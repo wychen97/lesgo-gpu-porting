@@ -13,11 +13,11 @@ structure, but they should be split only when a clean ownership boundary exists.
 | 1 | `atm_lesgo_interface.f90` | 141,240 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
 | 2 | `actuator_turbine_model.f90` | 118,068 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
 | 3 | `lagrange_Sdep_gpu.f90` | 93,175 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
-| 4 | `scalars.f90` | 63,194 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
+| 4 | `scalars.f90` | 63,217 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
 | 5 | `io.f90` | 60,643 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
 | 6 | `sgs_gpu.f90` | 55,422 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
 | 7 | `atm_input_util.f90` | 54,367 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |
-| 8 | `iwmles.f90` | 52,719 bytes | Separate wall-model paths after preserving identical `(i,j)` surface-field semantics. |
+| 8 | `iwmles.f90` | 52,742 bytes | Separate wall-model paths after preserving identical `(i,j)` surface-field semantics. |
 
 `level_set.f90` and `trees_*_ls.f90` are intentionally lower priority because
 LVLSET is not part of the optimized production path.
