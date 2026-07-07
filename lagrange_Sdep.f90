@@ -25,7 +25,9 @@ subroutine lagrange_Sdep()
 ! dependent model
 !
 use types, only : rprec
-use param
+use param, only : coord, cs_count, DYN_init, fringe_region_end,               &
+    fringe_region_len, inflow_type, inilag, jt, lbc_mom, ld, nproc, nx, ny,   &
+    nz, pi, ubc_mom, use_cfl_dt
 use sim_param, only : u, v, w
 use sgs_param, only : F_LM, F_MM, F_QN, F_NN, beta, Cs_opt2, opftime,          &
     lagran_dt, S11, S12, S13, S22, S23, S33, delta, S, u_bar, v_bar, w_bar,    &

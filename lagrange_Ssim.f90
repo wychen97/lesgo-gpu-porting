@@ -25,7 +25,9 @@ subroutine lagrange_Ssim()
 ! JFM, 319: 353-385 (1996) DOI: 10.1017/S0022112096007379
 !
 use types, only : rprec
-use param
+use param, only : coord, cs_count, DYN_init, fringe_region_end,               &
+    fringe_region_len, inflow_type, inilag, jt, ld, nx, ny, nz, pi,           &
+    use_cfl_dt
 use sim_param, only : u, v, w
 use sgs_param, only : F_LM, F_MM, Beta, Cs_opt2, opftime, lagran_dt
 use sgs_param, only : S11, S12, S13, S22, S23, S33, delta, S, ee_now, Tn_all,  &
