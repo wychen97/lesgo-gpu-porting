@@ -3,21 +3,14 @@
 
 from __future__ import annotations
 
-import re
 import subprocess
 import sys
 from pathlib import Path
 
+from cmake_metadata import CMAKE_PATH, cmake_source_groups, source_list_group_references
 
 ROOT = Path(__file__).resolve().parents[1]
-CMAKE_PATH = ROOT / "CMakeLists.txt"
 FORTRAN_SUFFIXES = {".f", ".f90", ".F", ".F90"}
-SOURCE_GROUP_RE = re.compile(r"^[A-Za-z0-9_]+_SOURCES$")
-VARIABLE_REF_RE = re.compile(r"\$\{(?P<name>[A-Za-z0-9_]+)\}")
-LIST_APPEND_SOURCES_RE = re.compile(
-    r"^\s*list\s*\(\s*APPEND\s+Sources\b(?P<rest>.*)$",
-    re.IGNORECASE,
-)
 
 
 def tracked_root_fortran_sources() -> set[str]:
@@ -37,76 +30,9 @@ def tracked_root_fortran_sources() -> set[str]:
     }
 
 
-def tokenize_cmake_items(text: str) -> list[str]:
-    return [
-        token.strip()
-        for token in re.split(r"\s+", text.replace(")", " "))
-        if token.strip()
-    ]
-
-
-def cmake_set_blocks() -> dict[str, list[str]]:
-    blocks: dict[str, list[str]] = {}
-    lines = CMAKE_PATH.read_text(encoding="utf-8").splitlines()
-    index = 0
-
-    while index < len(lines):
-        stripped = lines[index].strip()
-        match = re.match(r"^set\s*\(\s*(?P<name>[A-Za-z0-9_]+)\b(?P<rest>.*)$", stripped)
-        if not match:
-            index += 1
-            continue
-
-        name = match.group("name")
-        pieces = [match.group("rest")]
-        while ")" not in pieces[-1] and index + 1 < len(lines):
-            index += 1
-            pieces.append(lines[index].strip())
-
-        blocks[name] = tokenize_cmake_items(" ".join(pieces))
-        index += 1
-
-    return blocks
-
-
-def source_list_group_references(set_blocks: dict[str, list[str]]) -> set[str]:
-    references = {
-        match.group("name")
-        for token in set_blocks.get("Sources", [])
-        for match in VARIABLE_REF_RE.finditer(token)
-    }
-
-    lines = CMAKE_PATH.read_text(encoding="utf-8").splitlines()
-    index = 0
-    while index < len(lines):
-        stripped = lines[index].strip()
-        match = LIST_APPEND_SOURCES_RE.match(stripped)
-        if not match:
-            index += 1
-            continue
-
-        pieces = [match.group("rest")]
-        while ")" not in pieces[-1] and index + 1 < len(lines):
-            index += 1
-            pieces.append(lines[index].strip())
-
-        for piece in pieces:
-            references.update(
-                match.group("name") for match in VARIABLE_REF_RE.finditer(piece)
-            )
-        index += 1
-
-    return references
-
-
 def main() -> int:
     tracked = tracked_root_fortran_sources()
-    set_blocks = cmake_set_blocks()
-    source_groups = {
-        name: [item for item in items if Path(item).suffix in FORTRAN_SUFFIXES]
-        for name, items in set_blocks.items()
-        if SOURCE_GROUP_RE.match(name)
-    }
+    source_groups = cmake_source_groups()
 
     grouped: dict[str, list[str]] = {}
     for group_name, sources in source_groups.items():
@@ -121,7 +47,7 @@ def main() -> int:
     )
     empty_groups = sorted(name for name, sources in source_groups.items() if not sources)
 
-    source_references = source_list_group_references(set_blocks)
+    source_references = source_list_group_references()
     unused_groups = sorted(name for name in source_groups if name not in source_references)
     undefined_references = sorted(source_references - set(source_groups))
 

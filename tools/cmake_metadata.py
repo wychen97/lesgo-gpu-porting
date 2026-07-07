@@ -32,10 +32,93 @@ CACHE_DESCRIPTION_RE = re.compile(
     r'"[^"]*"\s+CACHE\s+STRING\s+"(?P<description>[^"]*)"',
     re.DOTALL,
 )
+SOURCE_GROUP_RE = re.compile(r"^[A-Za-z0-9_]+_SOURCES$")
+VARIABLE_REF_RE = re.compile(r"\$\{(?P<name>[A-Za-z0-9_]+)\}")
+LIST_APPEND_SOURCES_RE = re.compile(
+    r"^\s*list\s*\(\s*APPEND\s+Sources\b(?P<rest>.*)$",
+    re.IGNORECASE,
+)
+FORTRAN_SOURCE_RE = re.compile(r"\.(?:f90|F90|f|F)$")
 
 
 def cmake_text() -> str:
     return CMAKE_PATH.read_text(encoding="utf-8")
+
+
+def strip_cmake_comment(line: str) -> str:
+    return line.split("#", 1)[0]
+
+
+def tokenize_cmake_items(text: str) -> list[str]:
+    return [
+        token.strip()
+        for token in re.split(r"\s+", text.replace(")", " "))
+        if token.strip()
+    ]
+
+
+def cmake_set_blocks() -> dict[str, list[str]]:
+    blocks: dict[str, list[str]] = {}
+    lines = cmake_text().splitlines()
+    index = 0
+
+    while index < len(lines):
+        stripped = lines[index].strip()
+        match = re.match(r"^set\s*\(\s*(?P<name>[A-Za-z0-9_]+)\b(?P<rest>.*)$", stripped)
+        if not match:
+            index += 1
+            continue
+
+        name = match.group("name")
+        pieces = [match.group("rest")]
+        while ")" not in pieces[-1] and index + 1 < len(lines):
+            index += 1
+            pieces.append(lines[index].strip())
+
+        block_text = " ".join(strip_cmake_comment(piece) for piece in pieces)
+        blocks[name] = tokenize_cmake_items(block_text)
+        index += 1
+
+    return blocks
+
+
+def cmake_source_groups() -> dict[str, list[str]]:
+    return {
+        name: [item for item in items if FORTRAN_SOURCE_RE.search(item)]
+        for name, items in cmake_set_blocks().items()
+        if SOURCE_GROUP_RE.match(name)
+    }
+
+
+def source_list_group_references() -> set[str]:
+    set_blocks = cmake_set_blocks()
+    references = {
+        match.group("name")
+        for token in set_blocks.get("Sources", [])
+        for match in VARIABLE_REF_RE.finditer(token)
+    }
+
+    lines = cmake_text().splitlines()
+    index = 0
+    while index < len(lines):
+        stripped = lines[index].strip()
+        match = LIST_APPEND_SOURCES_RE.match(stripped)
+        if not match:
+            index += 1
+            continue
+
+        pieces = [match.group("rest")]
+        while ")" not in pieces[-1] and index + 1 < len(lines):
+            index += 1
+            pieces.append(lines[index].strip())
+
+        for piece in pieces:
+            references.update(
+                match.group("name") for match in VARIABLE_REF_RE.finditer(piece)
+            )
+        index += 1
+
+    return references
 
 
 def with_prefix(names: set[str], prefix: str | None) -> set[str]:

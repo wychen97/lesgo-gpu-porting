@@ -34,9 +34,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from cmake_metadata import CMAKE_PATH, cmake_source_groups, strip_cmake_comment
 
 ROOT = Path(__file__).resolve().parents[1]
-CMAKE_PATH = ROOT / "CMakeLists.txt"
 ALLOWED_COMPILER_MACROS = {"__INTEL_COMPILER", "PPXLF"}
 MAX_ISSUES = 200
 MPI_PROCEDURE_NAMES = {
@@ -244,10 +244,6 @@ def declaration_symbols(line: str) -> list[str]:
     return [local_symbol(name) for name in split_names(right) if local_symbol(name)]
 
 
-def strip_cmake_comment(line: str) -> str:
-    return line.split("#", 1)[0]
-
-
 def cmake_macros() -> set[str]:
     text = CMAKE_PATH.read_text(encoding="utf-8")
     macros: set[str] = set()
@@ -260,30 +256,9 @@ def cmake_macros() -> set[str]:
     return macros
 
 
-def cmake_source_group_members() -> dict[str, set[str]]:
-    text = CMAKE_PATH.read_text(encoding="utf-8")
-    groups: dict[str, set[str]] = {}
-    for match in re.finditer(
-        r"set\s*\(\s*([A-Za-z0-9_]+_SOURCES)\s+(.*?)\)",
-        text,
-        flags=re.I | re.S,
-    ):
-        group_name = match.group(1)
-        body = "\n".join(
-            strip_cmake_comment(line) for line in match.group(2).splitlines()
-        )
-        members = {
-            token
-            for token in re.split(r"\s+", body.strip())
-            if re.search(r"\.(?:f90|F90|f|F)$", token)
-        }
-        groups[group_name] = members
-    return groups
-
-
 def source_file_feature_requirements() -> dict[str, set[str]]:
     requirements: dict[str, set[str]] = {}
-    for group_name, members in cmake_source_group_members().items():
+    for group_name, members in cmake_source_groups().items():
         group_requirements = OPTIONAL_MODULE_REQUIREMENTS.get(group_name, set())
         if not group_requirements:
             continue
