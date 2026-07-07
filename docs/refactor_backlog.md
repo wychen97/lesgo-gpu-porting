@@ -10,7 +10,7 @@ structure, but they should be split only when a clean ownership boundary exists.
 
 | Priority | File | Current size | Refactor direction |
 | --- | --- | ---: | --- |
-| 1 | `atm_lesgo_interface.f90` | 141,042 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
+| 1 | `atm_lesgo_interface.f90` | 141,001 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
 | 2 | `actuator_turbine_model.f90` | 118,068 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
 | 3 | `lagrange_Sdep_gpu.f90` | 93,175 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
 | 4 | `scalars.f90` | 63,340 bytes | Separate scalar transport, halo handling, and timing diagnostics. |

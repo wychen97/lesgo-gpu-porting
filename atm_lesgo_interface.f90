@@ -204,11 +204,10 @@ logical, save :: atm_diag_load_printed = .false.
 
 contains
 
-! ===== Option A (full-OpenACC core + CPU ATM): CPU build has no CUDA-Fortran, so
-! these cuf gate functions are absent. Provide .false. stubs so the ATM takes its
-! pure-CPU paths. Physics/model preserved (the CPU paths are the existing
-! actuator-line model); only the ATM's GPU offload is off. Phase C later converts
-! these CPU ATM paths to OpenACC.
+! Maintained ATM GPU policy gates. Historical routine names still contain
+! `cuda` because these call sites predate the OpenACC explicit-residency cleanup.
+! CPU builds never enter PPLES_GPU call sites, and optional GPU subpaths remain
+! explicit here so they cannot be confused with hidden environment switches.
 logical function atm_wuv_cuda_enabled();          atm_wuv_cuda_enabled=.true.;           end function
 #ifdef PPLES_GPU
 logical function atm_direct_w_enabled();          atm_direct_w_enabled=.true.;           end function

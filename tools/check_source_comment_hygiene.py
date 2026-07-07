@@ -26,6 +26,8 @@ STALE_SOURCE_FRAGMENTS = (
     "check point data",
     "check point for iwm",
     "Initialize integral wall model xiang",
+    "cuf gate functions are absent",
+    "Phase C later converts",
 )
 
 
