@@ -21,7 +21,7 @@
 module shifted_inflow
 !*******************************************************************************
 use types, only : rprec
-use fringe
+use fringe, only : fringe_t
 
 implicit none
 

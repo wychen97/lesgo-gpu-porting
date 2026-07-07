@@ -23,8 +23,8 @@ module hit_inflow
 ! This module provides homogenous isotrophic inflow for lesgo
 use types, only : rprec
 use param, only : ny, nz, dt
-use grid_m
-use fringe
+use grid_m, only : grid
+use fringe, only : fringe_t
 use hit_inflow_gpu, only : hit_cuda_enabled, hit_gpu_setup,                  &
     hit_fringe_setup_gpu, hit_compute_plane_gpu, hit_apply_fringe_gpu
 implicit none

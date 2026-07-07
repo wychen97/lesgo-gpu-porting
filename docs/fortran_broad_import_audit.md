@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `169`
+Total broad imports: `163`
 
 ## Highest-Count Files
 
@@ -28,12 +28,12 @@ Total broad imports: `169`
 | `lagrange_Sdep_gpu.f90` | 4 |
 | `sgs_stag_util.f90` | 4 |
 | `concurrent_precursor.f90` | 3 |
-| `inflow.f90` | 3 |
 | `mpi_defs.f90` | 3 |
 | `press_stag_array.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
 | `tridag_array.f90` | 3 |
 | `convec.f90` | 2 |
+| `fft_gpu.f90` | 2 |
 
 ## Full List
 
@@ -59,11 +59,6 @@ Total broad imports: `169`
 | `fft_gpu.f90` | 46 | `fft_gpu` | `openacc` |
 | `forcing.f90` | 385 | `forcing::project` | `param` |
 | `forcing.f90` | 386 | `forcing::project` | `sim_param` |
-| `hit_inflow.f90` | 26 | `hit_inflow` | `grid_m` |
-| `hit_inflow.f90` | 27 | `hit_inflow` | `fringe` |
-| `inflow.f90` | 25 | `inflow` | `fringe` |
-| `inflow.f90` | 30 | `inflow` | `hit_inflow` |
-| `inflow.f90` | 32 | `inflow` | `shifted_inflow` |
 | `initial.f90` | 23 | `initial` | `iwmles` |
 | `initial.f90` | 25 | `initial` | `param` |
 | `initial.f90` | 250 | `initial::ic_interp` | `grid_m` |
@@ -174,7 +169,6 @@ Total broad imports: `169`
 | `sgs_stag_util.f90` | 64 | `sgs_stag_util::sgs_stag` | `sgs_param` |
 | `sgs_stag_util.f90` | 495 | `sgs_stag_util::calc_sij` | `param` |
 | `sgs_stag_util.f90` | 497 | `sgs_stag_util::calc_sij` | `sgs_param` |
-| `shifted_inflow.f90` | 24 | `shifted_inflow` | `fringe` |
 | `stat_defs.f90` | 26 | `stat_defs` | `turbine_indicator` |
 | `std_dynamic.f90` | 29 | `std_dynamic` | `test_filtermodule` |
 | `test_filtermodule.f90` | 62 | `test_filtermodule::test_filter_init` | `fft` |

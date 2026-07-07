@@ -22,14 +22,14 @@ module inflow
 !*******************************************************************************
 use types, only : rprec
 use param, only : inflow_type
-use fringe
+use fringe, only : fringe_t
 #ifdef PPCPS
 use concurrent_precursor, only : synchronize_cps, inflow_cps
 #endif
 #ifdef PPHIT
-use hit_inflow
+use hit_inflow, only : inflow_HIT
 #endif
-use shifted_inflow
+use shifted_inflow, only : shifted_inflow_init, inflow_shifted
 implicit none
 
 private
