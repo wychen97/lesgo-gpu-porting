@@ -83,7 +83,7 @@ use test_filtermodule, only : test_filter_plane_gpu, test_test_filter_plane_gpu
 use sgs_stag_util, only : rtnewt
 
 #ifdef PPMPI
-use mpi
+use mpi, only : mpi_sendrecv
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWN
 use param, only : MPI_RPREC, down, up, comm, status, ierr
 #endif

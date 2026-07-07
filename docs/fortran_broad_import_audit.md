@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `71`
+Total broad imports: `68`
 
 ## Highest-Count Files
 
@@ -33,7 +33,7 @@ Total broad imports: `71`
 | `fft.f90` | 1 |
 | `initial.f90` | 1 |
 | `mpi_transpose_mod.f90` | 1 |
-| `param.f90` | 1 |
+| `time_average.f90` | 1 |
 
 ## Full List
 
@@ -85,7 +85,6 @@ Total broad imports: `71`
 | `mpi_defs.f90` | 55 | `mpi_defs::initialize_mpi` | `param` |
 | `mpi_defs.f90` | 58 | `mpi_defs::initialize_mpi` | `cgns` |
 | `mpi_transpose_mod.f90` | 25 | `mpi_transpose_mod` | `mpi` |
-| `param.f90` | 28 | `param` | `mpi` |
 | `param_output.f90` | 23 | `param_output` | `param` |
 | `param_output.f90` | 25 | `param_output` | `level_set_base` |
 | `press_stag_array.f90` | 51 | `press_stag_array` | `param` |
@@ -93,7 +92,6 @@ Total broad imports: `71`
 | `scalars.f90` | 47 | `scalars` | `openacc` |
 | `scalars.f90` | 1379 | `scalars::scalars_transport` | `fft` |
 | `scalars.f90` | 1719 | `scalars::to_big` | `fft` |
-| `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` |
 | `sgs_stag_util.f90` | 62 | `sgs_stag_util::sgs_stag` | `param` |
 | `sgs_stag_util.f90` | 64 | `sgs_stag_util::sgs_stag` | `sgs_param` |
 | `sgs_stag_util.f90` | 495 | `sgs_stag_util::calc_sij` | `param` |
@@ -108,5 +106,4 @@ Total broad imports: `71`
 | `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` |
 | `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` |
 | `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` |
-| `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` |
 | `turbines.f90` | 36 | `turbines` | `param` |

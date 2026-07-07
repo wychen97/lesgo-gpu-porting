@@ -47,7 +47,8 @@ use types, only : rprec
 use param, only : ld, lh, ny, nz, nproc, coord
 #ifdef PPMPI
 use param, only : MPI_RPREC, comm, ierr, status, up, down
-use mpi
+use mpi, only : MPI_STATUSES_IGNORE, mpi_irecv, mpi_isend, mpi_recv, mpi_send, &
+    mpi_wait, mpi_waitall
 #endif
 implicit none
 save

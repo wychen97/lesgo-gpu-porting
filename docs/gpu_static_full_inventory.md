@@ -390,9 +390,9 @@ claims.
 | `tridag_array.f90:195` | `tridag_apply_env_enabled_unless_false` | `host-or-diagnostic` |  |  |
 | `tridag_array.f90:223` | `tridag_apply_env_true_token` | `host-or-diagnostic` |  |  |
 | `tridag_array.f90:251` | `tridag_array` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `tridag_gpu.f90:107` | `tridag_gpu_init` | `gpu-marked` |  |  |
-| `tridag_gpu.f90:126` | `tridag_gpu_finalize` | `gpu-marked` |  |  |
-| `tridag_gpu.f90:136` | `tridag_array_gpu` | `gpu-marked` |  |  |
+| `tridag_gpu.f90:108` | `tridag_gpu_init` | `gpu-marked` |  |  |
+| `tridag_gpu.f90:127` | `tridag_gpu_finalize` | `gpu-marked` |  |  |
+| `tridag_gpu.f90:137` | `tridag_array_gpu` | `gpu-marked` |  |  |
 | `turbine_indicator.f90:53` | `val` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbine_indicator.f90:77` | `init` | `host-or-diagnostic` |  |  |
 | `turbines.f90:160` | `turbines_init` | `gpu-marked` |  |  |
