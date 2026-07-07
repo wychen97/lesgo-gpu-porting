@@ -47,6 +47,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_docs_index.py` | Verifies `docs/README.md` indexes tracked collaborator docs. |
 | `tools/check_environment_switch_docs.py` | Verifies `LESGO_*` runtime switches used in source are documented. |
 | `tools/check_fortran_broad_import_audit.py` | Verifies the generated broad Fortran import audit is current. |
+| `tools/check_fortran_broad_imports_selftest.py` | Regression-tests the broad Fortran import audit parser on synthetic `use` statements. |
 | `tools/check_fortran_interface_hygiene.py` | Verifies Fortran preprocessor symbols, module/program `implicit none`, and `use ..., only:` import/export boundaries. |
 | `tools/check_fortran_interface_hygiene_selftest.py` | Regression-tests the Fortran interface hygiene checker on synthetic module snippets. |
 | `tools/check_gpu_benchmark_manifest.py` | Verifies the benchmark manifest covers every GPU validation matrix row and uses valid, internally consistent CMake build settings. |

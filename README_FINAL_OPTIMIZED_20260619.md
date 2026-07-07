@@ -143,6 +143,7 @@ python3 tools/check_source_comment_hygiene.py
 python3 tools/check_source_inventory.py
 python3 tools/check_fortran_interface_hygiene.py
 python3 tools/check_fortran_interface_hygiene_selftest.py
+python3 tools/check_fortran_broad_imports_selftest.py
 python3 tools/check_fortran_broad_import_audit.py
 python3 tools/check_sgs_model_constants.py
 python3 tools/check_refactor_backlog.py

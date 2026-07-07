@@ -39,6 +39,7 @@ PYTHON_CHECKS = [
     ("source inventory", "tools/check_source_inventory.py"),
     ("Fortran interface hygiene", "tools/check_fortran_interface_hygiene.py"),
     ("Fortran interface hygiene self-test", "tools/check_fortran_interface_hygiene_selftest.py"),
+    ("Fortran broad-import parser self-test", "tools/check_fortran_broad_imports_selftest.py"),
     ("Fortran broad-import audit", "tools/check_fortran_broad_import_audit.py"),
     ("SGS model constants", "tools/check_sgs_model_constants.py"),
     ("refactor backlog hotspots", "tools/check_refactor_backlog.py"),

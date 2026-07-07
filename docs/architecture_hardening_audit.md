@@ -57,6 +57,9 @@ mechanical patches.
   and MPI calls are imported from their owning modules explicitly;
 - fixed the broad-import audit parser so `use module, only: ...` imports are not
   misclassified as broad imports;
+- added a broad-import parser self-test so the generated audit keeps handling
+  plain `use module`, `use module, only: ...`, and `use, intrinsic :: ...`
+  forms distinctly;
 - regenerated static inventory and refactor-hotspot documentation after source
   changes.
 
