@@ -168,7 +168,7 @@ subroutine initialize_cps()
 !*******************************************************************************
 use param, only : nx, ny, nz, dx, L_x, coord, rank_of_coord, status, ierr
 use param, only : fringe_region_end, fringe_region_len, sampling_region_end
-use messages
+use messages, only : error
 use mpi, only : MPI_INTEGER, mpi_recv, mpi_send
 implicit none
 
@@ -222,7 +222,7 @@ end subroutine initialize_cps
 subroutine synchronize_cps()
 !*******************************************************************************
 use types, only : rprec
-use messages
+use messages, only : error
 use param, only : ny, nz
 use param, only : coord, rank_of_coord, status, ierr, MPI_RPREC
 use sim_param, only : u,v,w

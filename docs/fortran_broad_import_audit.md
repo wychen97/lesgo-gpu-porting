@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `176`
+Total broad imports: `169`
 
 ## Highest-Count Files
 
@@ -21,19 +21,19 @@ Total broad imports: `176`
 | `main.f90` | 11 |
 | `turbines.f90` | 10 |
 | `initial.f90` | 6 |
-| `mpi_defs.f90` | 6 |
 | `time_average.f90` | 6 |
-| `concurrent_precursor.f90` | 5 |
 | `initialize.f90` | 5 |
 | `atm_lesgo_interface.f90` | 4 |
 | `derivatives.f90` | 4 |
-| `forcing.f90` | 4 |
 | `lagrange_Sdep_gpu.f90` | 4 |
 | `sgs_stag_util.f90` | 4 |
+| `concurrent_precursor.f90` | 3 |
 | `inflow.f90` | 3 |
+| `mpi_defs.f90` | 3 |
 | `press_stag_array.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
 | `tridag_array.f90` | 3 |
+| `convec.f90` | 2 |
 
 ## Full List
 
@@ -48,8 +48,6 @@ Total broad imports: `176`
 | `concurrent_precursor.f90` | 24 | `concurrent_precursor` | `mpi_defs` |
 | `concurrent_precursor.f90` | 25 | `concurrent_precursor` | `fringe` |
 | `concurrent_precursor.f90` | 27 | `concurrent_precursor` | `openacc` |
-| `concurrent_precursor.f90` | 171 | `concurrent_precursor::initialize_cps` | `messages` |
-| `concurrent_precursor.f90` | 225 | `concurrent_precursor::synchronize_cps` | `messages` |
 | `convec.f90` | 33 | `convec` | `param` |
 | `convec.f90` | 36 | `convec` | `fft` |
 | `derivatives.f90` | 96 | `derivatives::ddx` | `fft` |
@@ -61,8 +59,6 @@ Total broad imports: `176`
 | `fft_gpu.f90` | 46 | `fft_gpu` | `openacc` |
 | `forcing.f90` | 385 | `forcing::project` | `param` |
 | `forcing.f90` | 386 | `forcing::project` | `sim_param` |
-| `forcing.f90` | 387 | `forcing::project` | `messages` |
-| `forcing.f90` | 391 | `forcing::project` | `mpi` |
 | `hit_inflow.f90` | 26 | `hit_inflow` | `grid_m` |
 | `hit_inflow.f90` | 27 | `hit_inflow` | `fringe` |
 | `inflow.f90` | 25 | `inflow` | `fringe` |
@@ -150,9 +146,6 @@ Total broad imports: `176`
 | `mpi_defs.f90` | 23 | `mpi_defs` | `mpi` |
 | `mpi_defs.f90` | 55 | `mpi_defs::initialize_mpi` | `param` |
 | `mpi_defs.f90` | 58 | `mpi_defs::initialize_mpi` | `cgns` |
-| `mpi_defs.f90` | 204 | `mpi_defs::create_mpi_comms_cps` | `mpi` |
-| `mpi_defs.f90` | 271 | `mpi_defs::mpi_sync_real_array` | `mpi` |
-| `mpi_defs.f90` | 273 | `mpi_defs::mpi_sync_real_array` | `messages` |
 | `mpi_transpose_mod.f90` | 25 | `mpi_transpose_mod` | `mpi` |
 | `param.f90` | 28 | `param` | `mpi` |
 | `param_output.f90` | 23 | `param_output` | `param` |

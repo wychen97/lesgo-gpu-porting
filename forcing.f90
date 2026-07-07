@@ -384,11 +384,10 @@ subroutine project ()
 !
 use param
 use sim_param
-use messages
 use inflow, only : apply_inflow
 #ifdef PPMPI
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWNUP
-use mpi
+use mpi, only : mpi_sendrecv
 
 #endif
 implicit none

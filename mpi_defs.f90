@@ -201,7 +201,8 @@ subroutine create_mpi_comms_cps( localComm )
 ! communicators are then bridged to create an intercommunicator
 ! (interComm).
 !
-use mpi
+use mpi, only : MPI_COMM_WORLD, mpi_abort, mpi_comm_rank, mpi_comm_size,      &
+    mpi_comm_split, mpi_intercomm_create
 use param, only : ierr
 implicit none
 
@@ -268,9 +269,10 @@ subroutine mpi_sync_real_array( var, lbz, isync )
 !         module.
 !
 use types, only : rprec
-use mpi
+use mpi, only : MPI_REQUEST_NULL, MPI_STATUS_SIZE, mpi_irecv, mpi_isend,      &
+    mpi_waitall
 use param, only : MPI_RPREC, down, up, comm, status, ierr, nz
-use messages
+use messages, only : error
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_r
 
 implicit none
