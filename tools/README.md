@@ -42,7 +42,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_cmake_invalid_feature_combinations.py` | Verifies contradictory public CMake feature combinations fail with clear configure-time diagnostics. |
 | `tools/check_cmake_option_docs.py` | Verifies root `USE_*` CMake options have build-option table rows in `docs/code_organization.md`. |
 | `tools/check_cmake_source_groups.py` | Verifies tracked root Fortran files appear in named CMake source groups. |
-| `tools/check_contributing_readiness_docs.py` | Verifies `CONTRIBUTING.md` points to the readiness source of truth. |
+| `tools/check_contributing_readiness_docs.py` | Verifies contributor/readiness docs point to the readiness source of truth. |
 | `tools/check_doc_paths.py` | Verifies documented local `docs/...` and `tools/...` references still exist. |
 | `tools/check_doc_source_refs.py` | Verifies documented Fortran source references point to tracked files. |
 | `tools/check_docs_index.py` | Verifies `docs/README.md` indexes tracked collaborator docs. |

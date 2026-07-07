@@ -74,7 +74,7 @@ mechanical patches.
 Run from the repository root:
 
 ```bash
-python3 tools/check_branch_readiness.py --with-git-diff-check --with-cmake-configure
+python3 tools/check_branch_readiness.py --with-git-diff-check --with-cmake-configure --with-hit-cmake-configure
 ```
 
 For solver behavior changes beyond readability/import/preprocessor cleanup,

@@ -37,6 +37,12 @@ When a compiler/CMake environment is available, also run:
 python3 tools/check_branch_readiness.py --with-cmake-configure
 ```
 
+For optional inflow or GPU source-membership changes, also run:
+
+```bash
+python3 tools/check_branch_readiness.py --with-hit-cmake-configure
+```
+
 ## Current Production Scope
 
 The organized production path is the optimized non-LVLSET GPU configuration

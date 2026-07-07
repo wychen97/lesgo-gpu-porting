@@ -45,6 +45,12 @@ If CMake and the intended compiler wrapper are available:
 python3 tools/check_branch_readiness.py --with-cmake-configure
 ```
 
+For optional inflow or GPU source-membership changes:
+
+```bash
+python3 tools/check_branch_readiness.py --with-hit-cmake-configure
+```
+
 Configure the validated non-LVLSET GPU profile:
 
 ```bash

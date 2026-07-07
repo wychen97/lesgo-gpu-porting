@@ -91,6 +91,12 @@ compiler wrapper:
 python3 tools/check_branch_readiness.py --with-cmake-configure
 ```
 
+For optional inflow or GPU source-membership changes, also run:
+
+```bash
+python3 tools/check_branch_readiness.py --with-hit-cmake-configure
+```
+
 Key checks include:
 
 ```bash
