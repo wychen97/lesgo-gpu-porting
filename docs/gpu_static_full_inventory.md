@@ -284,7 +284,7 @@ claims.
 | `press_gpu.f90:105` | `press_gpu_finalize` | `gpu-marked` |  |  |
 | `press_gpu.f90:118` | `press_stag_array_gpu` | `gpu-marked` |  |  |
 | `press_stag_array.f90:44` | `press_stag_array` | `gpu-marked` |  |  |
-| `press_stag_array.f90:534` | `press_apply_env_enabled_unless_false` | `host-or-diagnostic` |  |  |
+| `press_stag_array.f90:535` | `press_apply_env_enabled_unless_false` | `host-or-diagnostic` |  |  |
 | `rmsdiv.f90:21` | `rmsdiv` | `gpu-marked` |  |  |
 | `scalars.f90:164` | `scalars_acc_sync` | `gpu-marked` |  |  |
 | `scalars.f90:190` | `scalars_timer_start` | `host-or-diagnostic` |  |  |

@@ -48,11 +48,12 @@ subroutine press_stag_array()
 ! space on exit.
 !
 use types, only : rprec
-use param
+use param, only : BOGUS, coord, dt, dz, lbz, ld, lh, nproc, nx, ny, nz, tadv1
 use sim_param, only : u, v, w, divtz, p, dpdx, dpdy, dpdz
 use fft, only : back, forw, kx, ky
 use emul_complex, only : OPERATOR(.MULI.)
 #ifdef PPMPI
+use param, only : MPI_RPREC, comm, ierr, status, up, down
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_r, mpi_dbg_send_r, mpi_dbg_recv_r
 use mpi
 #endif
