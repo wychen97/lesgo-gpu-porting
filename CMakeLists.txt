@@ -49,6 +49,10 @@ option(USE_CGNS "Enable CGNS data output." OFF)
 option(USE_SCALARS "Enable scalar transport module." OFF)
 option(USE_SCALARS_GPU "Enable optimized OpenACC explicit-residency scalar transport path. Requires USE_SCALARS and USE_LES_GPU." OFF)
 
+if (USE_CPS AND NOT USE_MPI)
+    message(FATAL_ERROR "USE_CPS requires USE_MPI=ON because concurrent precursor synchronization uses mpi_defs.")
+endif ()
+
 # Enable verbose mode
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -70,10 +74,16 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 #set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
 
-# Project details
-enable_language (Fortran)
-project(lesgo)
+# Project details. LESGO is a Fortran codebase; keeping the project language
+# Fortran-only avoids unrelated C/CXX compiler probes on HPC module stacks.
+project(lesgo Fortran)
 set(exec_name "lesgo")
+
+# Keep compiler-generated Fortran module files out of the source tree and in a
+# single build-local include directory.  This also makes parallel module
+# dependencies less sensitive to stale `.mod` files from previous builds.
+set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mod")
+include_directories("${CMAKE_Fortran_MODULE_DIRECTORY}")
 
 # Library links
 if (${hostname} STREQUAL "marcc")
@@ -249,11 +259,11 @@ set(COMMON_DRIVER_SOURCES
     types.f90)
 
 set(COMMON_LES_CORE_SOURCES
-    convec.f90 derivatives.f90 divstress_uv.f90 divstress_w.f90 emul_complex.f90
+    iwmles.f90 convec.f90 derivatives.f90 divstress_uv.f90 divstress_w.f90 emul_complex.f90
     fft.f90 interpolag_Sdep.f90 interpolag_Ssim.f90 lagrange_Sdep.f90
     lagrange_Ssim.f90 press_stag_array.f90 scaledep_dynamic.f90 sgs_param.f90
     sgs_stag_util.f90 std_dynamic.f90 test_filtermodule.f90 tridag_array.f90
-    wallstress.f90 iwmles.f90)
+    wallstress.f90)
 
 set(COMMON_FORCING_SOURCES
     coriolis.f90 forcing.f90 fringe.f90 inflow.f90 shifted_inflow.f90 sponge.f90)

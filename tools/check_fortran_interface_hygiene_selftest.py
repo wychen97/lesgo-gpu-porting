@@ -322,6 +322,94 @@ def test_positive_preprocessor_macros_drop_disjunctions() -> None:
         raise AssertionError(f"disjunctive guard should be ambiguous: {macros!r}")
 
 
+def test_unguarded_optional_feature_import_is_reported(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "unguarded_scalar_import.f90",
+        """
+        subroutine unguarded_scalar_import()
+        use scalars, only : theta
+        implicit none
+        end subroutine unguarded_scalar_import
+        """,
+    )
+
+    issues = hygiene.check_optional_feature_import_guards([path])
+    assert_contains(issues, "imports optional feature module `scalars`")
+
+
+def test_guarded_optional_feature_import_is_allowed(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "guarded_scalar_import.f90",
+        """
+        subroutine guarded_scalar_import()
+        #ifdef PPSCALARS
+        use scalars, only : theta
+        #endif
+        implicit none
+        end subroutine guarded_scalar_import
+        """,
+    )
+
+    issues = hygiene.check_optional_feature_import_guards([path])
+    if issues:
+        raise AssertionError(f"guarded optional import failed: {issues!r}")
+
+
+def test_source_group_optional_feature_import_is_allowed(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "turbines.f90",
+        """
+        module turbines
+        use turbines_gpu, only : turbines_cuda_enabled
+        implicit none
+        end module turbines
+        """,
+    )
+
+    issues = hygiene.check_optional_feature_import_guards([path])
+    if issues:
+        raise AssertionError(f"source-group optional import failed: {issues!r}")
+
+
+def test_implied_gpu_feature_import_is_allowed(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "scalars.f90",
+        """
+        module scalars
+        #ifdef PPSCALARS_GPU
+        use fft_gpu, only : fft_gpu_exec_d2z
+        #endif
+        implicit none
+        end module scalars
+        """,
+    )
+
+    issues = hygiene.check_optional_feature_import_guards([path])
+    if issues:
+        raise AssertionError(f"implied GPU optional import failed: {issues!r}")
+
+
+def test_cps_source_group_implies_mpi_import_is_allowed(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "concurrent_precursor.f90",
+        """
+        module concurrent_precursor
+        use mpi_defs, only : BLUE
+        implicit none
+        end module concurrent_precursor
+        """,
+    )
+
+    issues = hygiene.check_optional_feature_import_guards([path])
+    if issues:
+        raise AssertionError(f"CPS source-group MPI import failed: {issues!r}")
+
+
 def main() -> int:
     tmpdir = Path(tempfile.mkdtemp(prefix=".fortran_hygiene_selftest_", dir=ROOT))
     try:
@@ -340,10 +428,15 @@ def main() -> int:
         test_guarded_gpu_filter_import_is_allowed(tmpdir)
         test_positive_preprocessor_macros_keep_conjunctions()
         test_positive_preprocessor_macros_drop_disjunctions()
+        test_unguarded_optional_feature_import_is_reported(tmpdir)
+        test_guarded_optional_feature_import_is_allowed(tmpdir)
+        test_source_group_optional_feature_import_is_allowed(tmpdir)
+        test_implied_gpu_feature_import_is_allowed(tmpdir)
+        test_cps_source_group_implies_mpi_import_is_allowed(tmpdir)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    print("Fortran interface hygiene self-test passed (15 synthetic cases).")
+    print("Fortran interface hygiene self-test passed (20 synthetic cases).")
     return 0
 
 

@@ -22,6 +22,8 @@ Fortran codebase:
   those specific procedure names.
 * imports of GPU-only ``test_filtermodule`` helper procedures outside GPU
   preprocessor guards, which would break CPU-profile compiles.
+* imports from optional CMake feature modules without a compatible feature
+  source group or preprocessor guard.
 """
 
 from __future__ import annotations
@@ -78,6 +80,77 @@ GPU_ONLY_TEST_FILTER_PROCEDURES = {
     "test_test_filter_plane_gpu",
 }
 GPU_TEST_FILTER_GUARD_MACROS = {"PPSGS_GPU", "PPSCALARS_GPU"}
+GPU_BUNDLE_MACROS = {
+    "PPLES_GPU",
+    "PPCONVEC_GPU",
+    "PPDERIVS_GPU",
+    "PPPRESS_GPU",
+    "PPSGS_GPU",
+}
+MACRO_IMPLICATIONS = {
+    macro: set(GPU_BUNDLE_MACROS) for macro in GPU_BUNDLE_MACROS
+}
+MACRO_IMPLICATIONS["PPCPS"] = {"PPCPS", "PPMPI"}
+MACRO_IMPLICATIONS["PPSCALARS_GPU"] = set(GPU_BUNDLE_MACROS) | {
+    "PPSCALARS",
+    "PPSCALARS_GPU",
+}
+OPTIONAL_MODULE_REQUIREMENTS = {
+    "mpi_defs": {"PPMPI"},
+    "mpi_transpose_mod": {"PPMPI"},
+    "concurrent_precursor": {"PPCPS"},
+    "hit_inflow": {"PPHIT"},
+    "hit_inflow_gpu": {"PPHIT"},
+    "level_set": {"PPLVLSET"},
+    "level_set_base": {"PPLVLSET"},
+    "turbines": {"PPTURBINES"},
+    "turbines_gpu": {"PPTURBINES"},
+    "turbine_indicator": {"PPTURBINES"},
+    "atm_base": {"PPATM"},
+    "atm_input_util": {"PPATM"},
+    "atm_lesgo_interface": {"PPATM"},
+    "actuator_turbine_model": {"PPATM"},
+    "scalars": {"PPSCALARS"},
+    "stability": {"PPSCALARS"},
+    "fft_gpu": {"PPLES_GPU"},
+    "tridag_gpu_m": {"PPLES_GPU"},
+    "convec_gpu_m": {"PPLES_GPU"},
+    "derivatives_gpu_m": {"PPLES_GPU"},
+    "press_gpu_m": {"PPLES_GPU"},
+    "lagrange_sdep_gpu_m": {"PPLES_GPU"},
+    "sgs_gpu_m": {"PPLES_GPU"},
+}
+SOURCE_FILE_REQUIREMENTS = {
+    "mpi_defs.f90": {"PPMPI"},
+    "mpi_transpose_mod.f90": {"PPMPI"},
+    "concurrent_precursor.f90": {"PPCPS"},
+    "hit_inflow.f90": {"PPHIT"},
+    "hit_inflow_gpu.f90": {"PPHIT"},
+    "level_set_base.f90": {"PPLVLSET"},
+    "level_set.f90": {"PPLVLSET"},
+    "linear_simple.f90": {"PPLVLSET"},
+    "trees_pre_ls.f90": {"PPLVLSET"},
+    "trees_base_ls.f90": {"PPLVLSET"},
+    "trees_setup_ls.f90": {"PPLVLSET"},
+    "trees_io_ls.f90": {"PPLVLSET"},
+    "trees_global_fmask_ls.f90": {"PPLVLSET"},
+    "turbines_gpu.f90": {"PPTURBINES"},
+    "turbines.f90": {"PPTURBINES"},
+    "turbine_indicator.f90": {"PPTURBINES"},
+    "atm_base.f90": {"PPATM"},
+    "atm_input_util.f90": {"PPATM"},
+    "actuator_turbine_model.f90": {"PPATM"},
+    "atm_lesgo_interface.f90": {"PPATM"},
+    "fft_gpu.f90": {"PPLES_GPU"},
+    "tridag_gpu.f90": {"PPLES_GPU"},
+    "convec_gpu.f90": {"PPLES_GPU"},
+    "derivatives_gpu.f90": {"PPLES_GPU"},
+    "press_gpu.f90": {"PPLES_GPU"},
+    "lagrange_Sdep_gpu.f90": {"PPLES_GPU"},
+    "sgs_gpu.f90": {"PPLES_GPU"},
+    "scalars.f90": {"PPSCALARS"},
+    "stability.f90": {"PPSCALARS"},
+}
 
 
 @dataclass
@@ -800,6 +873,19 @@ def positive_preprocessor_macros(line: str) -> set[str]:
     return set(re.findall(r"\bdefined\s*\(\s*([A-Z_][A-Z0-9_]*)\s*\)", condition))
 
 
+def implied_macros(macros: set[str]) -> set[str]:
+    expanded = set(macros)
+    changed = True
+    while changed:
+        changed = False
+        for macro in list(expanded):
+            additions = MACRO_IMPLICATIONS.get(macro, set())
+            if not additions <= expanded:
+                expanded |= additions
+                changed = True
+    return expanded
+
+
 def check_gpu_only_test_filter_import_guards(paths: list[Path]) -> list[str]:
     issues: list[str] = []
 
@@ -855,6 +941,58 @@ def check_gpu_only_test_filter_import_guards(paths: list[Path]) -> list[str]:
     return issues
 
 
+def check_optional_feature_import_guards(paths: list[Path]) -> list[str]:
+    issues: list[str] = []
+
+    for path in paths:
+        guard_stack: list[set[str]] = []
+        source_requirements = SOURCE_FILE_REQUIREMENTS.get(path.name, set())
+
+        for line_no, line in logical_lines(path):
+            if re.match(r"^#\s*(?:ifdef|ifndef|if)\b", line):
+                guard_stack.append(positive_preprocessor_macros(line))
+                continue
+            if re.match(r"^#\s*elif\b", line):
+                if guard_stack:
+                    guard_stack[-1] = positive_preprocessor_macros(line)
+                continue
+            if re.match(r"^#\s*else\b", line):
+                if guard_stack:
+                    guard_stack[-1] = set()
+                continue
+            if re.match(r"^#\s*endif\b", line):
+                if guard_stack:
+                    guard_stack.pop()
+                continue
+
+            use_match = re.match(
+                r"^use\s*(?:,\s*[^:]+::\s*)?(\w+)(?:\s*,\s*only\s*:.*)?$",
+                line,
+                flags=re.I,
+            )
+            if not use_match:
+                continue
+
+            module_name = use_match.group(1).lower()
+            required_macros = OPTIONAL_MODULE_REQUIREMENTS.get(module_name)
+            if not required_macros:
+                continue
+
+            local_positive_macros = set().union(*guard_stack) if guard_stack else set()
+            active_macros = implied_macros(source_requirements | local_positive_macros)
+            if active_macros & required_macros:
+                continue
+
+            rel = path.relative_to(ROOT)
+            issues.append(
+                f"{rel}:{line_no}: imports optional feature module `{module_name}` "
+                "without a compatible source group or preprocessor guard "
+                f"({', '.join(sorted(required_macros))})"
+            )
+
+    return issues
+
+
 def check_public_api_symbols(paths: list[Path]) -> list[str]:
     modules = collect_modules(paths)
     issues: list[str] = []
@@ -904,6 +1042,7 @@ def main() -> int:
         + check_mpi_procedure_only_imports(paths)
         + check_test_filter_specific_imports(paths)
         + check_gpu_only_test_filter_import_guards(paths)
+        + check_optional_feature_import_guards(paths)
         + check_public_api_symbols(paths)
     )
 
@@ -921,7 +1060,7 @@ def main() -> int:
         "implicit-none statements, private-export mismatches, bare flag conditions, "
         "unresolved tracked-module imports, duplicate/repeated imports, unsafe MPI "
         "procedure-only imports, missing/unguarded test-filter procedure bindings, "
-        "or stale public API names)."
+        "unguarded optional feature imports, or stale public API names)."
     )
     return 0
 

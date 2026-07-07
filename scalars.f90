@@ -868,7 +868,9 @@ subroutine ic_scal_file
 !*******************************************************************************
 ! Read initial profile for scalar from file
 use param, only : nx, nz, read_endian
+#ifdef PPMPI
 use mpi_defs, only :  mpi_sync_real_array, MPI_SYNC_DOWNUP
+#endif
 
 open(12, file=fname, form='unformatted', convert=read_endian)
 read(12) theta(:, :, 1:nz), RHS_T(:, :, 1:nz), psi_m(1:nx, :)
@@ -1049,7 +1051,9 @@ use param, only : lbz, ld, ny, nz, coord, nproc
 use param, only : MPI_RPREC, down, up, comm, status, ierr
 use mpi
 #endif
+#ifdef PPMPI
 use mpi_defs, only :  mpi_sync_real_array, MPI_SYNC_DOWNUP
+#endif
 use derivatives, only : filt_da, ddz_uv
 
 #ifdef PPSCALARS_GPU
@@ -1378,7 +1382,9 @@ use mpi
 use sim_param, only : u, v, w
 use sgs_param, only : Nu_t
 use derivatives, only : filt_da, ddx, ddy, ddz_uv, ddz_w
+#ifdef PPMPI
 use mpi_defs, only :  mpi_sync_real_array, MPI_SYNC_DOWNUP
+#endif
 use fft
 use messages, only : error
 #if defined(PPSCALARS_GPU) && defined(PPCONVEC_GPU)

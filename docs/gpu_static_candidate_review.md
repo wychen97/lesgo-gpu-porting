@@ -107,9 +107,9 @@ runtime correctness and timing evidence must close each bucket.
 | `linear_simple.f90:288` | `swap` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `mpi_transpose_mod.f90:36` | `mpi_transpose` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `scalars.f90:867` | `ic_scal_file` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:885` | `ic_scal_les` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:904` | `ic_scal_interp` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:1720` | `to_big` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:887` | `ic_scal_les` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:906` | `ic_scal_interp` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:1726` | `to_big` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
 | `scaledep_dynamic.f90:21` | `scaledep_dynamic` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `sgs_stag_util.f90:47` | `sgs_stag` | `diagnostic-profiling` | `diagnostics_output` |
 | `sgs_stag_util.f90:489` | `calc_Sij` | `diagnostic-profiling` | `diagnostics_output` |
