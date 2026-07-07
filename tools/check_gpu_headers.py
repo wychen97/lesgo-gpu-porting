@@ -7,11 +7,11 @@ import sys
 from pathlib import Path
 
 from fortran_inventory import tracked_fortran_files
+from report_gpu_static_inventory import GPU_SOURCE_FILES
 
 
 ROOT = Path(__file__).resolve().parents[1]
 HEADER_SCAN_LINES = 120
-GPU_FILE_MARKERS = ("_gpu", "gpu.")
 REQUIRED_MARKERS = (
     "GPU implementation",
     "GPU helper module",
@@ -26,8 +26,7 @@ REQUIRED_MARKERS = (
 
 
 def is_gpu_file(path: Path) -> bool:
-    lower = path.name.lower()
-    return any(marker in lower for marker in GPU_FILE_MARKERS)
+    return path.name in GPU_SOURCE_FILES
 
 
 def header_text(path: Path) -> str:
