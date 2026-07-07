@@ -50,7 +50,7 @@ subroutine press_stag_array()
 use types, only : rprec
 use param
 use sim_param, only : u, v, w, divtz, p, dpdx, dpdy, dpdz
-use fft
+use fft, only : back, forw, kx, ky
 use emul_complex, only : OPERATOR(.MULI.)
 #ifdef PPMPI
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_r, mpi_dbg_send_r, mpi_dbg_recv_r
