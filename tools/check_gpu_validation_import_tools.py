@@ -11,10 +11,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+from repo_paths import ROOT, repo_path
 
-ROOT = Path(__file__).resolve().parents[1]
-SOURCE_EVIDENCE = ROOT / "docs/gpu_validation_evidence.json"
-SOURCE_MATRIX = ROOT / "docs/gpu_validation_matrix.md"
+SOURCE_EVIDENCE = repo_path("docs", "gpu_validation_evidence.json")
+SOURCE_MATRIX = repo_path("docs", "gpu_validation_matrix.md")
 
 CPU_LOG = """\
 Time step information:

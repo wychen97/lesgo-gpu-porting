@@ -10,10 +10,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from repo_paths import ROOT, repo_path
 
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_EVIDENCE = ROOT / "docs/gpu_validation_evidence.json"
-DEFAULT_MANIFEST = ROOT / "docs/gpu_benchmark_manifest.json"
+DEFAULT_EVIDENCE = repo_path("docs", "gpu_validation_evidence.json")
+DEFAULT_MANIFEST = repo_path("docs", "gpu_benchmark_manifest.json")
 
 
 @dataclass(frozen=True)
