@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `87`
+Total broad imports: `84`
 
 ## Highest-Count Files
 
@@ -24,7 +24,6 @@ Total broad imports: `87`
 | `lagrange_Sdep_gpu.f90` | 3 |
 | `main.f90` | 3 |
 | `press_stag_array.f90` | 3 |
-| `test_filtermodule.f90` | 3 |
 | `cfl_util.f90` | 2 |
 | `clocks.f90` | 2 |
 | `fft_gpu.f90` | 2 |
@@ -34,6 +33,7 @@ Total broad imports: `87`
 | `trees_setup_ls.f90` | 2 |
 | `atm_lesgo_interface.f90` | 1 |
 | `concurrent_precursor.f90` | 1 |
+| `coriolis.f90` | 1 |
 
 ## Full List
 
@@ -110,9 +110,6 @@ Total broad imports: `87`
 | `sgs_stag_util.f90` | 495 | `sgs_stag_util::calc_sij` | `param` |
 | `sgs_stag_util.f90` | 497 | `sgs_stag_util::calc_sij` | `sgs_param` |
 | `sgs_stag_util.f90` | 673 | `sgs_stag_util::sgs_stage_report` | `mpi` |
-| `test_filtermodule.f90` | 62 | `test_filtermodule::test_filter_init` | `fft` |
-| `test_filtermodule.f90` | 155 | `test_filtermodule::test_filter` | `fft` |
-| `test_filtermodule.f90` | 212 | `test_filtermodule::test_test_filter` | `fft` |
 | `time_average.f90` | 36 | `time_average` | `cgns` |
 | `tools/validate_filt_da_cufft.F90` | 2 | `(file scope)` | `cudafor` |
 | `tools/validate_filt_da_cufft.F90` | 3 | `(file scope)` | `cufft` |

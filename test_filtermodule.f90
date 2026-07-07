@@ -59,7 +59,7 @@ subroutine test_filter_init()
 ! Creates the kernels which will be used for filtering the field
 use types, only : rprec
 use param, only : lh, nx, ny, dx, dy, pi, ifilter, sgs_model
-use fft
+use fft, only : k2, kx, ky
 implicit none
 
 real(rprec) :: delta_test, kc2_test, delta_test_test, kc2_test_test
@@ -152,7 +152,7 @@ subroutine test_filter(f)
 !*******************************************************************************
 ! note: this filters in-place, so input is ruined
 use types, only : rprec
-use fft
+use fft, only : back, forw
 use param, only : ny
 use emul_complex, only : OPERATOR(.MULR.)
 implicit none
@@ -209,7 +209,7 @@ subroutine test_test_filter(f)
 !*******************************************************************************
 ! note: this filters in-place, so input is ruined
 use types, only : rprec
-use fft
+use fft, only : back, forw
 use param, only : ny
 use emul_complex, only : OPERATOR(.MULR.)
 implicit none
