@@ -62,7 +62,7 @@ contains
 !*******************************************************************************
 subroutine read_input_conf ()
 !*******************************************************************************
-use param
+use param, only : coord
 use messages, only : error, mesg
 use string_util, only : eat_whitespace, uppercase
 implicit none

@@ -8,14 +8,14 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `73`
+Total broad imports: `72`
 
 ## Highest-Count Files
 
 | File | Broad imports |
 | --- | ---: |
 | `level_set.f90` | 17 |
-| `input_util.f90` | 8 |
+| `input_util.f90` | 7 |
 | `sgs_stag_util.f90` | 5 |
 | `turbines.f90` | 5 |
 | `mpi_defs.f90` | 4 |
@@ -50,7 +50,6 @@ Total broad imports: `73`
 | `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` |
 | `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` |
 | `forcing.f90` | 393 | `forcing::project` | `mpi` |
-| `input_util.f90` | 65 | `input_util::read_input_conf` | `param` |
 | `input_util.f90` | 149 | `input_util::read_input_conf::domain_block` | `param` |
 | `input_util.f90` | 260 | `input_util::read_input_conf::model_block` | `param` |
 | `input_util.f90` | 318 | `input_util::read_input_conf::coriolis_block` | `param` |
