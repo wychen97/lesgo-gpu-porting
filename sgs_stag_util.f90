@@ -62,7 +62,7 @@ use types, only : rprec
 use param
 use sim_param, only : txx, txy, txz, tyy, tyz, tzz
 use sgs_param
-use messages
+use messages, only : error
 
 #ifdef PPMPI
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWN

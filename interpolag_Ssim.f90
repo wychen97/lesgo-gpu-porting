@@ -38,7 +38,6 @@ use sgs_param, only: F_LM, F_MM, lagran_dt
 #ifdef PPDYN_TN
 use sgs_param, only: F_ee2, F_deedt2, ee_past
 #endif
-use messages
 use sim_param, only : u,v,w
 use grid_m
 use functions, only:trilinear_interp

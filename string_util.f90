@@ -202,7 +202,7 @@ subroutine split_string( string, delim, nseg, sarray )
 ! in this subroutine.
 !
 use param, only : CHAR_BUFF_LENGTH
-use messages
+use messages, only : error
 
 implicit none
 
@@ -867,4 +867,3 @@ s = s1 // trim(adjustl(b1)) // s2 // trim(adjustl(b2)) // s3 //                &
 end subroutine string_splice_ararara
 
 end module string_util
-

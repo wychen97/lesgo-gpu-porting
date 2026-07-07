@@ -22,7 +22,7 @@ module trees_base_ls
 !**********************************************************************
 use types, only : rp => rprec
 !use precision
-use messages
+use messages, only : error, mesg, n_l, warn
 implicit none
 
 save

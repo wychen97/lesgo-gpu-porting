@@ -22,7 +22,7 @@ module pid_m
 !*******************************************************************************
 ! PID-controller
 use types, only : rprec
-use messages
+use messages, only : error
 implicit none
 
 private

@@ -49,7 +49,6 @@ subroutine press_stag_array()
 !
 use types, only : rprec
 use param
-use messages
 use sim_param, only : u, v, w, divtz, p, dpdx, dpdy, dpdz
 use fft
 use emul_complex, only : OPERATOR(.MULI.)
