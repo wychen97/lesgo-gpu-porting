@@ -5,7 +5,7 @@ This check protects the structure-on ATM performance path.  The packed gather
 and batched Cl-correction paths must not fall back only because
 LESGO_ATM_STRUCTURE is enabled; instead they must carry the extra structural
 moment state needed by the torsion solve.  It also protects the per-turbine
-CUDA induced-velocity correction in actuator_turbine_model.f90; that correction
+    GPU induced-velocity correction in actuator_turbine_model.f90; that correction
 writes the same du/Uinf/uy state for rigid and structural consumers.
 """
 
@@ -104,41 +104,26 @@ def check_reset_payload(text: str, failures: list[str]) -> None:
 
 
 def check_remaining_structure_guards(text: str, failures: list[str]) -> None:
-    allowed_contexts = [
-        "Point-owner LB uses a reduced at-point force path.",
-        "legacy CUDA at-point blade-force kernel does not cover",
-    ]
-    lines = text.splitlines()
-    for index, line in enumerate(lines):
-        if ".not. atm_structure_enabled()" not in line:
-            continue
-        if "atm_model_cuda_enabled()" not in line:
-            continue
-        context = "\n".join(lines[max(0, index - 5) : index + 1])
-        if not any(allowed in context for allowed in allowed_contexts):
+    for index, line in enumerate(text.splitlines(), start=1):
+        if ".not. atm_structure_enabled()" in line:
             failures.append(
                 "unexpected structure-off guard in atm_lesgo_interface.f90 "
-                f"near line {index + 1}: {line.strip()}"
+                f"near line {index}: {line.strip()}"
             )
 
 
 def check_actuator_model_guards(text: str, failures: list[str]) -> None:
-    allowed_contexts = [
-        "CUDA rotation shortcut only updates bladePoints",
-        "CUDA yaw shortcut only rotates bladePoints",
-    ]
-    lines = text.splitlines()
-    for index, line in enumerate(lines):
+    allowed = "if (.not. atm_structure_enabled()) return"
+    solve_block = subroutine_block(text, "atm_solve_structure")
+    for index, line in enumerate(text.splitlines(), start=1):
         if ".not. atm_structure_enabled()" not in line:
             continue
-        if "atm_model_cuda_enabled()" not in line:
+        if line.strip() == allowed and allowed in solve_block:
             continue
-        context = "\n".join(lines[max(0, index - 5) : index + 1])
-        if not any(allowed in context for allowed in allowed_contexts):
-            failures.append(
-                "unexpected structure-off guard in actuator_turbine_model.f90 "
-                f"near line {index + 1}: {line.strip()}"
-            )
+        failures.append(
+            "unexpected structure-off guard in actuator_turbine_model.f90 "
+            f"near line {index}: {line.strip()}"
+        )
 
 
 def main() -> int:
