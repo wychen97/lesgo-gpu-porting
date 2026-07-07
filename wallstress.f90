@@ -231,7 +231,7 @@ subroutine ws_equilibrium_lbc
 !*******************************************************************************
 use param, only : dz, ld, nx, ny, vonk, zo
 use sim_param, only : u, v, ustar_lbc
-use test_filtermodule
+use test_filtermodule, only : test_filter
 #ifdef PPSCALARS
 use scalars, only : obukhov, phi_m, passive_scalar
 #endif
@@ -346,7 +346,7 @@ subroutine ws_equilibrium_ubc
 !*******************************************************************************
 use param, only : dz, ld, nx, ny, vonk, zo
 use sim_param, only : u, v
-use test_filtermodule
+use test_filtermodule, only : test_filter
 implicit none
 integer :: i, j
 real(rprec), dimension(nx, ny) :: denom, u_avg, ustar

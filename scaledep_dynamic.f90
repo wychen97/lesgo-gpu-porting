@@ -27,7 +27,7 @@ subroutine scaledep_dynamic(Cs_1D)
 use types, only : rprec
 use param, only : ld, nx, ny, nz, coord
 use sim_param, only : u, v, w
-use test_filtermodule
+use test_filtermodule, only : test_filter, test_test_filter
 use sgs_stag_util, only : rtnewt
 use sgs_param, only : S11, S12, S13, S22, S23, S33, delta, S, ee_now,          &
     u_bar, v_bar, w_bar, L11, L12, L13, L22, L23, L33, S_bar,                  &

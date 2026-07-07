@@ -35,11 +35,11 @@ use param, only : total_time, total_time_dim, lbz, jzmin, jzmax
 use param, only : cumulative_time
 use sim_param , only : w, dudz, dvdz
 use sgs_param , only : Cs_opt2
-use string_util
-use messages
-use time_average
+use string_util, only : string_concat, string_splice
+use messages, only : warn
+use time_average, only : tavg_t
 #ifdef PPMPI
-use mpi
+use mpi, only : mpi_reduce, mpi_barrier, MPI_SUM
 #endif
 
 #ifdef PPCGNS
@@ -111,7 +111,6 @@ subroutine energy (ke)
 use types, only : rprec
 use param
 use sim_param, only : u, v, w
-use messages
 implicit none
 integer :: jx, jy, jz, nan_count
 real(rprec)::KE
@@ -731,7 +730,7 @@ use param, only : yplane_nloc, yplane_loc
 use param, only : zplane_nloc, zplane_loc
 use param, only : dx, dy, dz
 use param, only : write_endian
-use grid_m
+use grid_m, only : grid
 use sim_param, only : u, v, w, p
 use sim_param, only : dwdy, dwdx, dvdx, dudy
 use functions, only : interp_to_w_grid
@@ -1533,7 +1532,7 @@ end subroutine inst_write
 !*******************************************************************************
 subroutine checkpoint ()
 !*******************************************************************************
-use iwmles
+use iwmles, only : iwm_checkPoint
 use param, only : nz, checkpoint_file, tavg_calc, lbc_mom, L_x, L_y, L_z, path
 #ifdef PPMPI
 use param, only : comm, ierr
@@ -1550,7 +1549,7 @@ use turbines, only : turbines_checkpoint
 #ifdef PPSCALARS
 use scalars, only : scalars_checkpoint
 #endif
-use coriolis
+use coriolis, only : coriolis_finalize
 
 ! HIT Inflow
 #ifdef PPHIT
@@ -1662,7 +1661,7 @@ use param, only : point_calc, point_nloc, point_loc
 use param, only : xplane_calc, xplane_nloc, xplane_loc
 use param, only : yplane_calc, yplane_nloc, yplane_loc
 use param, only : zplane_calc, zplane_nloc, zplane_loc
-use grid_m
+use grid_m, only : grid
 use functions, only : cell_indx
 use stat_defs, only : point, xplane, yplane, zplane
 implicit none

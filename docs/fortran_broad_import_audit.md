@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `144`
+Total broad imports: `126`
 
 ## Highest-Count Files
 
@@ -17,7 +17,6 @@ Total broad imports: `144`
 | `level_set.f90` | 17 |
 | `input_util.f90` | 15 |
 | `scalars.f90` | 13 |
-| `io.f90` | 11 |
 | `main.f90` | 11 |
 | `turbines.f90` | 10 |
 | `atm_lesgo_interface.f90` | 4 |
@@ -31,9 +30,10 @@ Total broad imports: `144`
 | `test_filtermodule.f90` | 3 |
 | `fft_gpu.f90` | 2 |
 | `forcing.f90` | 2 |
-| `iwmles.f90` | 2 |
-| `lagrange_Sdep.f90` | 2 |
-| `lagrange_Ssim.f90` | 2 |
+| `io.f90` | 2 |
+| `param_output.f90` | 2 |
+| `tools/validate_filt_da_cufft.F90` | 2 |
+| `trees_setup_ls.f90` | 2 |
 
 ## Full List
 
@@ -78,27 +78,14 @@ Total broad imports: `144`
 | `input_util.f90` | 988 | `input_util::parse_vector_point3d` | `messages` |
 | `interpolag_Sdep.f90` | 37 | `interpolag_sdep` | `param` |
 | `interpolag_Ssim.f90` | 36 | `interpolag_ssim` | `param` |
-| `io.f90` | 38 | `io` | `string_util` |
-| `io.f90` | 39 | `io` | `messages` |
-| `io.f90` | 40 | `io` | `time_average` |
-| `io.f90` | 42 | `io` | `mpi` |
 | `io.f90` | 46 | `io` | `cgns` |
 | `io.f90` | 112 | `io::energy` | `param` |
-| `io.f90` | 114 | `io::energy` | `messages` |
-| `io.f90` | 734 | `io::inst_write` | `grid_m` |
-| `io.f90` | 1536 | `io::checkpoint` | `iwmles` |
-| `io.f90` | 1553 | `io::checkpoint` | `coriolis` |
-| `io.f90` | 1665 | `io::output_init` | `grid_m` |
-| `iwmles.f90` | 361 | `iwmles::iwm_calc_lhs` | `test_filtermodule` |
-| `iwmles.f90` | 659 | `iwmles::iwm_calc_wallstress` | `test_filtermodule` |
 | `lagrange_Sdep.f90` | 28 | `lagrange_sdep` | `param` |
-| `lagrange_Sdep.f90` | 39 | `lagrange_sdep` | `test_filtermodule` |
 | `lagrange_Sdep_gpu.f90` | 220 | `lagrange_sdep_gpu_m::lagrange_ssim_gpu` | `param` |
 | `lagrange_Sdep_gpu.f90` | 490 | `lagrange_sdep_gpu_m::lagrange_sdep_gpu` | `param` |
 | `lagrange_Sdep_gpu.f90` | 501 | `lagrange_sdep_gpu_m::lagrange_sdep_gpu` | `mpi` |
 | `lagrange_Sdep_gpu.f90` | 1905 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` |
 | `lagrange_Ssim.f90` | 28 | `lagrange_ssim` | `param` |
-| `lagrange_Ssim.f90` | 36 | `lagrange_ssim` | `test_filtermodule` |
 | `level_set.f90` | 27 | `level_set` | `mpi` |
 | `level_set.f90` | 30 | `level_set` | `messages` |
 | `level_set.f90` | 32 | `level_set` | `level_set_base` |
@@ -152,14 +139,11 @@ Total broad imports: `144`
 | `scalars.f90` | 1381 | `scalars::scalars_transport` | `test_filtermodule` |
 | `scalars.f90` | 1382 | `scalars::scalars_transport` | `fft` |
 | `scalars.f90` | 1722 | `scalars::to_big` | `fft` |
-| `scaledep_dynamic.f90` | 30 | `scaledep_dynamic` | `test_filtermodule` |
 | `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` |
 | `sgs_stag_util.f90` | 62 | `sgs_stag_util::sgs_stag` | `param` |
 | `sgs_stag_util.f90` | 64 | `sgs_stag_util::sgs_stag` | `sgs_param` |
 | `sgs_stag_util.f90` | 495 | `sgs_stag_util::calc_sij` | `param` |
 | `sgs_stag_util.f90` | 497 | `sgs_stag_util::calc_sij` | `sgs_param` |
-| `stat_defs.f90` | 26 | `stat_defs` | `turbine_indicator` |
-| `std_dynamic.f90` | 29 | `std_dynamic` | `test_filtermodule` |
 | `test_filtermodule.f90` | 62 | `test_filtermodule::test_filter_init` | `fft` |
 | `test_filtermodule.f90` | 155 | `test_filtermodule::test_filter` | `fft` |
 | `test_filtermodule.f90` | 212 | `test_filtermodule::test_test_filter` | `fft` |
@@ -181,5 +165,3 @@ Total broad imports: `144`
 | `turbines.f90` | 1007 | `turbines::turbines_forcing` | `mpi` |
 | `turbines.f90` | 1269 | `turbines::place_turbines` | `messages` |
 | `turbines.f90` | 1417 | `turbines::read_control_files` | `messages` |
-| `wallstress.f90` | 234 | `wallstress::ws_equilibrium_lbc` | `test_filtermodule` |
-| `wallstress.f90` | 349 | `wallstress::ws_equilibrium_ubc` | `test_filtermodule` |

@@ -358,7 +358,7 @@ use grid_m, only : grid
 use types,only : rprec
 use param,only : nx,ny,dx,dy,ld
 use sim_param,only : u,v,w,p
-use test_filtermodule
+use test_filtermodule, only : test_filter
 implicit none
 
 ! Wrapped horizontal-neighbor indices from the grid module.
@@ -656,8 +656,6 @@ subroutine iwm_calc_wallstress
 !*******************************************************************************
 use types, only : rprec
 use param, only : vonk, nx, ny
-use test_filtermodule
-
 implicit none
 
 integer :: iwm_i, iwm_j

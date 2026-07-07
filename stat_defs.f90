@@ -23,7 +23,7 @@ module stat_defs
 use types, only : rprec
 use param, only : nx, ny, nz, lh
 #ifdef PPTURBINES
-use turbine_indicator
+use turbine_indicator, only : turb_ind_func_t
 #endif
 
 implicit none
