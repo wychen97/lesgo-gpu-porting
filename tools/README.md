@@ -77,6 +77,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_production_profile_docs.py` | Verifies canonical production `USE_*` settings match across build and organization docs. |
 | `tools/check_production_wording.py` | Verifies validated production paths are not described as experimental. |
 | `tools/check_refactor_backlog.py` | Verifies `docs/refactor_backlog.md` lists the current non-LVLSET source-size hotspots. |
+| `tools/check_repo_paths.py` | Verifies Python tools use the shared repository-root path helper. |
 | `tools/check_readiness_coverage.py` | Verifies tracked readiness checks are included in the wrapper. |
 | `tools/check_readiness_docs.py` | Verifies the README readiness checklist matches the wrapper. |
 | `tools/check_sgs_model_constants.py` | Verifies active SGS dispatch uses named `SGS_MODEL_*` constants. |
