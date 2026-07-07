@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+ROOT = Path(__file__).resolve().parents[1]
 FORTRAN_RE = re.compile(r".*\.(?:f|f90)$", re.IGNORECASE)
 START_RE = re.compile(
     r"^\s*(?:(?:recursive|pure|elemental|module)\s+)*"
@@ -67,6 +68,7 @@ def tracked_gpu_source_names() -> set[str]:
     """Return tracked root-level GPU helper source filenames."""
     result = subprocess.run(
         ["git", "ls-files", "*_gpu.f90", "*_gpu.F90"],
+        cwd=ROOT,
         check=True,
         text=True,
         stdout=subprocess.PIPE,
@@ -153,6 +155,7 @@ class Subprogram:
 def tracked_fortran() -> list[Path]:
     result = subprocess.run(
         ["git", "ls-files"],
+        cwd=ROOT,
         check=True,
         text=True,
         stdout=subprocess.PIPE,
@@ -186,7 +189,7 @@ def classify(path: Path, name: str, body: str) -> str:
 
 
 def parse_subprograms(path: Path) -> list[Subprogram]:
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
     result: list[Subprogram] = []
     index = 0
     while index < len(lines):
