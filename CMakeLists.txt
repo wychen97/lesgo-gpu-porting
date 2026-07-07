@@ -284,7 +284,7 @@ set(COMMON_FORCING_SOURCES
     coriolis.f90 forcing.f90 fringe.f90 inflow.f90 shifted_inflow.f90 sponge.f90)
 
 set(COMMON_DIAGNOSTIC_SOURCES
-    cuda_mpi_debug.f90 io.f90 rmsdiv.f90 stat_defs.f90 time_average.f90)
+    io.f90 rmsdiv.f90 stat_defs.f90 time_average.f90)
 
 set(Sources
     ${COMMON_DRIVER_SOURCES}
@@ -293,7 +293,7 @@ set(Sources
     ${COMMON_DIAGNOSTIC_SOURCES})
 
 set(MPI_SOURCES
-    mpi_transpose_mod.f90 mpi_defs.f90)
+    cuda_mpi_debug.f90 mpi_transpose_mod.f90 mpi_defs.f90)
 
 set(CPS_SOURCES
     concurrent_precursor.f90)

@@ -103,7 +103,8 @@ readiness gate checks this table against `CMakeLists.txt`.
 
 - `io.f90`, `time_average.f90`, `stat_defs.f90`: output, restart, statistics,
   and averaging.
-- `rmsdiv.f90`, `clocks.f90`, `cuda_mpi_debug.f90`: diagnostics and timing.
+- `rmsdiv.f90`, `clocks.f90`: diagnostics and timing.
+- `cuda_mpi_debug.f90`: MPI-only CUDA/MPI diagnostics and debug wrappers.
 - `grid.f90`, `functions.f90`, `linear_simple.f90`, `pid.f90`: numerical and
   utility support.
 

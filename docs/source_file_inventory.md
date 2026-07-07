@@ -104,7 +104,7 @@ Root `CMakeLists.txt` groups common and optional source files with matching
 | --- | --- | --- |
 | `mpi_defs.f90` | `USE_MPI` | MPI domain metadata and shared MPI definitions. |
 | `mpi_transpose_mod.f90` | `USE_MPI` | MPI transpose helpers. |
-| `cuda_mpi_debug.f90` | common | CUDA-aware MPI diagnostics and wrappers. |
+| `cuda_mpi_debug.f90` | `USE_MPI` | CUDA-aware MPI diagnostics and wrappers. |
 | `rmsdiv.f90` | common | Divergence diagnostic. |
 | `io.f90` | common | Checkpoint, restart, and field output. |
 | `time_average.f90` | common | Time-averaging support. |
