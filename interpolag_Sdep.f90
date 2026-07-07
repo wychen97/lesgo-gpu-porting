@@ -34,7 +34,8 @@ subroutine interpolag_Sdep()
 !   be satisfied.
 
 use types, only : rprec
-use param
+use param, only : coord, dt, jt_total, lag_cfl_count, lbz, lbc_mom, ld,       &
+                  nproc, nx, ny, nz, ubc_mom
 use sgs_param, only: F_LM, F_MM, F_QN, F_NN, lagran_dt
 #ifdef PPDYN_TN
 use sgs_param, only: F_ee2, F_deedt2, ee_past

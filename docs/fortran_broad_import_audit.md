@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `77`
+Total broad imports: `75`
 
 ## Highest-Count Files
 
@@ -32,8 +32,8 @@ Total broad imports: `77`
 | `convec.f90` | 1 |
 | `fft.f90` | 1 |
 | `initial.f90` | 1 |
-| `interpolag_Sdep.f90` | 1 |
-| `interpolag_Ssim.f90` | 1 |
+| `lagrange_Sdep.f90` | 1 |
+| `lagrange_Ssim.f90` | 1 |
 
 ## Full List
 
@@ -56,8 +56,6 @@ Total broad imports: `77`
 | `input_util.f90` | 435 | `input_util::read_input_conf::flow_cond_block` | `param` |
 | `input_util.f90` | 565 | `input_util::read_input_conf::output_block` | `param` |
 | `input_util.f90` | 670 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
-| `interpolag_Sdep.f90` | 37 | `interpolag_sdep` | `param` |
-| `interpolag_Ssim.f90` | 36 | `interpolag_ssim` | `param` |
 | `io.f90` | 46 | `io` | `cgns` |
 | `io.f90` | 112 | `io::energy` | `param` |
 | `lagrange_Sdep.f90` | 28 | `lagrange_sdep` | `param` |

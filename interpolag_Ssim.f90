@@ -33,7 +33,8 @@ subroutine interpolag_Ssim ()
 !   Lag. CFL in the x-direction is less than one this should generally
 !   be satisfied.
 use types, only : rprec
-use param
+use param, only : coord, dt, jt_total, lag_cfl_count, lbz, ld, nproc, nx, ny, &
+                  nz
 use sgs_param, only: F_LM, F_MM, lagran_dt
 #ifdef PPDYN_TN
 use sgs_param, only: F_ee2, F_deedt2, ee_past
