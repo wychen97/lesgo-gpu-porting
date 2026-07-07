@@ -388,7 +388,8 @@ subroutine ic_dns()
 ! using DNS boundary conditions.
 !
 use types,only:rprec
-use param
+use param, only : coord, dz, L_z, nu_molec, nx, ny, nz, ubc_mom, ubot,        &
+                  u_star, utop, z_i
 use sim_param,only:u,v,w
 implicit none
 
@@ -479,7 +480,8 @@ subroutine ic_les()
 ! promote the generation of turbulence
 !
 use types,only:rprec
-use param
+use param, only : coord, dz, lbc_mom, mean_p_force_x, mean_p_force_y, nproc,  &
+                  nx, ny, nz, ubc_mom, u_star, vonk, z_i, zo
 use sim_param, only : u, v, w
 use messages, only : error
 use coriolis, only : coriolis_forcing, G, alpha, fc

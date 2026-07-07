@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `79`
+Total broad imports: `77`
 
 ## Highest-Count Files
 
@@ -19,7 +19,6 @@ Total broad imports: `79`
 | `derivatives.f90` | 4 |
 | `lagrange_Sdep_gpu.f90` | 4 |
 | `sgs_stag_util.f90` | 4 |
-| `initial.f90` | 3 |
 | `mpi_defs.f90` | 3 |
 | `scalars.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
@@ -32,6 +31,7 @@ Total broad imports: `79`
 | `trees_setup_ls.f90` | 2 |
 | `convec.f90` | 1 |
 | `fft.f90` | 1 |
+| `initial.f90` | 1 |
 | `interpolag_Sdep.f90` | 1 |
 | `interpolag_Ssim.f90` | 1 |
 
@@ -48,8 +48,6 @@ Total broad imports: `79`
 | `fft_gpu.f90` | 45 | `fft_gpu` | `cufft` |
 | `fft_gpu.f90` | 46 | `fft_gpu` | `openacc` |
 | `initial.f90` | 25 | `initial` | `param` |
-| `initial.f90` | 391 | `initial::ic_dns` | `param` |
-| `initial.f90` | 482 | `initial::ic_les` | `param` |
 | `input_util.f90` | 65 | `input_util::read_input_conf` | `param` |
 | `input_util.f90` | 149 | `input_util::read_input_conf::domain_block` | `param` |
 | `input_util.f90` | 260 | `input_util::read_input_conf::model_block` | `param` |
