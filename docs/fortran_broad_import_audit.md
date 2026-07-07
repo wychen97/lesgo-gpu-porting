@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `91`
+Total broad imports: `90`
 
 ## Highest-Count Files
 
@@ -23,7 +23,6 @@ Total broad imports: `91`
 | `concurrent_precursor.f90` | 3 |
 | `initial.f90` | 3 |
 | `mpi_defs.f90` | 3 |
-| `press_stag_array.f90` | 3 |
 | `scalars.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
 | `fft_gpu.f90` | 2 |
@@ -31,6 +30,7 @@ Total broad imports: `91`
 | `io.f90` | 2 |
 | `main.f90` | 2 |
 | `param_output.f90` | 2 |
+| `press_stag_array.f90` | 2 |
 | `tools/validate_filt_da_cufft.F90` | 2 |
 | `trees_setup_ls.f90` | 2 |
 | `actuator_turbine_model.f90` | 1 |
@@ -108,7 +108,6 @@ Total broad imports: `91`
 | `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` |
 | `press_stag_array.f90` | 51 | `press_stag_array` | `param` |
 | `press_stag_array.f90` | 53 | `press_stag_array` | `fft` |
-| `press_stag_array.f90` | 57 | `press_stag_array` | `mpi` |
 | `rmsdiv.f90` | 28 | `rmsdiv` | `param` |
 | `scalars.f90` | 47 | `scalars` | `openacc` |
 | `scalars.f90` | 1379 | `scalars::scalars_transport` | `fft` |

@@ -54,7 +54,7 @@ use fft
 use emul_complex, only : OPERATOR(.MULI.)
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_r, mpi_dbg_send_r, mpi_dbg_recv_r
 #ifdef PPMPI
-use mpi
+use mpi, only : MPI_STATUS_SIZE, MPI_REQUEST_NULL, mpi_irecv, mpi_isend
 #endif
 
 implicit none
