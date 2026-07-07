@@ -470,6 +470,103 @@ def test_cps_source_group_implies_mpi_import_is_allowed(tmpdir: Path) -> None:
         raise AssertionError(f"CPS source-group MPI import failed: {issues!r}")
 
 
+def test_unguarded_conditional_symbol_import_is_reported(tmpdir: Path) -> None:
+    paths = [
+        write_case(
+            tmpdir,
+            "param.f90",
+            """
+            module param
+            implicit none
+            #ifdef PPMPI
+            integer :: status
+            #endif
+            integer :: coord
+            end module param
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "uses_status.f90",
+            """
+            subroutine uses_status()
+            use param, only : status
+            implicit none
+            end subroutine uses_status
+            """,
+        ),
+    ]
+
+    issues = hygiene.check_conditional_symbol_import_guards(paths)
+    assert_contains(issues, "imports conditionally declared symbol `param::status`")
+
+
+def test_guarded_conditional_symbol_import_is_allowed(tmpdir: Path) -> None:
+    paths = [
+        write_case(
+            tmpdir,
+            "param.f90",
+            """
+            module param
+            implicit none
+            #ifdef PPMPI
+            integer :: status
+            #endif
+            integer :: coord
+            end module param
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "uses_status_guarded.f90",
+            """
+            subroutine uses_status_guarded()
+            #ifdef PPMPI
+            use param, only : status
+            #endif
+            implicit none
+            end subroutine uses_status_guarded
+            """,
+        ),
+    ]
+
+    issues = hygiene.check_conditional_symbol_import_guards(paths)
+    if issues:
+        raise AssertionError(f"guarded conditional symbol import failed: {issues!r}")
+
+
+def test_unconditional_symbol_import_is_allowed(tmpdir: Path) -> None:
+    paths = [
+        write_case(
+            tmpdir,
+            "param.f90",
+            """
+            module param
+            implicit none
+            #ifdef PPMPI
+            integer :: status
+            #endif
+            integer :: coord
+            end module param
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "uses_coord.f90",
+            """
+            subroutine uses_coord()
+            use param, only : coord
+            implicit none
+            end subroutine uses_coord
+            """,
+        ),
+    ]
+
+    issues = hygiene.check_conditional_symbol_import_guards(paths)
+    if issues:
+        raise AssertionError(f"unconditional symbol import failed: {issues!r}")
+
+
 def main() -> int:
     tmpdir = Path(tempfile.mkdtemp(prefix=".fortran_hygiene_selftest_", dir=ROOT))
     try:
@@ -493,10 +590,13 @@ def main() -> int:
         test_source_group_optional_feature_import_is_allowed(tmpdir)
         test_implied_gpu_feature_import_is_allowed(tmpdir)
         test_cps_source_group_implies_mpi_import_is_allowed(tmpdir)
+        test_unguarded_conditional_symbol_import_is_reported(tmpdir)
+        test_guarded_conditional_symbol_import_is_allowed(tmpdir)
+        test_unconditional_symbol_import_is_allowed(tmpdir)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    print("Fortran interface hygiene self-test passed (20 synthetic cases).")
+    print("Fortran interface hygiene self-test passed (23 synthetic cases).")
     return 0
 
 

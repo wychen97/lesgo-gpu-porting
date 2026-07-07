@@ -24,6 +24,8 @@ Fortran codebase:
   preprocessor guards, which would break CPU-profile compiles.
 * imports from optional CMake feature modules without a compatible feature
   source group or preprocessor guard.
+* imports of conditionally declared module symbols without a compatible
+  preprocessor guard.
 """
 
 from __future__ import annotations
@@ -94,6 +96,10 @@ MACRO_IMPLICATIONS["PPCPS"] = {"PPCPS", "PPMPI"}
 MACRO_IMPLICATIONS["PPSCALARS_GPU"] = set(GPU_BUNDLE_MACROS) | {
     "PPSCALARS",
     "PPSCALARS_GPU",
+}
+MACRO_IMPLICATIONS["PPGPU_AWARE_MPI"] = set(GPU_BUNDLE_MACROS) | {
+    "PPGPU_AWARE_MPI",
+    "PPMPI",
 }
 OPTIONAL_MODULE_REQUIREMENTS = {
     "MPI_SOURCES": {"PPMPI"},
@@ -960,6 +966,185 @@ def check_optional_feature_import_guards(paths: list[Path]) -> list[str]:
     return issues
 
 
+def conditional_module_symbol_requirements(
+    paths: list[Path],
+) -> dict[tuple[str, str], list[set[str]]]:
+    file_requirements = source_file_feature_requirements()
+    symbols: dict[tuple[str, str], list[set[str]]] = {}
+
+    for path in paths:
+        guard_stack: list[set[str]] = []
+        current_module: str | None = None
+        in_contains = False
+        type_depth = 0
+        source_requirements = file_requirements.get(path.name, set())
+
+        for line_no, line in logical_lines(path):
+            if re.match(r"^#\s*(?:ifdef|ifndef|if)\b", line):
+                guard_stack.append(positive_preprocessor_macros(line))
+                continue
+            if re.match(r"^#\s*elif\b", line):
+                if guard_stack:
+                    guard_stack[-1] = positive_preprocessor_macros(line)
+                continue
+            if re.match(r"^#\s*else\b", line):
+                if guard_stack:
+                    guard_stack[-1] = set()
+                continue
+            if re.match(r"^#\s*endif\b", line):
+                if guard_stack:
+                    guard_stack.pop()
+                continue
+
+            lower = line.lower()
+            module_match = re.match(r"^module\s+(?!procedure\b)(\w+)", lower)
+            if module_match:
+                current_module = module_match.group(1)
+                in_contains = False
+                type_depth = 0
+                continue
+
+            if current_module and re.match(r"^end\s+module\b", lower):
+                current_module = None
+                in_contains = False
+                type_depth = 0
+                continue
+
+            if not current_module:
+                continue
+
+            if not in_contains and re.match(r"^end\s+type\b", lower):
+                type_depth = max(0, type_depth - 1)
+
+            if lower == "contains" and type_depth == 0:
+                in_contains = True
+                continue
+
+            local_positive_macros = set().union(*guard_stack) if guard_stack else set()
+            active_macros = implied_macros(source_requirements | local_positive_macros)
+            module_scope = not in_contains and type_depth == 0
+
+            if module_scope:
+                use_match = re.match(
+                    r"^use\s*(?:,\s*[^:]+::\s*)?\w+\s*,\s*only\s*:\s*(.+)$",
+                    line,
+                    flags=re.I,
+                )
+                if use_match:
+                    for name in split_names(use_match.group(1)):
+                        if is_special_public_name(name):
+                            continue
+                        symbol = local_symbol(name)
+                        if symbol:
+                            symbols.setdefault((current_module, symbol), []).append(
+                                active_macros
+                            )
+
+                for symbol in declaration_symbols(line):
+                    symbols.setdefault((current_module, symbol), []).append(
+                        active_macros
+                    )
+
+                type_match = re.match(r"^type\b(?:\s*,[^:]*)?\s*::\s*(\w+)", lower)
+                if type_match:
+                    symbols.setdefault((current_module, type_match.group(1)), []).append(
+                        active_macros
+                    )
+                    type_depth += 1
+                legacy_type_match = re.match(r"^type\s+(\w+)", lower)
+                if legacy_type_match and not lower.startswith("type("):
+                    symbols.setdefault(
+                        (current_module, legacy_type_match.group(1)), []
+                    ).append(active_macros)
+                    type_depth += 1
+                interface_match = re.match(r"^interface\s+(\w+)", lower)
+                if interface_match:
+                    symbols.setdefault(
+                        (current_module, interface_match.group(1)), []
+                    ).append(active_macros)
+
+            function_match = re.match(
+                r"^(?:(?:recursive|pure|elemental|impure)\s+)*"
+                r"(?:(?:integer|real|logical|complex|character|type|class)"
+                r"\s*(?:\([^)]*\))?\s+)?(subroutine|function)\s+(\w+)",
+                lower,
+            )
+            if function_match:
+                symbols.setdefault((current_module, function_match.group(2)), []).append(
+                    active_macros
+                )
+
+    return symbols
+
+
+def check_conditional_symbol_import_guards(paths: list[Path]) -> list[str]:
+    issues: list[str] = []
+    file_requirements = source_file_feature_requirements()
+    symbol_requirements = conditional_module_symbol_requirements(paths)
+
+    for path in paths:
+        guard_stack: list[set[str]] = []
+        source_requirements = file_requirements.get(path.name, set())
+
+        for line_no, line in logical_lines(path):
+            if re.match(r"^#\s*(?:ifdef|ifndef|if)\b", line):
+                guard_stack.append(positive_preprocessor_macros(line))
+                continue
+            if re.match(r"^#\s*elif\b", line):
+                if guard_stack:
+                    guard_stack[-1] = positive_preprocessor_macros(line)
+                continue
+            if re.match(r"^#\s*else\b", line):
+                if guard_stack:
+                    guard_stack[-1] = set()
+                continue
+            if re.match(r"^#\s*endif\b", line):
+                if guard_stack:
+                    guard_stack.pop()
+                continue
+
+            use_match = re.match(
+                r"^use\s*(?:,\s*[^:]+::\s*)?(\w+)\s*,\s*only\s*:\s*(.+)$",
+                line,
+                flags=re.I,
+            )
+            if not use_match:
+                continue
+
+            module_name = use_match.group(1).lower()
+            local_positive_macros = set().union(*guard_stack) if guard_stack else set()
+            active_macros = implied_macros(source_requirements | local_positive_macros)
+
+            for name in split_names(use_match.group(2)):
+                if is_special_public_name(name):
+                    continue
+                symbol = clean_symbol(name)
+                requirements = symbol_requirements.get((module_name, symbol))
+                if not requirements:
+                    continue
+                if any(not requirement for requirement in requirements):
+                    continue
+                if any(requirement <= active_macros for requirement in requirements):
+                    continue
+
+                rel = path.relative_to(ROOT)
+                guard_options = sorted(
+                    {
+                        macro
+                        for requirement in requirements
+                        for macro in requirement
+                    }
+                )
+                issues.append(
+                    f"{rel}:{line_no}: imports conditionally declared symbol "
+                    f"`{module_name}::{symbol}` without a compatible source "
+                    "group or preprocessor guard "
+                    f"({', '.join(guard_options)})"
+                )
+
+    return issues
+
+
 def check_public_api_symbols(paths: list[Path]) -> list[str]:
     modules = collect_modules(paths)
     issues: list[str] = []
@@ -1010,6 +1195,7 @@ def main() -> int:
         + check_test_filter_specific_imports(paths)
         + check_gpu_only_test_filter_import_guards(paths)
         + check_optional_feature_import_guards(paths)
+        + check_conditional_symbol_import_guards(paths)
         + check_public_api_symbols(paths)
     )
 
@@ -1027,7 +1213,8 @@ def main() -> int:
         "implicit-none statements, private-export mismatches, bare flag conditions, "
         "unresolved tracked-module imports, duplicate/repeated imports, unsafe MPI "
         "procedure-only imports, missing/unguarded test-filter procedure bindings, "
-        "unguarded optional feature imports, or stale public API names)."
+        "unguarded optional feature imports, unguarded conditional-symbol imports, "
+        "or stale public API names)."
     )
     return 0
 

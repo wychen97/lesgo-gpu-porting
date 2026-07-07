@@ -447,10 +447,11 @@ if (${hostname} STREQUAL "derecho" OR ${hostname} STREQUAL "delta")
         # Without it the host-staged fallbacks compile - correct but the
         # pressure pipeline is lost (~6x slower pressure solve).
         #   AUTO: enable iff Cray's CUDA GTL exists (cray-mpich needs it linked)
-        #   ON:   force-enable; MPI must be CUDA-aware (OpenMPI+UCX needs no
-        #         extra lib; Cray GTL is still linked when present)
+        #   ON:   force-enable; USE_MPI must be ON and MPI must be CUDA-aware
+        #         (OpenMPI+UCX needs no extra lib; Cray GTL is still linked
+        #         when present)
         #   OFF:  host-staged paths only
-        if (NOT USE_GPU_AWARE_MPI STREQUAL "OFF" AND
+        if (USE_MPI AND NOT USE_GPU_AWARE_MPI STREQUAL "OFF" AND
             (USE_GPU_AWARE_MPI STREQUAL "ON" OR EXISTS "/opt/cray/pe/lib64/libmpi_gtl_cuda.so"))
             if (EXISTS "/opt/cray/pe/lib64/libmpi_gtl_cuda.so")
                 link_directories("/opt/cray/pe/lib64")
@@ -461,6 +462,8 @@ if (${hostname} STREQUAL "derecho" OR ${hostname} STREQUAL "delta")
                 message(STATUS "USE_LES_GPU: GPU-aware MPI ON (forced; MPI must be CUDA-aware, e.g. OpenMPI+UCX)")
             endif ()
             add_definitions(-DPPGPU_AWARE_MPI)
+        elseif (NOT USE_MPI)
+            message(STATUS "GPU-aware MPI OFF (USE_MPI=OFF)")
         else ()
             message(WARNING "GPU-aware MPI OFF (USE_GPU_AWARE_MPI=${USE_GPU_AWARE_MPI}, no Cray GTL found) - host-staged halos + monolithic tridag; pressure ~6x slower")
         endif ()

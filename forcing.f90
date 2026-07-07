@@ -384,10 +384,11 @@ subroutine project ()
 !
 use types, only : rprec
 use param, only : comm, coord, down, dt, ierr, ld, lbc_mom, MPI_RPREC, nproc, &
-                  nx, ny, nz, status, tadv1, ubc_mom, up
+                  nx, ny, nz, tadv1, ubc_mom, up
 use sim_param, only : dpdx, dpdy, dpdz, fx, fy, fz, u, v, w
 use inflow, only : apply_inflow
 #ifdef PPMPI
+use param, only : status
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWNUP
 use mpi
 
