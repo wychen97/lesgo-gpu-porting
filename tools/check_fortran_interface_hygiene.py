@@ -794,8 +794,9 @@ def positive_preprocessor_macros(line: str) -> set[str]:
         return set()
 
     condition = condition_match.group(1)
-    if re.search(r"!\s*defined\s*\(", condition):
+    if "||" in condition:
         return set()
+    condition = re.sub(r"!\s*defined\s*\([^)]*\)", "", condition)
     return set(re.findall(r"\bdefined\s*\(\s*([A-Z_][A-Z0-9_]*)\s*\)", condition))
 
 

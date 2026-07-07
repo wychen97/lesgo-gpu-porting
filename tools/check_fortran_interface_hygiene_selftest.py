@@ -306,6 +306,22 @@ def test_guarded_gpu_filter_import_is_allowed(tmpdir: Path) -> None:
         raise AssertionError(f"guarded GPU filter import failed: {issues!r}")
 
 
+def test_positive_preprocessor_macros_keep_conjunctions() -> None:
+    macros = hygiene.positive_preprocessor_macros(
+        "#if defined(PPSCALARS_GPU) && !defined(PPATM)"
+    )
+    if macros != {"PPSCALARS_GPU"}:
+        raise AssertionError(f"unexpected positive macro set: {macros!r}")
+
+
+def test_positive_preprocessor_macros_drop_disjunctions() -> None:
+    macros = hygiene.positive_preprocessor_macros(
+        "#if !defined(PPSGS_GPU) || (defined(PPLVLSET) && defined(PPLES_GPU))"
+    )
+    if macros:
+        raise AssertionError(f"disjunctive guard should be ambiguous: {macros!r}")
+
+
 def main() -> int:
     tmpdir = Path(tempfile.mkdtemp(prefix=".fortran_hygiene_selftest_", dir=ROOT))
     try:
@@ -322,10 +338,12 @@ def main() -> int:
         test_module_scope_test_filter_import_satisfies_contained_call(tmpdir)
         test_unguarded_gpu_filter_import_is_reported(tmpdir)
         test_guarded_gpu_filter_import_is_allowed(tmpdir)
+        test_positive_preprocessor_macros_keep_conjunctions()
+        test_positive_preprocessor_macros_drop_disjunctions()
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    print("Fortran interface hygiene self-test passed (13 synthetic cases).")
+    print("Fortran interface hygiene self-test passed (15 synthetic cases).")
     return 0
 
 
