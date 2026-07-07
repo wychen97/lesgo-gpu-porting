@@ -10,10 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import check_fortran_interface_hygiene as hygiene
+from repo_paths import ROOT, repo_path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-REPORT_PATH = ROOT / "docs" / "fortran_broad_import_audit.md"
+REPORT_PATH = repo_path("docs", "fortran_broad_import_audit.md")
 
 
 @dataclass(frozen=True)

@@ -7,15 +7,15 @@ import argparse
 import sys
 from collections import Counter
 
+from repo_paths import repo_path
 from report_gpu_static_inventory import (
     BUCKET_VALIDATION_ROWS,
-    ROOT,
     collect,
     review_bucket,
 )
 
 
-OUTPUT_PATH = ROOT / "docs/gpu_static_full_inventory.md"
+OUTPUT_PATH = repo_path("docs", "gpu_static_full_inventory.md")
 
 
 def markdown() -> str:

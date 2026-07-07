@@ -8,9 +8,9 @@ import json
 import sys
 from pathlib import Path
 
+from repo_paths import repo_path
 
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_EVIDENCE_PATH = ROOT / "docs/gpu_validation_evidence.json"
+DEFAULT_EVIDENCE_PATH = repo_path("docs", "gpu_validation_evidence.json")
 PASSING_CORRECTNESS_STATUSES = {"passed", "accepted", "verified"}
 
 

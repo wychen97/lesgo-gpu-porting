@@ -10,8 +10,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+from repo_paths import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 FORTRAN_RE = re.compile(r".*\.(?:f|f90)$", re.IGNORECASE)
 START_RE = re.compile(
     r"^\s*(?:(?:recursive|pure|elemental|module)\s+)*"

@@ -7,9 +7,9 @@ import argparse
 import sys
 from collections import defaultdict
 
+from repo_paths import repo_path
 from report_gpu_static_inventory import (
     BUCKET_VALIDATION_ROWS,
-    ROOT,
     REVIEW_BUCKET_DESCRIPTIONS,
     Subprogram,
     collect,
@@ -17,7 +17,7 @@ from report_gpu_static_inventory import (
 )
 
 
-OUTPUT_PATH = ROOT / "docs/gpu_static_candidate_review.md"
+OUTPUT_PATH = repo_path("docs", "gpu_static_candidate_review.md")
 
 
 def candidate_items() -> list[Subprogram]:

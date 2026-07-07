@@ -9,10 +9,10 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from repo_paths import repo_path
 from report_gpu_static_inventory import (
     BUCKET_VALIDATION_ROWS,
     REVIEW_BUCKET_DESCRIPTIONS,
-    ROOT,
     collect,
     review_bucket,
 )
@@ -21,9 +21,9 @@ from check_lesgo_conf_coverage_docs import source_keys
 from require_gpu_release_objective import case_gap
 
 
-OUTPUT_PATH = ROOT / "docs/gpu_release_objective_status.md"
-MANIFEST_PATH = ROOT / "docs/gpu_benchmark_manifest.json"
-EVIDENCE_PATH = ROOT / "docs/gpu_validation_evidence.json"
+OUTPUT_PATH = repo_path("docs", "gpu_release_objective_status.md")
+MANIFEST_PATH = repo_path("docs", "gpu_benchmark_manifest.json")
+EVIDENCE_PATH = repo_path("docs", "gpu_validation_evidence.json")
 
 
 def load_cases(path: Path) -> dict[str, dict]:

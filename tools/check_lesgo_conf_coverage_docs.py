@@ -6,12 +6,11 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from pathlib import Path
 
+from repo_paths import repo_path
 
-ROOT = Path(__file__).resolve().parents[1]
-SOURCE_PATH = ROOT / "input_util.f90"
-DOC_PATH = ROOT / "docs/gpu_port_coverage_audit.md"
+SOURCE_PATH = repo_path("input_util.f90")
+DOC_PATH = repo_path("docs", "gpu_port_coverage_audit.md")
 
 BLOCK_SUBROUTINES = {
     "DOMAIN": "domain_block",

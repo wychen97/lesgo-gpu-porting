@@ -101,6 +101,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/prepare_sgs_matrix_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for `sgs=false`, `sgs_model=1..5`, and optional `USE_DYN_TN=ON` validation. |
 | `tools/prepare_scalar_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for passive and active scalar validation. |
 | `tools/readiness_manifest.py` | Shared parser for the readiness wrapper's `PYTHON_CHECKS` manifest. |
+| `tools/repo_paths.py` | Shared repository-root path helpers for tools that must work outside the caller's current directory. |
 | `tools/report_lesgo_conf_key_validation.py` | Generates the key-level `lesgo.conf` validation coverage report from source parser keys and evidence state. |
 | `tools/report_gpu_matrix_status_updates.py` | Suggests validation-matrix status updates implied by the evidence ledger. |
 | `tools/report_gpu_release_objective_status.py` | Generates the release-objective status report tying static source coverage to validation evidence. |
