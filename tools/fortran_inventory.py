@@ -5,8 +5,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+from repo_paths import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 FORTRAN_SUFFIXES = {".f", ".f90", ".F", ".F90"}
 
 

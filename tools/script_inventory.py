@@ -5,8 +5,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+from repo_paths import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 TEST_CASE_ROOT = Path("test-cases")
 TEST_CASE_SCRIPT_SUFFIXES = {".pbs", ".sbatch", ".sh"}
 

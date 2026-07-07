@@ -5,8 +5,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from repo_paths import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 WRAPPER_RELATIVE_PATH = Path("tools/check_branch_readiness.py")
 WRAPPER_PATH = ROOT / WRAPPER_RELATIVE_PATH
 

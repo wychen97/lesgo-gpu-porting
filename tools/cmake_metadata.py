@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
+from repo_paths import repo_path
 
-ROOT = Path(__file__).resolve().parents[1]
-CMAKE_PATH = ROOT / "CMakeLists.txt"
+CMAKE_PATH = repo_path("CMakeLists.txt")
 
 OPTION_NAME_RE = re.compile(
     r"^\s*option\s*\(\s*(?P<name>[A-Za-z0-9_]+)\b",
