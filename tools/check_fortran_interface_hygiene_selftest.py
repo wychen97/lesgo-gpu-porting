@@ -323,7 +323,18 @@ def test_positive_preprocessor_macros_drop_disjunctions() -> None:
 
 
 def test_unguarded_optional_feature_import_is_reported(tmpdir: Path) -> None:
-    path = write_case(
+    paths = [
+        write_case(
+            tmpdir,
+            "scalars.f90",
+            """
+            module scalars
+            implicit none
+            real :: theta
+            end module scalars
+            """,
+        ),
+        write_case(
         tmpdir,
         "unguarded_scalar_import.f90",
         """
@@ -332,80 +343,129 @@ def test_unguarded_optional_feature_import_is_reported(tmpdir: Path) -> None:
         implicit none
         end subroutine unguarded_scalar_import
         """,
-    )
+        ),
+    ]
 
-    issues = hygiene.check_optional_feature_import_guards([path])
+    issues = hygiene.check_optional_feature_import_guards(paths)
     assert_contains(issues, "imports optional feature module `scalars`")
 
 
 def test_guarded_optional_feature_import_is_allowed(tmpdir: Path) -> None:
-    path = write_case(
-        tmpdir,
-        "guarded_scalar_import.f90",
-        """
-        subroutine guarded_scalar_import()
-        #ifdef PPSCALARS
-        use scalars, only : theta
-        #endif
-        implicit none
-        end subroutine guarded_scalar_import
-        """,
-    )
+    paths = [
+        write_case(
+            tmpdir,
+            "scalars.f90",
+            """
+            module scalars
+            implicit none
+            real :: theta
+            end module scalars
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "guarded_scalar_import.f90",
+            """
+            subroutine guarded_scalar_import()
+            #ifdef PPSCALARS
+            use scalars, only : theta
+            #endif
+            implicit none
+            end subroutine guarded_scalar_import
+            """,
+        ),
+    ]
 
-    issues = hygiene.check_optional_feature_import_guards([path])
+    issues = hygiene.check_optional_feature_import_guards(paths)
     if issues:
         raise AssertionError(f"guarded optional import failed: {issues!r}")
 
 
 def test_source_group_optional_feature_import_is_allowed(tmpdir: Path) -> None:
-    path = write_case(
-        tmpdir,
-        "turbines.f90",
-        """
-        module turbines
-        use turbines_gpu, only : turbines_cuda_enabled
-        implicit none
-        end module turbines
-        """,
-    )
+    paths = [
+        write_case(
+            tmpdir,
+            "turbines_gpu.f90",
+            """
+            module turbines_gpu
+            implicit none
+            logical :: turbines_cuda_enabled
+            end module turbines_gpu
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "turbines.f90",
+            """
+            module turbines
+            use turbines_gpu, only : turbines_cuda_enabled
+            implicit none
+            end module turbines
+            """,
+        ),
+    ]
 
-    issues = hygiene.check_optional_feature_import_guards([path])
+    issues = hygiene.check_optional_feature_import_guards(paths)
     if issues:
         raise AssertionError(f"source-group optional import failed: {issues!r}")
 
 
 def test_implied_gpu_feature_import_is_allowed(tmpdir: Path) -> None:
-    path = write_case(
-        tmpdir,
-        "scalars.f90",
-        """
-        module scalars
-        #ifdef PPSCALARS_GPU
-        use fft_gpu, only : fft_gpu_exec_d2z
-        #endif
-        implicit none
-        end module scalars
-        """,
-    )
+    paths = [
+        write_case(
+            tmpdir,
+            "fft_gpu.f90",
+            """
+            module fft_gpu
+            implicit none
+            integer :: fft_gpu_exec_d2z
+            end module fft_gpu
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "scalars.f90",
+            """
+            module scalars
+            #ifdef PPSCALARS_GPU
+            use fft_gpu, only : fft_gpu_exec_d2z
+            #endif
+            implicit none
+            end module scalars
+            """,
+        ),
+    ]
 
-    issues = hygiene.check_optional_feature_import_guards([path])
+    issues = hygiene.check_optional_feature_import_guards(paths)
     if issues:
         raise AssertionError(f"implied GPU optional import failed: {issues!r}")
 
 
 def test_cps_source_group_implies_mpi_import_is_allowed(tmpdir: Path) -> None:
-    path = write_case(
-        tmpdir,
-        "concurrent_precursor.f90",
-        """
-        module concurrent_precursor
-        use mpi_defs, only : BLUE
-        implicit none
-        end module concurrent_precursor
-        """,
-    )
+    paths = [
+        write_case(
+            tmpdir,
+            "mpi_defs.f90",
+            """
+            module mpi_defs
+            implicit none
+            integer :: BLUE
+            end module mpi_defs
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "concurrent_precursor.f90",
+            """
+            module concurrent_precursor
+            use mpi_defs, only : BLUE
+            implicit none
+            end module concurrent_precursor
+            """,
+        ),
+    ]
 
-    issues = hygiene.check_optional_feature_import_guards([path])
+    issues = hygiene.check_optional_feature_import_guards(paths)
     if issues:
         raise AssertionError(f"CPS source-group MPI import failed: {issues!r}")
 

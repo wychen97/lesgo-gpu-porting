@@ -96,60 +96,14 @@ MACRO_IMPLICATIONS["PPSCALARS_GPU"] = set(GPU_BUNDLE_MACROS) | {
     "PPSCALARS_GPU",
 }
 OPTIONAL_MODULE_REQUIREMENTS = {
-    "mpi_defs": {"PPMPI"},
-    "mpi_transpose_mod": {"PPMPI"},
-    "concurrent_precursor": {"PPCPS"},
-    "hit_inflow": {"PPHIT"},
-    "hit_inflow_gpu": {"PPHIT"},
-    "level_set": {"PPLVLSET"},
-    "level_set_base": {"PPLVLSET"},
-    "turbines": {"PPTURBINES"},
-    "turbines_gpu": {"PPTURBINES"},
-    "turbine_indicator": {"PPTURBINES"},
-    "atm_base": {"PPATM"},
-    "atm_input_util": {"PPATM"},
-    "atm_lesgo_interface": {"PPATM"},
-    "actuator_turbine_model": {"PPATM"},
-    "scalars": {"PPSCALARS"},
-    "stability": {"PPSCALARS"},
-    "fft_gpu": {"PPLES_GPU"},
-    "tridag_gpu_m": {"PPLES_GPU"},
-    "convec_gpu_m": {"PPLES_GPU"},
-    "derivatives_gpu_m": {"PPLES_GPU"},
-    "press_gpu_m": {"PPLES_GPU"},
-    "lagrange_sdep_gpu_m": {"PPLES_GPU"},
-    "sgs_gpu_m": {"PPLES_GPU"},
-}
-SOURCE_FILE_REQUIREMENTS = {
-    "mpi_defs.f90": {"PPMPI"},
-    "mpi_transpose_mod.f90": {"PPMPI"},
-    "concurrent_precursor.f90": {"PPCPS"},
-    "hit_inflow.f90": {"PPHIT"},
-    "hit_inflow_gpu.f90": {"PPHIT"},
-    "level_set_base.f90": {"PPLVLSET"},
-    "level_set.f90": {"PPLVLSET"},
-    "linear_simple.f90": {"PPLVLSET"},
-    "trees_pre_ls.f90": {"PPLVLSET"},
-    "trees_base_ls.f90": {"PPLVLSET"},
-    "trees_setup_ls.f90": {"PPLVLSET"},
-    "trees_io_ls.f90": {"PPLVLSET"},
-    "trees_global_fmask_ls.f90": {"PPLVLSET"},
-    "turbines_gpu.f90": {"PPTURBINES"},
-    "turbines.f90": {"PPTURBINES"},
-    "turbine_indicator.f90": {"PPTURBINES"},
-    "atm_base.f90": {"PPATM"},
-    "atm_input_util.f90": {"PPATM"},
-    "actuator_turbine_model.f90": {"PPATM"},
-    "atm_lesgo_interface.f90": {"PPATM"},
-    "fft_gpu.f90": {"PPLES_GPU"},
-    "tridag_gpu.f90": {"PPLES_GPU"},
-    "convec_gpu.f90": {"PPLES_GPU"},
-    "derivatives_gpu.f90": {"PPLES_GPU"},
-    "press_gpu.f90": {"PPLES_GPU"},
-    "lagrange_Sdep_gpu.f90": {"PPLES_GPU"},
-    "sgs_gpu.f90": {"PPLES_GPU"},
-    "scalars.f90": {"PPSCALARS"},
-    "stability.f90": {"PPSCALARS"},
+    "MPI_SOURCES": {"PPMPI"},
+    "CPS_SOURCES": {"PPCPS"},
+    "HIT_SOURCES": {"PPHIT"},
+    "LVLSET_SOURCES": {"PPLVLSET"},
+    "TURBINE_SOURCES": {"PPTURBINES"},
+    "ATM_SOURCES": {"PPATM"},
+    "LES_GPU_SOURCES": {"PPLES_GPU"},
+    "SCALAR_SOURCES": {"PPSCALARS"},
 }
 
 
@@ -304,6 +258,38 @@ def cmake_macros() -> set[str]:
         body = "\n".join(strip_cmake_comment(line) for line in match.group(1).splitlines())
         macros.update(re.findall(r"\b([A-Z_][A-Z0-9_]*)\b", body))
     return macros
+
+
+def cmake_source_group_members() -> dict[str, set[str]]:
+    text = CMAKE_PATH.read_text(encoding="utf-8")
+    groups: dict[str, set[str]] = {}
+    for match in re.finditer(
+        r"set\s*\(\s*([A-Za-z0-9_]+_SOURCES)\s+(.*?)\)",
+        text,
+        flags=re.I | re.S,
+    ):
+        group_name = match.group(1)
+        body = "\n".join(
+            strip_cmake_comment(line) for line in match.group(2).splitlines()
+        )
+        members = {
+            token
+            for token in re.split(r"\s+", body.strip())
+            if re.search(r"\.(?:f90|F90|f|F)$", token)
+        }
+        groups[group_name] = members
+    return groups
+
+
+def source_file_feature_requirements() -> dict[str, set[str]]:
+    requirements: dict[str, set[str]] = {}
+    for group_name, members in cmake_source_group_members().items():
+        group_requirements = OPTIONAL_MODULE_REQUIREMENTS.get(group_name, set())
+        if not group_requirements:
+            continue
+        for member in members:
+            requirements.setdefault(member, set()).update(group_requirements)
+    return requirements
 
 
 def check_preprocessor_symbols(paths: list[Path]) -> list[str]:
@@ -943,10 +929,16 @@ def check_gpu_only_test_filter_import_guards(paths: list[Path]) -> list[str]:
 
 def check_optional_feature_import_guards(paths: list[Path]) -> list[str]:
     issues: list[str] = []
+    file_requirements = source_file_feature_requirements()
+    modules = collect_modules(paths)
+    module_requirements = {
+        module_name: file_requirements.get(module.path.name, set())
+        for module_name, module in modules.items()
+    }
 
     for path in paths:
         guard_stack: list[set[str]] = []
-        source_requirements = SOURCE_FILE_REQUIREMENTS.get(path.name, set())
+        source_requirements = file_requirements.get(path.name, set())
 
         for line_no, line in logical_lines(path):
             if re.match(r"^#\s*(?:ifdef|ifndef|if)\b", line):
@@ -974,7 +966,7 @@ def check_optional_feature_import_guards(paths: list[Path]) -> list[str]:
                 continue
 
             module_name = use_match.group(1).lower()
-            required_macros = OPTIONAL_MODULE_REQUIREMENTS.get(module_name)
+            required_macros = module_requirements.get(module_name)
             if not required_macros:
                 continue
 
