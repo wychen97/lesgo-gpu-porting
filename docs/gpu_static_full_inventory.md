@@ -212,15 +212,15 @@ claims.
 | `interpolag_Ssim.f90:21` | `interpolag_Ssim` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `io.f90:70` | `openfiles` | `host-boundary` |  |  |
 | `io.f90:109` | `energy` | `gpu-marked` |  |  |
-| `io.f90:172` | `write_tau_wall_bot` | `host-boundary` |  |  |
-| `io.f90:199` | `write_tau_wall_top` | `host-boundary` |  |  |
-| `io.f90:228` | `write_parallel_cgns` | `host-boundary` |  |  |
-| `io.f90:397` | `write_null_cgns` | `host-boundary` |  |  |
-| `io.f90:562` | `output_loop` | `host-boundary` |  |  |
-| `io.f90:709` | `inst_write` | `gpu-marked` |  |  |
-| `io.f90:1533` | `checkpoint` | `gpu-marked` |  |  |
-| `io.f90:1639` | `output_final` | `host-boundary` |  |  |
-| `io.f90:1653` | `output_init` | `host-boundary` |  |  |
+| `io.f90:174` | `write_tau_wall_bot` | `host-boundary` |  |  |
+| `io.f90:201` | `write_tau_wall_top` | `host-boundary` |  |  |
+| `io.f90:230` | `write_parallel_cgns` | `host-boundary` |  |  |
+| `io.f90:399` | `write_null_cgns` | `host-boundary` |  |  |
+| `io.f90:564` | `output_loop` | `host-boundary` |  |  |
+| `io.f90:711` | `inst_write` | `gpu-marked` |  |  |
+| `io.f90:1535` | `checkpoint` | `gpu-marked` |  |  |
+| `io.f90:1641` | `output_final` | `host-boundary` |  |  |
+| `io.f90:1655` | `output_init` | `host-boundary` |  |  |
 | `iwmles.f90:115` | `iwm_wallstress` | `gpu-marked` |  |  |
 | `iwmles.f90:174` | `iwm_init` | `gpu-marked` |  |  |
 | `iwmles.f90:297` | `iwm_finalize` | `gpu-marked` |  |  |

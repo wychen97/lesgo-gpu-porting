@@ -109,7 +109,9 @@ end subroutine openfiles
 subroutine energy (ke)
 !*******************************************************************************
 use types, only : rprec
-use param
+#ifdef PPMPI
+use param, only : comm, ierr, MPI_RPREC
+#endif
 use sim_param, only : u, v, w
 implicit none
 integer :: jx, jy, jz, nan_count
