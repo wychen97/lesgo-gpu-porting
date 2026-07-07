@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `67`
+Total broad imports: `65`
 
 ## Highest-Count Files
 
@@ -17,13 +17,13 @@ Total broad imports: `67`
 | `level_set.f90` | 17 |
 | `input_util.f90` | 8 |
 | `derivatives.f90` | 4 |
-| `lagrange_Sdep_gpu.f90` | 4 |
 | `sgs_stag_util.f90` | 4 |
 | `mpi_defs.f90` | 3 |
 | `scalars.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
 | `fft_gpu.f90` | 2 |
 | `io.f90` | 2 |
+| `lagrange_Sdep_gpu.f90` | 2 |
 | `main.f90` | 2 |
 | `param_output.f90` | 2 |
 | `press_stag_array.f90` | 2 |
@@ -60,8 +60,6 @@ Total broad imports: `67`
 | `io.f90` | 112 | `io::energy` | `param` |
 | `lagrange_Sdep_gpu.f90` | 220 | `lagrange_sdep_gpu_m::lagrange_ssim_gpu` | `param` |
 | `lagrange_Sdep_gpu.f90` | 490 | `lagrange_sdep_gpu_m::lagrange_sdep_gpu` | `param` |
-| `lagrange_Sdep_gpu.f90` | 501 | `lagrange_sdep_gpu_m::lagrange_sdep_gpu` | `mpi` |
-| `lagrange_Sdep_gpu.f90` | 1905 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` |
 | `level_set.f90` | 27 | `level_set` | `mpi` |
 | `level_set.f90` | 30 | `level_set` | `messages` |
 | `level_set.f90` | 32 | `level_set` | `level_set_base` |
