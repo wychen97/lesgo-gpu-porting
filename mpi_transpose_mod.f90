@@ -22,7 +22,7 @@ module mpi_transpose_mod
 !*******************************************************************************
 use types, only : rprec
 use param, only : nproc, comm, coord, ierr, MPI_CPREC
-use mpi
+use mpi, only : MPI_STATUS_SIZE, MPI_cart_rank
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_c
 implicit none
 
