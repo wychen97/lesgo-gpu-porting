@@ -1899,7 +1899,7 @@ subroutine sync_downup_F(F)
 ! do the host-side MPI exchange, push only the two slabs the sendrecv wrote
 ! (k=nz for sync_down, k=0 for sync_up).
 !*******************************************************************************
-use mpi, only : mpi_sendrecv
+use mpi
 use param, only : ld, ny, nz, MPI_RPREC, down, up, comm, status, ierr
 implicit none
 real(rprec), dimension(ld,ny,0:nz), intent(inout) :: F

@@ -166,7 +166,7 @@ subroutine initialize_cps()
 use param, only : nx, ny, nz, dx, L_x, coord, rank_of_coord, status, ierr
 use param, only : fringe_region_end, fringe_region_len, sampling_region_end
 use messages, only : error
-use mpi, only : MPI_INTEGER, mpi_recv, mpi_send
+use mpi
 implicit none
 
 character (*), parameter :: sub_name = mod_name // '.initialize_cps'

@@ -47,7 +47,7 @@ contains
 subroutine start( this )
 !*******************************************************************************
 #ifdef PPMPI
-use mpi, only : mpi_wtime
+use mpi
 #endif
 implicit none
 
@@ -65,7 +65,7 @@ end subroutine start
 subroutine stop( this )
 !*******************************************************************************
 #ifdef PPMPI
-use mpi, only : mpi_wtime
+use mpi
 #endif
 implicit none
 

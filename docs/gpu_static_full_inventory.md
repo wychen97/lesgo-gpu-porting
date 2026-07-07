@@ -107,16 +107,16 @@ claims.
 | `coriolis.f90:84` | `coriolis_init` | `host-or-diagnostic` |  |  |
 | `coriolis.f90:164` | `coriolis_finalize` | `host-or-diagnostic` |  |  |
 | `coriolis.f90:177` | `coriolis_calc` | `gpu-marked` |  |  |
-| `cuda_mpi_debug.f90:38` | `cuda_mpi_debug_init` | `gpu-marked` |  |  |
-| `cuda_mpi_debug.f90:89` | `print_env` | `gpu-marked` |  |  |
-| `cuda_mpi_debug.f90:125` | `cuda_pre` | `gpu-marked` |  |  |
-| `cuda_mpi_debug.f90:139` | `cuda_post` | `gpu-marked` |  |  |
-| `cuda_mpi_debug.f90:154` | `probe_real` | `host-boundary` |  |  |
-| `cuda_mpi_debug.f90:164` | `probe_complex` | `host-boundary` |  |  |
-| `cuda_mpi_debug.f90:174` | `mpi_dbg_sendrecv_r` | `gpu-marked` |  |  |
-| `cuda_mpi_debug.f90:212` | `mpi_dbg_sendrecv_c` | `gpu-marked` |  |  |
-| `cuda_mpi_debug.f90:250` | `mpi_dbg_send_r` | `gpu-marked` |  |  |
-| `cuda_mpi_debug.f90:281` | `mpi_dbg_recv_r` | `gpu-marked` |  |  |
+| `cuda_mpi_debug.f90:37` | `cuda_mpi_debug_init` | `gpu-marked` |  |  |
+| `cuda_mpi_debug.f90:88` | `print_env` | `gpu-marked` |  |  |
+| `cuda_mpi_debug.f90:124` | `cuda_pre` | `gpu-marked` |  |  |
+| `cuda_mpi_debug.f90:138` | `cuda_post` | `gpu-marked` |  |  |
+| `cuda_mpi_debug.f90:153` | `probe_real` | `host-boundary` |  |  |
+| `cuda_mpi_debug.f90:163` | `probe_complex` | `host-boundary` |  |  |
+| `cuda_mpi_debug.f90:173` | `mpi_dbg_sendrecv_r` | `gpu-marked` |  |  |
+| `cuda_mpi_debug.f90:211` | `mpi_dbg_sendrecv_c` | `gpu-marked` |  |  |
+| `cuda_mpi_debug.f90:249` | `mpi_dbg_send_r` | `gpu-marked` |  |  |
+| `cuda_mpi_debug.f90:280` | `mpi_dbg_recv_r` | `gpu-marked` |  |  |
 | `derivatives.f90:49` | `stress_uv_xy_derivs` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `derivatives.f90:70` | `stress_w_xy_derivs` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `derivatives.f90:88` | `ddx` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
@@ -246,7 +246,7 @@ claims.
 | `linear_simple.f90:226` | `lubksb` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `linear_simple.f90:278` | `outerprod` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `linear_simple.f90:288` | `swap` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `main.f90:1051` | `main_read_env_real` | `host-or-diagnostic` |  |  |
+| `main.f90:1050` | `main_read_env_real` | `host-or-diagnostic` |  |  |
 | `messages.f90:63` | `message_a` | `host-boundary` |  |  |
 | `messages.f90:73` | `message_ai` | `host-boundary` |  |  |
 | `messages.f90:84` | `message_aiai` | `host-boundary` |  |  |
@@ -270,11 +270,11 @@ claims.
 | `messages.f90:348` | `error_al` | `host-boundary` |  |  |
 | `messages.f90:365` | `error_ar` | `host-boundary` |  |  |
 | `messages.f90:382` | `error_ar_array` | `host-boundary` |  |  |
-| `mpi_defs.f90:55` | `initialize_mpi` | `gpu-marked` |  |  |
-| `mpi_defs.f90:200` | `create_mpi_comms_cps` | `host-boundary` |  |  |
-| `mpi_defs.f90:251` | `mpi_sync_real_array` | `gpu-marked` |  |  |
-| `mpi_defs.f90:357` | `sync_up` | `host-boundary` |  |  |
-| `mpi_defs.f90:368` | `sync_downup_nb` | `host-boundary` |  |  |
+| `mpi_defs.f90:52` | `initialize_mpi` | `gpu-marked` |  |  |
+| `mpi_defs.f90:197` | `create_mpi_comms_cps` | `host-boundary` |  |  |
+| `mpi_defs.f90:247` | `mpi_sync_real_array` | `gpu-marked` |  |  |
+| `mpi_defs.f90:352` | `sync_up` | `host-boundary` |  |  |
+| `mpi_defs.f90:363` | `sync_downup_nb` | `host-boundary` |  |  |
 | `mpi_transpose_mod.f90:36` | `mpi_transpose` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `param_output.f90:21` | `param_output` | `host-boundary` |  |  |
 | `pid.f90:49` | `constructor` | `host-boundary` |  |  |
@@ -390,9 +390,9 @@ claims.
 | `tridag_array.f90:195` | `tridag_apply_env_enabled_unless_false` | `host-or-diagnostic` |  |  |
 | `tridag_array.f90:223` | `tridag_apply_env_true_token` | `host-or-diagnostic` |  |  |
 | `tridag_array.f90:251` | `tridag_array` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `tridag_gpu.f90:108` | `tridag_gpu_init` | `gpu-marked` |  |  |
-| `tridag_gpu.f90:127` | `tridag_gpu_finalize` | `gpu-marked` |  |  |
-| `tridag_gpu.f90:137` | `tridag_array_gpu` | `gpu-marked` |  |  |
+| `tridag_gpu.f90:107` | `tridag_gpu_init` | `gpu-marked` |  |  |
+| `tridag_gpu.f90:126` | `tridag_gpu_finalize` | `gpu-marked` |  |  |
+| `tridag_gpu.f90:136` | `tridag_array_gpu` | `gpu-marked` |  |  |
 | `turbine_indicator.f90:53` | `val` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbine_indicator.f90:77` | `init` | `host-or-diagnostic` |  |  |
 | `turbines.f90:160` | `turbines_init` | `gpu-marked` |  |  |

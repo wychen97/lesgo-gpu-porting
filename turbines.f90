@@ -709,7 +709,7 @@ subroutine turbines_acc_sync_device_field(F)
 ! avoid non-contiguous slice temporaries for padded arrays.
 !
 #ifdef PPMPI
-use mpi, only : mpi_sendrecv
+use mpi
 #endif
 implicit none
 
@@ -741,7 +741,7 @@ subroutine turbines_forcing_acc()
 use sim_param, only : u, v, w, fxa, fya, fza
 use functions, only : linear_interp
 #ifdef PPMPI
-use mpi, only : MPI_Allreduce, MPI_SUM
+use mpi
 #endif
 implicit none
 
@@ -1004,7 +1004,7 @@ subroutine turbines_forcing()
 use param, only : pi, lbz
 use sim_param, only : u, v, w, fxa, fya, fza
 use functions, only : linear_interp, interp_to_uv_grid, interp_to_w_grid
-use mpi, only : MPI_Allreduce, MPI_SUM
+use mpi
 implicit none
 
 character(*), parameter :: sub_name = mod_name // '.turbines_forcing'

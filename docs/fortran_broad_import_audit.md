@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `62`
+Total broad imports: `90`
 
 ## Highest-Count Files
 
@@ -16,30 +16,37 @@ Total broad imports: `62`
 | --- | ---: |
 | `level_set.f90` | 17 |
 | `input_util.f90` | 8 |
+| `scalars.f90` | 5 |
+| `sgs_stag_util.f90` | 5 |
 | `derivatives.f90` | 4 |
-| `sgs_stag_util.f90` | 4 |
-| `scalars.f90` | 3 |
+| `mpi_defs.f90` | 4 |
+| `turbines.f90` | 4 |
+| `forcing.f90` | 3 |
+| `lagrange_Sdep_gpu.f90` | 3 |
+| `main.f90` | 3 |
+| `press_stag_array.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
+| `cfl_util.f90` | 2 |
+| `clocks.f90` | 2 |
 | `fft_gpu.f90` | 2 |
-| `lagrange_Sdep_gpu.f90` | 2 |
-| `main.f90` | 2 |
+| `io.f90` | 2 |
 | `param_output.f90` | 2 |
-| `press_stag_array.f90` | 2 |
 | `tools/validate_filt_da_cufft.F90` | 2 |
 | `trees_setup_ls.f90` | 2 |
-| `convec.f90` | 1 |
-| `fft.f90` | 1 |
-| `initial.f90` | 1 |
-| `io.f90` | 1 |
-| `mpi_defs.f90` | 1 |
-| `time_average.f90` | 1 |
-| `trees_global_fmask_ls.f90` | 1 |
+| `concurrent_precursor.f90` | 1 |
 
 ## Full List
 
 | File | Line | Scope | Module |
 | --- | ---: | --- | --- |
+| `cfl_util.f90` | 49 | `cfl_util::get_max_cfl` | `mpi` |
+| `cfl_util.f90` | 109 | `cfl_util::get_cfl_dt` | `mpi` |
+| `clocks.f90` | 50 | `clock_m::start` | `mpi` |
+| `clocks.f90` | 68 | `clock_m::stop` | `mpi` |
+| `concurrent_precursor.f90` | 169 | `concurrent_precursor::initialize_cps` | `mpi` |
 | `convec.f90` | 37 | `convec` | `fft` |
+| `coriolis.f90` | 182 | `coriolis::coriolis_calc` | `mpi` |
+| `cuda_mpi_debug.f90` | 4 | `cuda_mpi_debug` | `mpi` |
 | `derivatives.f90` | 96 | `derivatives::ddx` | `fft` |
 | `derivatives.f90` | 139 | `derivatives::ddy` | `fft` |
 | `derivatives.f90` | 182 | `derivatives::ddxy` | `fft` |
@@ -47,6 +54,9 @@ Total broad imports: `62`
 | `fft.f90` | 26 | `fft` | `iso_c_binding` |
 | `fft_gpu.f90` | 45 | `fft_gpu` | `cufft` |
 | `fft_gpu.f90` | 46 | `fft_gpu` | `openacc` |
+| `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` |
+| `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` |
+| `forcing.f90` | 392 | `forcing::project` | `mpi` |
 | `initial.f90` | 25 | `initial` | `param` |
 | `input_util.f90` | 65 | `input_util::read_input_conf` | `param` |
 | `input_util.f90` | 149 | `input_util::read_input_conf::domain_block` | `param` |
@@ -56,9 +66,11 @@ Total broad imports: `62`
 | `input_util.f90` | 435 | `input_util::read_input_conf::flow_cond_block` | `param` |
 | `input_util.f90` | 565 | `input_util::read_input_conf::output_block` | `param` |
 | `input_util.f90` | 670 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
+| `io.f90` | 42 | `io` | `mpi` |
 | `io.f90` | 46 | `io` | `cgns` |
 | `lagrange_Sdep_gpu.f90` | 220 | `lagrange_sdep_gpu_m::lagrange_ssim_gpu` | `param` |
 | `lagrange_Sdep_gpu.f90` | 490 | `lagrange_sdep_gpu_m::lagrange_sdep_gpu` | `param` |
+| `lagrange_Sdep_gpu.f90` | 1902 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` |
 | `level_set.f90` | 27 | `level_set` | `mpi` |
 | `level_set.f90` | 30 | `level_set` | `messages` |
 | `level_set.f90` | 32 | `level_set` | `level_set_base` |
@@ -78,18 +90,30 @@ Total broad imports: `62`
 | `level_set.f90` | 4397 | `level_set::safe_cd` | `grid_m` |
 | `main.f90` | 41 | `(file scope)` | `param` |
 | `main.f90` | 42 | `(file scope)` | `sim_param` |
-| `mpi_defs.f90` | 62 | `mpi_defs::initialize_mpi` | `cgns` |
+| `main.f90` | 58 | `(file scope)` | `mpi` |
+| `mpi_defs.f90` | 23 | `mpi_defs` | `mpi` |
+| `mpi_defs.f90` | 59 | `mpi_defs::initialize_mpi` | `cgns` |
+| `mpi_defs.f90` | 205 | `mpi_defs::create_mpi_comms_cps` | `mpi` |
+| `mpi_defs.f90` | 272 | `mpi_defs::mpi_sync_real_array` | `mpi` |
+| `mpi_transpose_mod.f90` | 25 | `mpi_transpose_mod` | `mpi` |
 | `param_output.f90` | 23 | `param_output` | `param` |
 | `param_output.f90` | 25 | `param_output` | `level_set_base` |
+| `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` |
 | `press_stag_array.f90` | 51 | `press_stag_array` | `param` |
 | `press_stag_array.f90` | 53 | `press_stag_array` | `fft` |
+| `press_stag_array.f90` | 57 | `press_stag_array` | `mpi` |
+| `rmsdiv.f90` | 31 | `rmsdiv` | `mpi` |
 | `scalars.f90` | 47 | `scalars` | `openacc` |
+| `scalars.f90` | 1050 | `scalars::scalars_deriv` | `mpi` |
+| `scalars.f90` | 1373 | `scalars::scalars_transport` | `mpi` |
 | `scalars.f90` | 1379 | `scalars::scalars_transport` | `fft` |
 | `scalars.f90` | 1719 | `scalars::to_big` | `fft` |
+| `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` |
 | `sgs_stag_util.f90` | 62 | `sgs_stag_util::sgs_stag` | `param` |
 | `sgs_stag_util.f90` | 64 | `sgs_stag_util::sgs_stag` | `sgs_param` |
 | `sgs_stag_util.f90` | 495 | `sgs_stag_util::calc_sij` | `param` |
 | `sgs_stag_util.f90` | 497 | `sgs_stag_util::calc_sij` | `sgs_param` |
+| `sgs_stag_util.f90` | 673 | `sgs_stag_util::sgs_stage_report` | `mpi` |
 | `test_filtermodule.f90` | 62 | `test_filtermodule::test_filter_init` | `fft` |
 | `test_filtermodule.f90` | 155 | `test_filtermodule::test_filter` | `fft` |
 | `test_filtermodule.f90` | 212 | `test_filtermodule::test_test_filter` | `fft` |
@@ -100,4 +124,8 @@ Total broad imports: `62`
 | `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` |
 | `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` |
 | `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` |
+| `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` |
 | `turbines.f90` | 36 | `turbines` | `param` |
+| `turbines.f90` | 712 | `turbines::turbines_acc_sync_device_field` | `mpi` |
+| `turbines.f90` | 744 | `turbines::turbines_forcing_acc` | `mpi` |
+| `turbines.f90` | 1007 | `turbines::turbines_forcing` | `mpi` |

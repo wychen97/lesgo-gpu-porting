@@ -1047,7 +1047,7 @@ subroutine scalars_deriv
 use param, only : lbz, ld, ny, nz, coord, nproc
 #if defined(PPSCALARS_GPU) && defined(PPGPU_AWARE_MPI)
 use param, only : MPI_RPREC, down, up, comm, status, ierr
-use mpi, only : mpi_sendrecv
+use mpi
 #endif
 use mpi_defs, only :  mpi_sync_real_array, MPI_SYNC_DOWNUP
 use derivatives, only : filt_da, ddz_uv
@@ -1370,7 +1370,7 @@ use param, only : lbz, nx, nz, nx2, ny2, nproc, coord, dt, tadv1, tadv2,       &
 use param, only : lbc_mom, ubc_mom, dz
 #if defined(PPSCALARS_GPU) && defined(PPGPU_AWARE_MPI)
 use param, only : ld, ny, MPI_RPREC, down, up, comm, status, ierr
-use mpi, only : mpi_sendrecv
+use mpi
 #endif
 use sim_param, only : u, v, w
 use sgs_param, only : Nu_t

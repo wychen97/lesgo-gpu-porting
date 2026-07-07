@@ -55,8 +55,7 @@ use sgs_param, only : SGS_MODEL_SMAGORINSKY, SGS_MODEL_STANDARD_DYNAMIC,      &
                       SGS_MODEL_LAGRANGE_SCALE_DEP
 
 #ifdef PPMPI
-use mpi, only : mpi_init, mpi_sendrecv, mpi_allreduce, mpi_barrier, MPI_MAX,  &
-    MPI_SUM, MPI_COMM_WORLD
+use mpi
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWN
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_r
 #endif

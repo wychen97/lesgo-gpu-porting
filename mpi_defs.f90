@@ -20,10 +20,7 @@
 !*******************************************************************************
 module mpi_defs
 !*******************************************************************************
-use mpi, only : MPI_COMM_NULL, MPI_COMM_WORLD, MPI_COMPLEX,                   &
-    MPI_DOUBLE_COMPLEX, MPI_DOUBLE_PRECISION, MPI_REAL, mpi_cart_coords,      &
-    mpi_cart_create, mpi_cart_rank, mpi_cart_shift, mpi_comm_rank,            &
-    mpi_comm_size
+use mpi
 implicit none
 
 save
@@ -205,8 +202,7 @@ subroutine create_mpi_comms_cps( localComm )
 ! communicators are then bridged to create an intercommunicator
 ! (interComm).
 !
-use mpi, only : MPI_COMM_WORLD, mpi_abort, mpi_comm_rank, mpi_comm_size,      &
-    mpi_comm_split, mpi_intercomm_create
+use mpi
 use param, only : ierr
 implicit none
 
@@ -273,8 +269,7 @@ subroutine mpi_sync_real_array( var, lbz, isync )
 !         module.
 !
 use types, only : rprec
-use mpi, only : MPI_REQUEST_NULL, MPI_STATUS_SIZE, mpi_irecv, mpi_isend,      &
-    mpi_waitall
+use mpi
 use param, only : MPI_RPREC, down, up, comm, status, ierr, nz
 use messages, only : error
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_r

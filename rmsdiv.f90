@@ -28,7 +28,7 @@ use types, only : rprec
 use param, only : comm, ierr, MPI_RPREC, nproc, nx, ny, nz, rank
 use sim_param, only : dudx, dvdy, dwdz
 #ifdef PPMPI
-use mpi, only : MPI_SUM, mpi_reduce
+use mpi
 #endif
 
 implicit none

@@ -670,7 +670,7 @@ use types, only : rprec
 use param, only : coord
 #ifdef PPMPI
 use param, only : comm, ierr, MPI_RPREC, nproc
-use mpi, only : MPI_MAX, mpi_allreduce, mpi_barrier
+use mpi
 #endif
 implicit none
 

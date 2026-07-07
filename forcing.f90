@@ -100,7 +100,7 @@ end function lvlset_bridge_timing_enabled
 subroutine lvlset_bridge_time(tnow)
 !*******************************************************************************
 #ifdef PPMPI
-use mpi, only : mpi_wtime
+use mpi
 #endif
 implicit none
 
@@ -121,7 +121,7 @@ subroutine lvlset_bridge_report(call_count, wait_sync, update_self,            &
 use param, only : coord
 #ifdef PPMPI
 use param, only : comm, ierr, MPI_RPREC
-use mpi, only : MPI_MAX, mpi_allreduce
+use mpi
 #endif
 implicit none
 
@@ -389,7 +389,7 @@ use sim_param, only : dpdx, dpdy, dpdz, fx, fy, fz, u, v, w
 use inflow, only : apply_inflow
 #ifdef PPMPI
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWNUP
-use mpi, only : mpi_sendrecv
+use mpi
 
 #endif
 implicit none

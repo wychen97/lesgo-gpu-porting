@@ -39,7 +39,7 @@ use string_util, only : string_concat, string_splice
 use messages, only : warn
 use time_average, only : tavg_t
 #ifdef PPMPI
-use mpi, only : mpi_reduce, mpi_barrier, MPI_SUM
+use mpi
 #endif
 
 #ifdef PPCGNS
