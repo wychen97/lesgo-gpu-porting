@@ -12,7 +12,10 @@ Fortran codebase:
   imported symbol is not explicitly public;
 * duplicate symbols in one ``use ..., only:`` import list;
 * repeated imports of the same local name from the same module in one scope;
-* stale or duplicate names in explicit ``public`` API lists.
+* stale or duplicate names in explicit ``public`` API lists;
+* ``use module, only: symbol`` imports that are not actually exported by a
+  tracked module, including symbols that were previously re-exported through a
+  broad module import.
 """
 
 from __future__ import annotations
@@ -473,6 +476,43 @@ def check_module_exports(paths: list[Path]) -> list[str]:
     return issues
 
 
+def check_use_only_imports_resolve(paths: list[Path]) -> list[str]:
+    modules = collect_modules(paths)
+    issues: list[str] = []
+    exported_cache: dict[str, set[str]] = {}
+
+    for path in paths:
+        for line_no, line in logical_lines(path):
+            match = re.match(
+                r"^use\s*(?:,\s*[^:]+::\s*)?(\w+)\s*,\s*only\s*:\s*(.+)$",
+                line,
+                flags=re.I,
+            )
+            if not match:
+                continue
+
+            module_name = match.group(1).lower()
+            module = modules.get(module_name)
+            if not module:
+                continue
+
+            exported = exported_module_symbols(modules, module_name, exported_cache)
+            for name in split_names(match.group(2)):
+                lower = name.lower().strip()
+                if not lower or lower.startswith(("operator", "assignment")):
+                    continue
+                symbol = clean_symbol(name)
+                if symbol and symbol not in exported:
+                    rel = path.relative_to(ROOT)
+                    module_rel = module.path.relative_to(ROOT)
+                    issues.append(
+                        f"{rel}:{line_no}: imports `{symbol}` from tracked "
+                        f"module `{module_name}`, but `{module_rel}` does not "
+                        "export that symbol"
+                    )
+    return issues
+
+
 def check_duplicate_use_only_symbols(paths: list[Path]) -> list[str]:
     issues: list[str] = []
 
@@ -618,6 +658,7 @@ def main() -> int:
         + check_unused_cmake_preprocessor_symbols(paths)
         + check_module_program_implicit_none(paths)
         + check_module_exports(paths)
+        + check_use_only_imports_resolve(paths)
         + check_duplicate_use_only_symbols(paths)
         + check_repeated_scope_imports(paths)
         + check_public_api_symbols(paths)
@@ -635,7 +676,8 @@ def main() -> int:
         "Fortran interface hygiene check passed "
         f"({len(paths)} files, no stale/unused macros, missing module/program "
         "implicit-none statements, private-export mismatches, bare flag conditions, "
-        "duplicate/repeated imports, or stale public API names)."
+        "unresolved tracked-module imports, duplicate/repeated imports, or stale "
+        "public API names)."
     )
     return 0
 

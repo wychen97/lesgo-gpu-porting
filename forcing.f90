@@ -382,8 +382,9 @@ subroutine project ()
 !
 ! provides u, v, w at 1:nz
 !
+use types, only : rprec
 use param, only : comm, coord, down, dt, ierr, ld, lbc_mom, MPI_RPREC, nproc, &
-                  nx, ny, nz, rprec, status, tadv1, ubc_mom, up
+                  nx, ny, nz, status, tadv1, ubc_mom, up
 use sim_param, only : dpdx, dpdy, dpdz, fx, fy, fz, u, v, w
 use inflow, only : apply_inflow
 #ifdef PPMPI

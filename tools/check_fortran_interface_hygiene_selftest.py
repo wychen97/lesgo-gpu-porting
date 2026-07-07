@@ -109,6 +109,45 @@ def test_private_module_import_mismatch_is_reported(tmpdir: Path) -> None:
     assert_contains(issues, "imports `hidden` from default-private module `provider_m`")
 
 
+def test_use_only_reexport_mismatch_is_reported(tmpdir: Path) -> None:
+    paths = [
+        write_case(
+            tmpdir,
+            "external_like_provider.f90",
+            """
+            module external_like_provider_m
+            implicit none
+            integer :: mpi_status_size
+            integer :: mpi_comm_world
+            end module external_like_provider_m
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "wrapper.f90",
+            """
+            module wrapper_m
+            use external_like_provider_m, only : mpi_status_size
+            implicit none
+            end module wrapper_m
+            """,
+        ),
+        write_case(
+            tmpdir,
+            "consumer.f90",
+            """
+            module consumer_m
+            use wrapper_m, only : mpi_comm_world
+            implicit none
+            end module consumer_m
+            """,
+        ),
+    ]
+
+    issues = hygiene.check_use_only_imports_resolve(paths)
+    assert_contains(issues, "imports `mpi_comm_world` from tracked module `wrapper_m`")
+
+
 def test_duplicate_use_only_local_names_are_reported(tmpdir: Path) -> None:
     path = write_case(
         tmpdir,
@@ -183,6 +222,7 @@ def main() -> int:
         test_derived_type_members_are_not_module_exports(tmpdir)
         test_stale_public_symbol_is_reported(tmpdir)
         test_private_module_import_mismatch_is_reported(tmpdir)
+        test_use_only_reexport_mismatch_is_reported(tmpdir)
         test_duplicate_use_only_local_names_are_reported(tmpdir)
         test_repeated_scope_imports_are_reported(tmpdir)
         test_bare_flag_condition_is_reported(tmpdir)
@@ -190,7 +230,7 @@ def main() -> int:
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    print("Fortran interface hygiene self-test passed (7 synthetic cases).")
+    print("Fortran interface hygiene self-test passed (8 synthetic cases).")
     return 0
 
 
