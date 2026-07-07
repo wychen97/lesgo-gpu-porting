@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `74`
+Total broad imports: `73`
 
 ## Highest-Count Files
 
@@ -32,8 +32,8 @@ Total broad imports: `74`
 | `concurrent_precursor.f90` | 1 |
 | `coriolis.f90` | 1 |
 | `cuda_mpi_debug.f90` | 1 |
-| `initial.f90` | 1 |
 | `mpi_transpose_mod.f90` | 1 |
+| `press_gpu.f90` | 1 |
 
 ## Full List
 
@@ -50,7 +50,6 @@ Total broad imports: `74`
 | `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` |
 | `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` |
 | `forcing.f90` | 393 | `forcing::project` | `mpi` |
-| `initial.f90` | 25 | `initial` | `param` |
 | `input_util.f90` | 65 | `input_util::read_input_conf` | `param` |
 | `input_util.f90` | 149 | `input_util::read_input_conf::domain_block` | `param` |
 | `input_util.f90` | 260 | `input_util::read_input_conf::model_block` | `param` |

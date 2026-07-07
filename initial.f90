@@ -22,7 +22,9 @@ subroutine initial()
 !*******************************************************************************
 use iwmles, only : iwm_read_checkPoint
 use types,only:rprec
-use param
+use param, only : BOGUS, L_x, L_y, L_z, checkpoint_file, coord,               &
+                  cumulative_time, inflow_type, inflow_velocity, inilag,      &
+                  initu, lbc_mom, lbz, nproc, nx, ny, nz, path, read_endian
 use sim_param, only : u, v, w, RHSx, RHSy, RHSz
 use sgs_param, only : Cs_opt2, F_LM, F_MM, F_QN, F_NN
 #ifdef PPDYN_TN
