@@ -6,10 +6,10 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import defaultdict
-from pathlib import Path
 
 from report_gpu_static_inventory import (
     BUCKET_VALIDATION_ROWS,
+    ROOT,
     REVIEW_BUCKET_DESCRIPTIONS,
     Subprogram,
     collect,
@@ -17,7 +17,7 @@ from report_gpu_static_inventory import (
 )
 
 
-OUTPUT_PATH = Path("docs/gpu_static_candidate_review.md")
+OUTPUT_PATH = ROOT / "docs/gpu_static_candidate_review.md"
 
 
 def candidate_items() -> list[Subprogram]:

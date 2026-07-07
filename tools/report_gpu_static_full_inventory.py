@@ -6,16 +6,16 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter
-from pathlib import Path
 
 from report_gpu_static_inventory import (
     BUCKET_VALIDATION_ROWS,
+    ROOT,
     collect,
     review_bucket,
 )
 
 
-OUTPUT_PATH = Path("docs/gpu_static_full_inventory.md")
+OUTPUT_PATH = ROOT / "docs/gpu_static_full_inventory.md"
 
 
 def markdown() -> str:
