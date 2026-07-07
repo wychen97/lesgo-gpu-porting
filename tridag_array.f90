@@ -43,9 +43,10 @@
 subroutine tridag_array (a, b, c, r, u, p_halo_req, p_halo_nreq)
 !*******************************************************************************
 use types, only : rprec
-use param
+use param, only : comm, coord, down, ierr, ld, lh, MPI_RPREC, nproc, ny, nz,  &
+    status, up
 use cuda_mpi_debug, only : mpi_dbg_send_r, mpi_dbg_recv_r
-use mpi
+use mpi, only : MPI_REQUEST_NULL
 implicit none
 
 real(rprec), dimension(lh,ny,nz+1), intent(in) :: a, b, c
@@ -250,7 +251,7 @@ end subroutine tridag_apply_env_true_token
 subroutine tridag_array(a, b, c, r, u)
 !*******************************************************************************
 use types, only : rprec
-use param
+use param, only : coord, ld, lh, nproc, ny, nz
 implicit none
 
 real(rprec),dimension(lh,ny,nz+1), intent(in) :: a, b, c

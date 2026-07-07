@@ -123,7 +123,7 @@ runtime correctness and timing evidence must close each bucket.
 | `test_filtermodule.f90:208` | `test_test_filter` | `diagnostic-profiling` | `diagnostics_output` |
 | `test_filtermodule.f90:232` | `test_test_filter_3` | `diagnostic-profiling` | `diagnostics_output` |
 | `test_filtermodule.f90:247` | `test_test_filter_6` | `diagnostic-profiling` | `diagnostics_output` |
-| `tridag_array.f90:250` | `tridag_array` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
+| `tridag_array.f90:251` | `tridag_array` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `turbine_indicator.f90:53` | `val` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbines.f90:316` | `turbines_nodes` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbines.f90:989` | `turbines_forcing_acc` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |

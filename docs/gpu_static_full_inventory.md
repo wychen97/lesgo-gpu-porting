@@ -387,9 +387,9 @@ claims.
 | `time_average.f90:882` | `write_parallel_cgns` | `host-or-diagnostic` |  |  |
 | `time_average.f90:1052` | `write_null_cgns` | `host-or-diagnostic` |  |  |
 | `tridag_array.f90:43` | `tridag_array` | `gpu-marked` |  |  |
-| `tridag_array.f90:194` | `tridag_apply_env_enabled_unless_false` | `host-or-diagnostic` |  |  |
-| `tridag_array.f90:222` | `tridag_apply_env_true_token` | `host-or-diagnostic` |  |  |
-| `tridag_array.f90:250` | `tridag_array` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
+| `tridag_array.f90:195` | `tridag_apply_env_enabled_unless_false` | `host-or-diagnostic` |  |  |
+| `tridag_array.f90:223` | `tridag_apply_env_true_token` | `host-or-diagnostic` |  |  |
+| `tridag_array.f90:251` | `tridag_array` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `tridag_gpu.f90:107` | `tridag_gpu_init` | `gpu-marked` |  |  |
 | `tridag_gpu.f90:126` | `tridag_gpu_finalize` | `gpu-marked` |  |  |
 | `tridag_gpu.f90:136` | `tridag_array_gpu` | `gpu-marked` |  |  |

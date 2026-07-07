@@ -30,7 +30,8 @@ subroutine convec
 ! chapter 7
 !
 use types, only : rprec
-use param
+use param, only : BOGUS, coord, lbc_mom, lbz, ld_big, nproc, nx, nx2, ny,    &
+    ny2, nz, sgs, ubc_mom
 use sim_param, only : u, v, w, dudy, dudz, dvdx, dvdz, dwdx, dwdy
 use sim_param, only : RHSx, RHSy, RHSz
 use fft

@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `163`
+Total broad imports: `159`
 
 ## Highest-Count Files
 
@@ -31,9 +31,9 @@ Total broad imports: `163`
 | `mpi_defs.f90` | 3 |
 | `press_stag_array.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
-| `tridag_array.f90` | 3 |
-| `convec.f90` | 2 |
 | `fft_gpu.f90` | 2 |
+| `forcing.f90` | 2 |
+| `interpolag_Sdep.f90` | 2 |
 
 ## Full List
 
@@ -48,8 +48,7 @@ Total broad imports: `163`
 | `concurrent_precursor.f90` | 24 | `concurrent_precursor` | `mpi_defs` |
 | `concurrent_precursor.f90` | 25 | `concurrent_precursor` | `fringe` |
 | `concurrent_precursor.f90` | 27 | `concurrent_precursor` | `openacc` |
-| `convec.f90` | 33 | `convec` | `param` |
-| `convec.f90` | 36 | `convec` | `fft` |
+| `convec.f90` | 37 | `convec` | `fft` |
 | `derivatives.f90` | 96 | `derivatives::ddx` | `fft` |
 | `derivatives.f90` | 139 | `derivatives::ddy` | `fft` |
 | `derivatives.f90` | 182 | `derivatives::ddxy` | `fft` |
@@ -186,9 +185,6 @@ Total broad imports: `163`
 | `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` |
 | `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` |
 | `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` |
-| `tridag_array.f90` | 46 | `tridag_array` | `param` |
-| `tridag_array.f90` | 48 | `tridag_array` | `mpi` |
-| `tridag_array.f90` | 253 | `tridag_array::tridag_array` | `param` |
 | `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` |
 | `turbines.f90` | 36 | `turbines` | `param` |
 | `turbines.f90` | 37 | `turbines` | `grid_m` |
