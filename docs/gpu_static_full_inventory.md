@@ -143,14 +143,14 @@ claims.
 | `fft.f90:74` | `unpadd` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `fft.f90:102` | `init_fft` | `host-or-diagnostic` |  |  |
 | `fft.f90:131` | `init_wavenumber` | `gpu-marked` |  |  |
-| `fft_gpu.f90:79` | `init_fft_gpu` | `gpu-marked` |  |  |
-| `fft_gpu.f90:136` | `make_plan` | `gpu-marked` |  |  |
-| `fft_gpu.f90:171` | `set_stream` | `gpu-marked` |  |  |
-| `fft_gpu.f90:182` | `finalize_fft_gpu` | `gpu-file-unmarked` |  |  |
-| `fft_gpu.f90:194` | `destroy_plan` | `gpu-marked` |  |  |
-| `fft_gpu.f90:211` | `fft_gpu_exec_d2z` | `gpu-marked` |  |  |
-| `fft_gpu.f90:222` | `fft_gpu_exec_z2d` | `gpu-marked` |  |  |
-| `fft_gpu.f90:234` | `check_cufft` | `gpu-marked` |  |  |
+| `fft_gpu.f90:80` | `init_fft_gpu` | `gpu-marked` |  |  |
+| `fft_gpu.f90:137` | `make_plan` | `gpu-marked` |  |  |
+| `fft_gpu.f90:172` | `set_stream` | `gpu-marked` |  |  |
+| `fft_gpu.f90:183` | `finalize_fft_gpu` | `gpu-file-unmarked` |  |  |
+| `fft_gpu.f90:195` | `destroy_plan` | `gpu-marked` |  |  |
+| `fft_gpu.f90:212` | `fft_gpu_exec_d2z` | `gpu-marked` |  |  |
+| `fft_gpu.f90:223` | `fft_gpu_exec_z2d` | `gpu-marked` |  |  |
+| `fft_gpu.f90:235` | `check_cufft` | `gpu-marked` |  |  |
 | `finalize.f90:21` | `finalize` | `host-boundary` |  |  |
 | `forcing.f90:100` | `lvlset_bridge_time` | `unmarked-runtime-candidate` | `excluded-lvlset-bridge` | `lvlset` |
 | `forcing.f90:118` | `lvlset_bridge_report` | `host-or-diagnostic` |  |  |

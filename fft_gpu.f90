@@ -42,8 +42,9 @@ module fft_gpu
 #ifdef PPLES_GPU
 use types, only : rprec
 use param, only : ld, ny, ld_big, ny2, nx, nx2, lbz, nz
-use cufft
-use openacc
+use cufft, only : CUFFT_D2Z, CUFFT_SUCCESS, CUFFT_Z2D, cufftDestroy,          &
+                  cufftExecD2Z, cufftExecZ2D, cufftPlanMany, cufftSetStream
+use openacc, only : acc_get_cuda_stream, acc_handle_kind
 implicit none
 save
 
