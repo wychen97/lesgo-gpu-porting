@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 
 from cmake_metadata import CMAKE_PATH, cmake_source_groups, source_list_group_references
+from repo_paths import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 FORTRAN_SUFFIXES = {".f", ".f90", ".F", ".F90"}
 
 

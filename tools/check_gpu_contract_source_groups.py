@@ -5,12 +5,11 @@ from __future__ import annotations
 
 import re
 import sys
-from pathlib import Path
 
+from repo_paths import ROOT, repo_path
 
-ROOT = Path(__file__).resolve().parents[1]
-CMAKE_PATH = ROOT / "CMakeLists.txt"
-CONTRACT_PATH = ROOT / "docs/gpu_module_contracts.md"
+CMAKE_PATH = repo_path("CMakeLists.txt")
+CONTRACT_PATH = repo_path("docs", "gpu_module_contracts.md")
 SOURCE_GROUP_RE = re.compile(r"^\s*set\s*\(\s*([A-Za-z0-9_]+_SOURCES)\b")
 DOCUMENTED_GROUP_RE = re.compile(r"`([A-Z0-9_]+_SOURCES)`")
 

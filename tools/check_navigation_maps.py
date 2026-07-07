@@ -7,9 +7,9 @@ import sys
 from pathlib import Path
 
 from fortran_inventory import tracked_fortran_files
+from repo_paths import ROOT
 
 
-ROOT = Path(__file__).resolve().parents[1]
 LINE_THRESHOLD = 900
 HEADER_SCAN_LINES = 180
 MAP_MARKERS = ("Navigation map", "Routine map")

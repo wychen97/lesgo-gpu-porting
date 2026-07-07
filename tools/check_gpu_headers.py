@@ -7,10 +7,10 @@ import sys
 from pathlib import Path
 
 from fortran_inventory import tracked_fortran_files
+from repo_paths import ROOT
 from report_gpu_static_inventory import GPU_SOURCE_FILES
 
 
-ROOT = Path(__file__).resolve().parents[1]
 HEADER_SCAN_LINES = 120
 REQUIRED_MARKERS = (
     "GPU implementation",
