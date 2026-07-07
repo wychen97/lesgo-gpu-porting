@@ -9,8 +9,9 @@ import sys
 from pathlib import Path
 
 
-SOURCE_PATH = Path("input_util.f90")
-DOC_PATH = Path("docs/gpu_port_coverage_audit.md")
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE_PATH = ROOT / "input_util.f90"
+DOC_PATH = ROOT / "docs/gpu_port_coverage_audit.md"
 
 BLOCK_SUBROUTINES = {
     "DOMAIN": "domain_block",

@@ -11,9 +11,10 @@ from pathlib import Path
 from check_lesgo_conf_coverage_docs import source_keys
 
 
-MAP_PATH = Path("docs/lesgo_conf_gpu_validation_map.json")
-EVIDENCE_PATH = Path("docs/gpu_validation_evidence.json")
-OUTPUT_PATH = Path("docs/lesgo_conf_key_validation_coverage.md")
+ROOT = Path(__file__).resolve().parents[1]
+MAP_PATH = ROOT / "docs/lesgo_conf_gpu_validation_map.json"
+EVIDENCE_PATH = ROOT / "docs/gpu_validation_evidence.json"
+OUTPUT_PATH = ROOT / "docs/lesgo_conf_key_validation_coverage.md"
 
 
 def load_json(path: Path) -> dict:
