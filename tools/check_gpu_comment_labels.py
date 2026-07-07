@@ -6,19 +6,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from report_gpu_static_inventory import GPU_MARKERS, GPU_SOURCE_FILES, tracked_fortran
+
 
 ROOT = Path(__file__).resolve().parents[1]
-
-GPU_SOURCE_FILES = (
-    "convec_gpu.f90",
-    "derivatives_gpu.f90",
-    "fft_gpu.f90",
-    "lagrange_Sdep_gpu.f90",
-    "press_gpu.f90",
-    "sgs_gpu.f90",
-    "tridag_gpu.f90",
-    "turbines_gpu.f90",
-)
 
 STALE_LABELS = (
     "P0a",
@@ -35,9 +26,22 @@ STALE_LABELS = (
 )
 
 
+def gpu_comment_source_files() -> list[Path]:
+    """Return non-LVLSET root Fortran files with production GPU markers."""
+    result: list[Path] = []
+    for path in tracked_fortran():
+        text = (ROOT / path).read_text(encoding="utf-8")
+        lower_text = text.lower()
+        has_gpu_marker = any(marker.lower() in lower_text for marker in GPU_MARKERS)
+        if has_gpu_marker or path.name in GPU_SOURCE_FILES:
+            result.append(path)
+    return result
+
+
 def main() -> int:
     problems: list[str] = []
-    for relative in GPU_SOURCE_FILES:
+    gpu_sources = gpu_comment_source_files()
+    for relative in gpu_sources:
         path = ROOT / relative
         text = path.read_text(encoding="utf-8")
         for line_number, line in enumerate(text.splitlines(), start=1):
@@ -53,7 +57,7 @@ def main() -> int:
 
     print(
         f"GPU comment-label check passed "
-        f"({len(GPU_SOURCE_FILES)} files, {len(STALE_LABELS)} labels)."
+        f"({len(gpu_sources)} files, {len(STALE_LABELS)} labels)."
     )
     return 0
 
