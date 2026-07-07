@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `79`
+Total broad imports: `77`
 
 ## Highest-Count Files
 
@@ -28,12 +28,12 @@ Total broad imports: `79`
 | `io.f90` | 2 |
 | `param_output.f90` | 2 |
 | `press_stag_array.f90` | 2 |
-| `tools/validate_filt_da_cufft.F90` | 2 |
 | `trees_setup_ls.f90` | 2 |
 | `atm_lesgo_interface.f90` | 1 |
 | `concurrent_precursor.f90` | 1 |
 | `coriolis.f90` | 1 |
 | `cuda_mpi_debug.f90` | 1 |
+| `fft.f90` | 1 |
 
 ## Full List
 
@@ -106,8 +106,6 @@ Total broad imports: `79`
 | `sgs_stag_util.f90` | 497 | `sgs_stag_util::calc_sij` | `sgs_param` |
 | `sgs_stag_util.f90` | 673 | `sgs_stag_util::sgs_stage_report` | `mpi` |
 | `time_average.f90` | 36 | `time_average` | `cgns` |
-| `tools/validate_filt_da_cufft.F90` | 2 | `(file scope)` | `cudafor` |
-| `tools/validate_filt_da_cufft.F90` | 3 | `(file scope)` | `cufft` |
 | `trees_global_fmask_ls.f90` | 23 | `trees_global_fmask_ls` | `trees_base_ls` |
 | `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` |
 | `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` |

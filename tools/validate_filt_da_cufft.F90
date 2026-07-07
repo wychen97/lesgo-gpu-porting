@@ -1,6 +1,7 @@
 program validate_filt_da_cufft
-use cudafor
-use cufft
+use cudafor, only : cudaDeviceSynchronize
+use cufft, only : CUFFT_D2Z, CUFFT_SUCCESS, CUFFT_Z2D, cufftDestroy,          &
+    cufftExecD2Z, cufftExecZ2D, cufftPlanMany
 implicit none
 include 'fftw3.f'
 
