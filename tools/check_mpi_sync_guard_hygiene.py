@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify LESGO MPI sync wrappers are not used in serial compile paths."""
+"""Verify MPI-only imports and sync wrappers stay out of serial compile paths."""
 
 from __future__ import annotations
 
@@ -10,13 +10,15 @@ from pathlib import Path
 from fortran_inventory import ROOT, normalized_repo_path, tracked_fortran_files
 
 
-MPI_OWNED_FILES = {
+MPI_REQUIRED_FILES = {
+    "concurrent_precursor.f90",
     "cuda_mpi_debug.f90",
     "mpi_defs.f90",
     "mpi_transpose_mod.f90",
 }
 
 SYNC_SYMBOL_RE = re.compile(r"\b(mpi_sync_real_array|mpi_sync_down\w*)\b", re.I)
+RAW_MPI_IMPORT_RE = re.compile(r"^\s*use\s+mpi(?:\s*,|\s*$)", re.I)
 POSITIVE_PPMPI_GUARDS = {"PPMPI", "PPGPU_AWARE_MPI"}
 
 
@@ -39,7 +41,7 @@ def positive_guard_macros(line: str) -> set[str]:
 
 
 def check_file(path: Path) -> list[str]:
-    if path.name in MPI_OWNED_FILES:
+    if path.name in MPI_REQUIRED_FILES:
         return []
 
     rel = normalized_repo_path(path.relative_to(ROOT))
@@ -67,9 +69,13 @@ def check_file(path: Path) -> list[str]:
             continue
 
         code = line.split("!", 1)[0]
+        guarded = any(macros & POSITIVE_PPMPI_GUARDS for macros in guard_stack)
+        if RAW_MPI_IMPORT_RE.search(code) and not guarded:
+            issues.append(f"{rel}:{line_no}: raw `use mpi` must be guarded by PPMPI")
+            continue
         if not SYNC_SYMBOL_RE.search(code):
             continue
-        if any(macros & POSITIVE_PPMPI_GUARDS for macros in guard_stack):
+        if guarded:
             continue
         issues.append(
             f"{rel}:{line_no}: MPI sync wrapper use must be guarded by PPMPI"

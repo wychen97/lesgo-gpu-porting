@@ -176,10 +176,13 @@ end subroutine coriolis_finalize
 !*******************************************************************************
 subroutine coriolis_calc
 !*******************************************************************************
-use param, only : MPI_RPREC, comm, ierr, dt, total_time_dim, u_star, jt_total
+use param, only : dt, total_time_dim, u_star, jt_total
+#ifdef PPMPI
+use param, only : MPI_RPREC, comm, ierr
+use mpi
+#endif
 use sim_param, only : u, v, RHSx, RHSy, nx, ny, nz
 use functions, only : linear_interp
-use mpi
 real(rprec) :: ubar = 0, vbar = 0
 #ifdef PPMPI
 real(rprec) :: coriolis_reduce_send(2), coriolis_reduce_recv(2)

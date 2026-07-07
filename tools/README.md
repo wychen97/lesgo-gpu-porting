@@ -70,7 +70,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_lesgo_conf_coverage_docs.py` | Verifies the GPU coverage audit tracks non-LVLSET `lesgo.conf` parser keys. |
 | `tools/check_lesgo_conf_key_validation_report.py` | Verifies the generated key-level `lesgo.conf` validation coverage report is current. |
 | `tools/check_lesgo_conf_validation_map.py` | Verifies parsed `lesgo.conf` groups are mapped to GPU validation rows. |
-| `tools/check_mpi_sync_guard_hygiene.py` | Verifies LESGO MPI sync wrappers are guarded out of serial compile paths. |
+| `tools/check_mpi_sync_guard_hygiene.py` | Verifies raw MPI imports and LESGO MPI sync wrappers are guarded out of serial compile paths. |
 | `tools/check_navigation_maps.py` | Verifies large active Fortran modules have a header-level navigation map. |
 | `tools/check_p0_archived_evidence_importer.py` | Smoke-tests importing archived public p0 CPU/GPU logs into a temporary validation evidence ledger. |
 | `tools/check_p0_paired_case_scripts.py` | Verifies the public p0 cases preserve clean paired CPU/GPU build and submit profiles, including executable names derived from root CMake target suffixes. |
