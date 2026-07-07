@@ -40,7 +40,7 @@ module atm_input_util
 ! and any output/diagnostic code that consumes the parsed metadata.
 
 ! Module for dynamic allocation variables
-use atm_base
+use atm_base, only : error, rprec
 
 implicit none
 

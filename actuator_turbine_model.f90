@@ -54,7 +54,9 @@ module actuator_turbine_model
 use atm_base, only : rprec, error, interpolate, interpolate_i, vector_add,      &
     vector_divide, vector_mag, rotatePoint, cross_product, distance, int2str
 
-use atm_input_util ! Utilities to read input files
+use atm_input_util, only : airfoilType_t, atm_print_initialize,               &
+    diagnosticOutputInterval, numberOfTurbines, outputInterval,               &
+    read_input_conf, turbineArray, turbineModel
 use param, only : coord
 
 

@@ -47,14 +47,17 @@ def current_scope(line: str, stack: list[str]) -> list[str]:
 
 def collect_broad_imports(paths: list[Path]) -> list[BroadImport]:
     rows: list[BroadImport] = []
-    use_re = re.compile(r"^use\s*(?:,\s*[^:]+::\s*)?(\w+)\s*$", flags=re.I)
+    use_re = re.compile(
+        r"^use\s*(?:,\s*[^:]+::\s*)?(\w+)(?:\s*,\s*only\s*:\s*(.+))?$",
+        flags=re.I,
+    )
 
     for path in paths:
         scope: list[str] = []
         for line_no, line in hygiene.logical_lines(path):
             scope = current_scope(line, scope)
             match = use_re.match(line)
-            if not match:
+            if not match or match.group(2) is not None:
                 continue
             rows.append(
                 BroadImport(

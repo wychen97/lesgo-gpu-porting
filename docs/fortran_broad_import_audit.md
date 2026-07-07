@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `90`
+Total broad imports: `84`
 
 ## Highest-Count Files
 
@@ -16,7 +16,6 @@ Total broad imports: `90`
 | --- | ---: |
 | `level_set.f90` | 17 |
 | `input_util.f90` | 8 |
-| `atm_lesgo_interface.f90` | 4 |
 | `derivatives.f90` | 4 |
 | `lagrange_Sdep_gpu.f90` | 4 |
 | `sgs_stag_util.f90` | 4 |
@@ -33,18 +32,13 @@ Total broad imports: `90`
 | `press_stag_array.f90` | 2 |
 | `tools/validate_filt_da_cufft.F90` | 2 |
 | `trees_setup_ls.f90` | 2 |
-| `actuator_turbine_model.f90` | 1 |
+| `convec.f90` | 1 |
+| `fft.f90` | 1 |
 
 ## Full List
 
 | File | Line | Scope | Module |
 | --- | ---: | --- | --- |
-| `actuator_turbine_model.f90` | 57 | `actuator_turbine_model` | `atm_input_util` |
-| `atm_input_util.f90` | 43 | `atm_input_util` | `atm_base` |
-| `atm_lesgo_interface.f90` | 69 | `atm_lesgo_interface` | `mpi_defs` |
-| `atm_lesgo_interface.f90` | 70 | `atm_lesgo_interface` | `mpi` |
-| `atm_lesgo_interface.f90` | 81 | `atm_lesgo_interface` | `atm_base` |
-| `atm_lesgo_interface.f90` | 82 | `atm_lesgo_interface` | `actuator_turbine_model` |
 | `concurrent_precursor.f90` | 24 | `concurrent_precursor` | `mpi_defs` |
 | `concurrent_precursor.f90` | 25 | `concurrent_precursor` | `fringe` |
 | `concurrent_precursor.f90` | 27 | `concurrent_precursor` | `openacc` |

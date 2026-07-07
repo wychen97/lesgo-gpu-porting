@@ -66,8 +66,9 @@ use grid_m, only : grid
 
 ! MPI implementation from LESGO
 #ifdef PPMPI
-  use mpi_defs
-  use mpi
+  use mpi, only : MPI_INTEGER, MPI_MAX, MPI_MIN, MPI_STATUS_SIZE, MPI_SUM,    &
+                  mpi_allreduce, mpi_barrier, mpi_comm_create, mpi_comm_group, &
+                  mpi_group_incl, mpi_sendrecv
   use param, only : ierr, mpi_rprec, comm, up, down
 #endif
 
@@ -78,11 +79,13 @@ use functions, only : trilinear_interp, interp_to_uv_grid
 use clock_m, only : clock_t
 
 ! Actuator Turbine Model module
-use atm_base
-use actuator_turbine_model
-use atm_input_util, only : rprec, turbineArray, turbineModel, eat_whitespace, &
-                           atm_print_initialize, updateInterval, outputInterval, &
-                           diagnosticOutputInterval, airfoilType_t
+use atm_base, only : distance
+use actuator_turbine_model, only : atm_computeBladeForce,                     &
+    atm_computeNacelleForce, atm_compute_cl_correction, atm_initialize,        &
+    atm_initialize_output, atm_output, atm_structure_enabled,                  &
+    atm_structure_timing_report, atm_update, atm_write_restart
+use atm_input_util, only : numberOfTurbines, outputInterval, rprec,            &
+                           turbineArray, turbineModel, updateInterval
 
 ! Used for testing time
 ! use clock_m

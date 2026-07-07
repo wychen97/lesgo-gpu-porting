@@ -53,6 +53,10 @@ mechanical patches.
   import from `messages.f90`;
 - removed repeated scoped imports in `atm_lesgo_interface.f90`, `initial.f90`,
   and `forcing.f90`;
+- narrowed ATM-side module imports so turbine metadata, actuator entry points,
+  and MPI calls are imported from their owning modules explicitly;
+- fixed the broad-import audit parser so `use module, only: ...` imports are not
+  misclassified as broad imports;
 - regenerated static inventory and refactor-hotspot documentation after source
   changes.
 

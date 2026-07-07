@@ -16,34 +16,34 @@ claims.
 
 | File:line | Subprogram | Classification | Review bucket | Validation rows |
 | --- | --- | --- | --- | --- |
-| `actuator_turbine_model.f90:97` | `atm_model_env_token` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:207` | `atm_structure_timing_report` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:226` | `atm_structure_diag_snapshot` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:302` | `atm_initialize` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:347` | `atm_read_actuator_points` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:399` | `atm_read_restart` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:480` | `atm_write_restart` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:574` | `atm_initialize_output` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:708` | `atm_create_points` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:897` | `atm_update` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:926` | `atm_control_yaw` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:957` | `atm_computeRotorSpeed` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1138` | `atm_rotateBlades` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1243` | `atm_compute_cl_correction` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1404` | `s_fit` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1441` | `atm_calculate_variables` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1611` | `atm_airfoil_blend_info` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1685` | `atm_computeBladeForce` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1929` | `atm_computeNacelleForce` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1978` | `atm_integrate_u` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2001` | `atm_yawNacelle` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2079` | `atm_output` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:2288` | `atm_compute_power` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2315` | `atm_write_blade_points` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:2348` | `atm_process_output` | `host-or-diagnostic` |  |  |
-| `actuator_turbine_model.f90:2406` | `atm_solve_structure` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2699` | `solve_linear_system_banded_dp` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2762` | `solve_linear_system_dp` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:99` | `atm_model_env_token` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:209` | `atm_structure_timing_report` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:228` | `atm_structure_diag_snapshot` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:304` | `atm_initialize` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:349` | `atm_read_actuator_points` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:401` | `atm_read_restart` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:482` | `atm_write_restart` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:576` | `atm_initialize_output` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:710` | `atm_create_points` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:899` | `atm_update` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:928` | `atm_control_yaw` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:959` | `atm_computeRotorSpeed` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1140` | `atm_rotateBlades` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1245` | `atm_compute_cl_correction` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1406` | `s_fit` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1443` | `atm_calculate_variables` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1613` | `atm_airfoil_blend_info` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1687` | `atm_computeBladeForce` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1931` | `atm_computeNacelleForce` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1980` | `atm_integrate_u` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2003` | `atm_yawNacelle` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2081` | `atm_output` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:2290` | `atm_compute_power` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2317` | `atm_write_blade_points` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:2350` | `atm_process_output` | `host-or-diagnostic` |  |  |
+| `actuator_turbine_model.f90:2408` | `atm_solve_structure` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2701` | `solve_linear_system_banded_dp` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2764` | `solve_linear_system_dp` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:40` | `error` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:57` | `interpolate` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:122` | `vector_add` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
@@ -60,35 +60,35 @@ claims.
 | `atm_input_util.f90:1074` | `read_airfoil` | `host-or-diagnostic` |  |  |
 | `atm_input_util.f90:1113` | `readline` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
 | `atm_input_util.f90:1158` | `eat_whitespace` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:245` | `atm_interp_w_to_uv` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:306` | `atm_prepare_direct_w` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:390` | `atm_lesgo_apply_force_gpu` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:435` | `atm_lesgo_convolute_force_gpu_atpoint` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:590` | `atm_lesgo_force_gpu_atpoint` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:602` | `atm_lesgo_initialize` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:650` | `atm_lesgo_finalize` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:685` | `atm_lesgo_report_timing` | `host-or-diagnostic` |  |  |
-| `atm_lesgo_interface.f90:728` | `atm_lesgo_build_force_shadows` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:805` | `atm_lesgo_destroy_force_shadows` | `host-or-diagnostic` |  |  |
-| `atm_lesgo_interface.f90:825` | `atm_lesgo_build_blade_mirrors` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:866` | `atm_lesgo_destroy_blade_mirrors` | `host-or-diagnostic` |  |  |
-| `atm_lesgo_interface.f90:880` | `atm_sync_blade_points_to_device` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:898` | `atm_sync_blade_forces_to_device` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:917` | `atm_lesgo_findCells` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:1115` | `atm_lesgo_forcing` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:1465` | `atm_lesgo_mpi_gather` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:1647` | `atm_lesgo_mpi_gather_packed` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:1903` | `atm_lesgo_force` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:2060` | `atm_lesgo_compute_Spalart_u` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:2142` | `atm_lesgo_convolute_force` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:2430` | `atm_convolute_atpoint_gpu` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:2581` | `atm_sample_velocity_atpoint_gpu` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:2697` | `atm_batch_atpoint_init` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:2775` | `atm_batch_sample_velocity_gpu` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:2963` | `atm_batch_convolute_force_gpu` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:3116` | `atm_batch_clc_init` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:3184` | `atm_batch_cl_correction_gpu` | `gpu-marked` |  |  |
-| `atm_lesgo_interface.f90:3440` | `atm_lesgo_apply_force` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:248` | `atm_interp_w_to_uv` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:309` | `atm_prepare_direct_w` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:393` | `atm_lesgo_apply_force_gpu` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:438` | `atm_lesgo_convolute_force_gpu_atpoint` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:593` | `atm_lesgo_force_gpu_atpoint` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:605` | `atm_lesgo_initialize` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:653` | `atm_lesgo_finalize` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:688` | `atm_lesgo_report_timing` | `host-or-diagnostic` |  |  |
+| `atm_lesgo_interface.f90:731` | `atm_lesgo_build_force_shadows` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:808` | `atm_lesgo_destroy_force_shadows` | `host-or-diagnostic` |  |  |
+| `atm_lesgo_interface.f90:828` | `atm_lesgo_build_blade_mirrors` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:869` | `atm_lesgo_destroy_blade_mirrors` | `host-or-diagnostic` |  |  |
+| `atm_lesgo_interface.f90:883` | `atm_sync_blade_points_to_device` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:901` | `atm_sync_blade_forces_to_device` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:920` | `atm_lesgo_findCells` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:1118` | `atm_lesgo_forcing` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:1468` | `atm_lesgo_mpi_gather` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:1650` | `atm_lesgo_mpi_gather_packed` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:1906` | `atm_lesgo_force` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:2063` | `atm_lesgo_compute_Spalart_u` | `unmarked-runtime-candidate` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:2145` | `atm_lesgo_convolute_force` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:2433` | `atm_convolute_atpoint_gpu` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:2584` | `atm_sample_velocity_atpoint_gpu` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:2700` | `atm_batch_atpoint_init` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:2778` | `atm_batch_sample_velocity_gpu` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:2966` | `atm_batch_convolute_force_gpu` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:3119` | `atm_batch_clc_init` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:3187` | `atm_batch_cl_correction_gpu` | `gpu-marked` |  |  |
+| `atm_lesgo_interface.f90:3443` | `atm_lesgo_apply_force` | `gpu-marked` |  |  |
 | `cfl_util.f90:38` | `get_max_cfl` | `gpu-marked` |  |  |
 | `cfl_util.f90:98` | `get_cfl_dt` | `gpu-marked` |  |  |
 | `clocks.f90:47` | `start` | `host-boundary` |  |  |
