@@ -9,10 +9,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fortran_inventory import tracked_fortran_files
+from repo_paths import ROOT, repo_path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-BACKLOG_PATH = ROOT / "docs/refactor_backlog.md"
+BACKLOG_PATH = repo_path("docs", "refactor_backlog.md")
 HOTSPOT_COUNT = 8
 
 # LVLSET is tracked but outside the optimized production path for this branch.

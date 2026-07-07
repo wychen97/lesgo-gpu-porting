@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 
 from readiness_manifest import wrapper_script_paths
+from repo_paths import ROOT
 
 
-ROOT = Path(__file__).resolve().parents[1]
 PATH_RE = re.compile(
     r"(?<![A-Za-z0-9_/${}-])"
     r"((?:\.\./)*(?:(?:docs|tools)/[A-Za-z0-9_./-]+|"

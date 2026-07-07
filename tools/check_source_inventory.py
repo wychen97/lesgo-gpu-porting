@@ -5,14 +5,13 @@ from __future__ import annotations
 
 import re
 import sys
-from pathlib import Path
 
 from cmake_metadata import public_knob_names
 from fortran_inventory import normalized_repo_path, tracked_fortran_paths
+from repo_paths import ROOT, repo_path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-INVENTORY_PATH = ROOT / "docs/source_file_inventory.md"
+INVENTORY_PATH = repo_path("docs", "source_file_inventory.md")
 INVENTORY_ROW_RE = re.compile(
     r"^\|\s*`(?P<path>[^`]+\.(?:f|f90|F|F90))`\s*"
     r"\|\s*(?P<build>[^|]+)\|"

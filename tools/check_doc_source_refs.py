@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 
 from fortran_inventory import tracked_fortran_paths, tracked_paths
+from repo_paths import ROOT
 
 
-ROOT = Path(__file__).resolve().parents[1]
 SOURCE_REF_RE = re.compile(r"`([^`]+\.(?:f|f90|F|F90))`")
 DOC_SUFFIXES = {".md"}
 
