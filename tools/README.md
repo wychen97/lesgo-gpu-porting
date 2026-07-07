@@ -39,6 +39,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_cluster_script_docs.py` | Verifies root-level cluster/helper shell scripts are documented and classified. |
 | `tools/check_cmake_cache_docs.py` | Verifies public CMake cache variables have table rows in `docs/build_profiles.md`. |
 | `tools/check_cmake_comment_quality.py` | Rejects vague maintenance comments in tracked CMake build files. |
+| `tools/check_cmake_invalid_feature_combinations.py` | Verifies contradictory public CMake feature combinations fail with clear configure-time diagnostics. |
 | `tools/check_cmake_option_docs.py` | Verifies root `USE_*` CMake options have build-option table rows in `docs/code_organization.md`. |
 | `tools/check_cmake_source_groups.py` | Verifies tracked root Fortran files appear in named CMake source groups. |
 | `tools/check_contributing_readiness_docs.py` | Verifies `CONTRIBUTING.md` points to the readiness source of truth. |

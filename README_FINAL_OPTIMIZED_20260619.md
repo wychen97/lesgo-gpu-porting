@@ -125,6 +125,7 @@ python3 tools/check_cmake_option_docs.py
 python3 tools/check_cmake_cache_docs.py
 python3 tools/check_build_profile_args.py
 python3 tools/check_cmake_comment_quality.py
+python3 tools/check_cmake_invalid_feature_combinations.py
 python3 tools/check_cmake_source_groups.py
 python3 tools/check_production_profile_docs.py
 python3 tools/check_production_wording.py

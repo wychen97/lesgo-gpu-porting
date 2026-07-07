@@ -19,6 +19,7 @@ PYTHON_CHECKS = [
     ("CMake cache-variable documentation", "tools/check_cmake_cache_docs.py"),
     ("build-profile CMake arguments", "tools/check_build_profile_args.py"),
     ("CMake comment quality", "tools/check_cmake_comment_quality.py"),
+    ("CMake invalid feature combinations", "tools/check_cmake_invalid_feature_combinations.py"),
     ("CMake source groups", "tools/check_cmake_source_groups.py"),
     ("production profile documentation", "tools/check_production_profile_docs.py"),
     ("production wording", "tools/check_production_wording.py"),
