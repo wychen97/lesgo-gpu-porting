@@ -9,7 +9,8 @@ import sys
 from pathlib import Path
 
 
-DEFAULT_EVIDENCE_PATH = Path("docs/gpu_validation_evidence.json")
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_EVIDENCE_PATH = ROOT / "docs/gpu_validation_evidence.json"
 PASSING_CORRECTNESS_STATUSES = {"passed", "accepted", "verified"}
 
 
