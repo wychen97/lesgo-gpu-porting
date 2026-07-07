@@ -433,6 +433,7 @@ end subroutine  time_block
 subroutine flow_cond_block()
 !*******************************************************************************
 use param
+use sponge, only : use_sponge, sponge_frequency, sponge_height
 #ifdef PPHIT
 ! Type hit has all the information inside
 use hit_inflow, only : hit
