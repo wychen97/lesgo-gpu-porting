@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `202`
+Total broad imports: `197`
 
 ## Highest-Count Files
 
@@ -21,19 +21,19 @@ Total broad imports: `202`
 | `main.f90` | 11 |
 | `functions.f90` | 10 |
 | `turbines.f90` | 10 |
-| `concurrent_precursor.f90` | 6 |
-| `forcing.f90` | 6 |
 | `initial.f90` | 6 |
 | `mpi_defs.f90` | 6 |
-| `sgs_stag_util.f90` | 6 |
 | `time_average.f90` | 6 |
+| `concurrent_precursor.f90` | 5 |
 | `initialize.f90` | 5 |
+| `sgs_stag_util.f90` | 5 |
 | `atm_lesgo_interface.f90` | 4 |
 | `derivatives.f90` | 4 |
+| `forcing.f90` | 4 |
 | `lagrange_Sdep_gpu.f90` | 4 |
 | `press_stag_array.f90` | 4 |
-| `coriolis.f90` | 3 |
 | `inflow.f90` | 3 |
+| `interpolag_Ssim.f90` | 3 |
 
 ## Full List
 
@@ -49,13 +49,11 @@ Total broad imports: `202`
 | `concurrent_precursor.f90` | 25 | `concurrent_precursor` | `fringe` |
 | `concurrent_precursor.f90` | 27 | `concurrent_precursor` | `openacc` |
 | `concurrent_precursor.f90` | 171 | `concurrent_precursor::initialize_cps` | `messages` |
-| `concurrent_precursor.f90` | 172 | `concurrent_precursor::initialize_cps` | `mpi` |
 | `concurrent_precursor.f90` | 225 | `concurrent_precursor::synchronize_cps` | `messages` |
 | `convec.f90` | 33 | `convec` | `param` |
 | `convec.f90` | 36 | `convec` | `fft` |
 | `coriolis.f90` | 25 | `coriolis` | `pid_m` |
 | `coriolis.f90` | 88 | `coriolis::coriolis_init` | `grid_m` |
-| `coriolis.f90` | 182 | `coriolis::coriolis_calc` | `mpi` |
 | `derivatives.f90` | 96 | `derivatives::ddx` | `fft` |
 | `derivatives.f90` | 139 | `derivatives::ddy` | `fft` |
 | `derivatives.f90` | 182 | `derivatives::ddxy` | `fft` |
@@ -63,8 +61,6 @@ Total broad imports: `202`
 | `fft.f90` | 26 | `fft` | `iso_c_binding` |
 | `fft_gpu.f90` | 45 | `fft_gpu` | `cufft` |
 | `fft_gpu.f90` | 46 | `fft_gpu` | `openacc` |
-| `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` |
-| `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` |
 | `forcing.f90` | 385 | `forcing::project` | `param` |
 | `forcing.f90` | 386 | `forcing::project` | `sim_param` |
 | `forcing.f90` | 387 | `forcing::project` | `messages` |
@@ -204,7 +200,6 @@ Total broad imports: `202`
 | `sgs_stag_util.f90` | 65 | `sgs_stag_util::sgs_stag` | `messages` |
 | `sgs_stag_util.f90` | 495 | `sgs_stag_util::calc_sij` | `param` |
 | `sgs_stag_util.f90` | 497 | `sgs_stag_util::calc_sij` | `sgs_param` |
-| `sgs_stag_util.f90` | 673 | `sgs_stag_util::sgs_stage_report` | `mpi` |
 | `shifted_inflow.f90` | 24 | `shifted_inflow` | `fringe` |
 | `stat_defs.f90` | 26 | `stat_defs` | `turbine_indicator` |
 | `std_dynamic.f90` | 29 | `std_dynamic` | `test_filtermodule` |
