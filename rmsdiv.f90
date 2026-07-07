@@ -25,8 +25,11 @@ subroutine rmsdiv(rms)
 ! L_1 norm ov the velocity divergence.
 !
 use types, only : rprec
-use param
+use param, only : comm, ierr, MPI_RPREC, nproc, nx, ny, nz, rank
 use sim_param, only : dudx, dvdy, dwdz
+#ifdef PPMPI
+use mpi, only : MPI_SUM, mpi_reduce
+#endif
 
 implicit none
 integer :: jx, jy, jz, jz_max

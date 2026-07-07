@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `73`
+Total broad imports: `72`
 
 ## Highest-Count Files
 
@@ -91,7 +91,6 @@ Total broad imports: `73`
 | `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` |
 | `press_stag_array.f90` | 51 | `press_stag_array` | `param` |
 | `press_stag_array.f90` | 53 | `press_stag_array` | `fft` |
-| `rmsdiv.f90` | 28 | `rmsdiv` | `param` |
 | `scalars.f90` | 47 | `scalars` | `openacc` |
 | `scalars.f90` | 1379 | `scalars::scalars_transport` | `fft` |
 | `scalars.f90` | 1719 | `scalars::to_big` | `fft` |
