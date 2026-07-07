@@ -128,7 +128,7 @@ runtime correctness and timing evidence must close each bucket.
 | `turbines.f90:316` | `turbines_nodes` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbines.f90:992` | `turbines_forcing_acc` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbines.f90:1002` | `turbines_forcing` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
-| `turbines.f90:1263` | `place_turbines` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
+| `turbines.f90:1267` | `place_turbines` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 
 Regenerate this file with:
 

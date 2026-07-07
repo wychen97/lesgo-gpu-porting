@@ -143,6 +143,7 @@ python3 tools/check_lesgo_conf_key_validation_report.py
 python3 tools/check_source_comment_hygiene.py
 python3 tools/check_source_inventory.py
 python3 tools/check_fortran_interface_hygiene.py
+python3 tools/check_mpi_sync_guard_hygiene.py
 python3 tools/check_fortran_interface_hygiene_selftest.py
 python3 tools/check_fortran_broad_imports_selftest.py
 python3 tools/check_fortran_broad_import_audit.py

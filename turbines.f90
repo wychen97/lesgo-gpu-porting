@@ -1007,7 +1007,9 @@ subroutine turbines_forcing()
 use param, only : pi, lbz
 use sim_param, only : u, v, w, fxa, fya, fza
 use functions, only : linear_interp, interp_to_uv_grid, interp_to_w_grid
+#ifdef PPMPI
 use mpi
+#endif
 implicit none
 
 character(*), parameter :: sub_name = mod_name // '.turbines_forcing'
@@ -1154,9 +1156,11 @@ do s=1,nloc
 end do
 
 ! Interpolate force onto the w grid
+#ifdef PPMPI
 call mpi_sync_real_array( fxa(1:nx,1:ny,lbz:nz), 0, MPI_SYNC_DOWNUP )
 call mpi_sync_real_array( fya(1:nx,1:ny,lbz:nz), 0, MPI_SYNC_DOWNUP )
 call mpi_sync_real_array( fza(1:nx,1:ny,lbz:nz), 0, MPI_SYNC_DOWNUP )
+#endif
 fza = interp_to_w_grid(fza,lbz)
 
 !spatially average velocity at the top of the domain and write to file
