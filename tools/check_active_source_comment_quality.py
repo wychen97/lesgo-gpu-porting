@@ -7,8 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
+from repo_paths import ROOT
 
 # LVLSET/tree sources are intentionally deferred from the optimized production
 # path.  Their legacy comments are tracked separately by docs/refactor_backlog.md.

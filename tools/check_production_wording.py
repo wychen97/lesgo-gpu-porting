@@ -8,10 +8,10 @@ import sys
 from pathlib import Path
 
 from cmake_metadata import cmake_descriptions
+from repo_paths import ROOT, repo_path
 
 
-ROOT = Path(__file__).resolve().parents[1]
-CODE_ORG = ROOT / "docs/code_organization.md"
+CODE_ORG = repo_path("docs", "code_organization.md")
 
 # These source comments describe validated production paths.  Experimental
 # labels are still allowed for real experiments such as point-owner ATM LB.

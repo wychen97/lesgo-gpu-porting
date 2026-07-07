@@ -7,8 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
+from repo_paths import ROOT
 
 # These are not general words to ban from documentation.  They are old source
 # comment fragments that made the production code harder for collaborators to

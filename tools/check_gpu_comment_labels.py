@@ -6,10 +6,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from repo_paths import ROOT
 from report_gpu_static_inventory import GPU_MARKERS, GPU_SOURCE_FILES, tracked_fortran
 
-
-ROOT = Path(__file__).resolve().parents[1]
 
 STALE_LABELS = (
     "P0a",
