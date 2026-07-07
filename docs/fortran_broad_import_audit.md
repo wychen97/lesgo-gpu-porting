@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `72`
+Total broad imports: `71`
 
 ## Highest-Count Files
 
@@ -88,7 +88,6 @@ Total broad imports: `72`
 | `param.f90` | 28 | `param` | `mpi` |
 | `param_output.f90` | 23 | `param_output` | `param` |
 | `param_output.f90` | 25 | `param_output` | `level_set_base` |
-| `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` |
 | `press_stag_array.f90` | 51 | `press_stag_array` | `param` |
 | `press_stag_array.f90` | 53 | `press_stag_array` | `fft` |
 | `scalars.f90` | 47 | `scalars` | `openacc` |

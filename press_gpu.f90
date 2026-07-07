@@ -55,7 +55,7 @@ use param, only : ld, lh, ny, nz, lbz, nx, dz, dt, tadv1, BOGUS,               &
                   domain_calc, domain_nstart, domain_nend, domain_nskip
 #ifdef PPMPI
 use param, only : MPI_RPREC, comm, ierr, status, up, down
-use mpi
+use mpi, only : mpi_recv, mpi_send, mpi_sendrecv
 #endif
 use sim_param, only : u, v, w, divtz, p, dpdx, dpdy, dpdz
 use fft, only : kx, ky
