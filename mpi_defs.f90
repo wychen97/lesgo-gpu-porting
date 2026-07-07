@@ -20,7 +20,10 @@
 !*******************************************************************************
 module mpi_defs
 !*******************************************************************************
-use mpi
+use mpi, only : MPI_COMM_NULL, MPI_COMM_WORLD, MPI_COMPLEX,                   &
+    MPI_DOUBLE_COMPLEX, MPI_DOUBLE_PRECISION, MPI_REAL, mpi_cart_coords,      &
+    mpi_cart_create, mpi_cart_rank, mpi_cart_shift, mpi_comm_rank,            &
+    mpi_comm_size
 implicit none
 
 save

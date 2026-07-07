@@ -270,11 +270,11 @@ claims.
 | `messages.f90:348` | `error_al` | `host-boundary` |  |  |
 | `messages.f90:365` | `error_ar` | `host-boundary` |  |  |
 | `messages.f90:382` | `error_ar_array` | `host-boundary` |  |  |
-| `mpi_defs.f90:52` | `initialize_mpi` | `gpu-marked` |  |  |
-| `mpi_defs.f90:196` | `create_mpi_comms_cps` | `host-boundary` |  |  |
-| `mpi_defs.f90:247` | `mpi_sync_real_array` | `gpu-marked` |  |  |
-| `mpi_defs.f90:353` | `sync_up` | `host-boundary` |  |  |
-| `mpi_defs.f90:364` | `sync_downup_nb` | `host-boundary` |  |  |
+| `mpi_defs.f90:55` | `initialize_mpi` | `gpu-marked` |  |  |
+| `mpi_defs.f90:199` | `create_mpi_comms_cps` | `host-boundary` |  |  |
+| `mpi_defs.f90:250` | `mpi_sync_real_array` | `gpu-marked` |  |  |
+| `mpi_defs.f90:356` | `sync_up` | `host-boundary` |  |  |
+| `mpi_defs.f90:367` | `sync_downup_nb` | `host-boundary` |  |  |
 | `mpi_transpose_mod.f90:36` | `mpi_transpose` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `param_output.f90:21` | `param_output` | `host-boundary` |  |  |
 | `pid.f90:49` | `constructor` | `host-boundary` |  |  |
