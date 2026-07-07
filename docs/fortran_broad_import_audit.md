@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `63`
+Total broad imports: `62`
 
 ## Highest-Count Files
 
@@ -23,7 +23,6 @@ Total broad imports: `63`
 | `fft_gpu.f90` | 2 |
 | `lagrange_Sdep_gpu.f90` | 2 |
 | `main.f90` | 2 |
-| `mpi_defs.f90` | 2 |
 | `param_output.f90` | 2 |
 | `press_stag_array.f90` | 2 |
 | `tools/validate_filt_da_cufft.F90` | 2 |
@@ -32,6 +31,7 @@ Total broad imports: `63`
 | `fft.f90` | 1 |
 | `initial.f90` | 1 |
 | `io.f90` | 1 |
+| `mpi_defs.f90` | 1 |
 | `time_average.f90` | 1 |
 | `trees_global_fmask_ls.f90` | 1 |
 
@@ -78,8 +78,7 @@ Total broad imports: `63`
 | `level_set.f90` | 4397 | `level_set::safe_cd` | `grid_m` |
 | `main.f90` | 41 | `(file scope)` | `param` |
 | `main.f90` | 42 | `(file scope)` | `sim_param` |
-| `mpi_defs.f90` | 58 | `mpi_defs::initialize_mpi` | `param` |
-| `mpi_defs.f90` | 61 | `mpi_defs::initialize_mpi` | `cgns` |
+| `mpi_defs.f90` | 62 | `mpi_defs::initialize_mpi` | `cgns` |
 | `param_output.f90` | 23 | `param_output` | `param` |
 | `param_output.f90` | 25 | `param_output` | `level_set_base` |
 | `press_stag_array.f90` | 51 | `press_stag_array` | `param` |

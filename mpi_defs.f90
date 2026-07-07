@@ -55,7 +55,8 @@ contains
 subroutine initialize_mpi()
 !*******************************************************************************
 use types, only : rprec
-use param
+use param, only : chcoord, comm, coord, coord_of_rank, down, global_rank,      &
+    ierr, MPI_CPREC, MPI_RPREC, nproc, rank, rank_of_coord, up
 use cuda_mpi_debug, only : cuda_mpi_debug_init
 #ifdef PPCGNS
 use cgns
