@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `88`
+Total broad imports: `87`
 
 ## Highest-Count Files
 
@@ -45,7 +45,6 @@ Total broad imports: `88`
 | `clocks.f90` | 50 | `clock_m::start` | `mpi` |
 | `clocks.f90` | 68 | `clock_m::stop` | `mpi` |
 | `concurrent_precursor.f90` | 169 | `concurrent_precursor::initialize_cps` | `mpi` |
-| `convec.f90` | 37 | `convec` | `fft` |
 | `coriolis.f90` | 182 | `coriolis::coriolis_calc` | `mpi` |
 | `cuda_mpi_debug.f90` | 4 | `cuda_mpi_debug` | `mpi` |
 | `fft.f90` | 26 | `fft` | `iso_c_binding` |
