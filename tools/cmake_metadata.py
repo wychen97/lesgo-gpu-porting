@@ -31,6 +31,7 @@ CACHE_DESCRIPTION_RE = re.compile(
     r'"[^"]*"\s+CACHE\s+STRING\s+"(?P<description>[^"]*)"',
     re.DOTALL,
 )
+COMPILE_DEFINITION_RE = re.compile(r"-D(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b")
 SOURCE_GROUP_RE = re.compile(r"^[A-Za-z0-9_]+_SOURCES$")
 VARIABLE_REF_RE = re.compile(r"\$\{(?P<name>[A-Za-z0-9_]+)\}")
 LIST_APPEND_SOURCES_RE = re.compile(
@@ -167,3 +168,7 @@ def cmake_descriptions(prefix: str | None = None) -> dict[str, str]:
                 continue
             descriptions[name] = " ".join(match.group("description").split())
     return descriptions
+
+
+def compile_definition_names() -> set[str]:
+    return set(COMPILE_DEFINITION_RE.findall(cmake_text()))

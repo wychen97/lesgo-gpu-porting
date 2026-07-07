@@ -14,6 +14,7 @@ PYTHON_CHECKS = [
     # Branch-wide source, CMake, and production-profile hygiene.
     ("source hygiene", "tools/check_source_hygiene.py"),
     ("repository path helpers", "tools/check_repo_paths.py"),
+    ("preprocessor macro inventory", "tools/check_preprocessor_macro_inventory.py"),
     ("CMake option documentation", "tools/check_cmake_option_docs.py"),
     ("CMake cache-variable documentation", "tools/check_cmake_cache_docs.py"),
     ("build-profile CMake arguments", "tools/check_build_profile_args.py"),

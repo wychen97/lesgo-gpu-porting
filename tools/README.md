@@ -74,6 +74,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_navigation_maps.py` | Verifies large active Fortran modules have a header-level navigation map. |
 | `tools/check_p0_archived_evidence_importer.py` | Smoke-tests importing archived public p0 CPU/GPU logs into a temporary validation evidence ledger. |
 | `tools/check_p0_paired_case_scripts.py` | Verifies the public p0 cases preserve clean paired CPU/GPU build and submit profiles, including executable names derived from root CMake target suffixes. |
+| `tools/check_preprocessor_macro_inventory.py` | Verifies active Fortran preprocessor guards use root-CMake-defined macros or documented compiler macros. |
 | `tools/check_production_profile_docs.py` | Verifies canonical production `USE_*` settings match across build and organization docs. |
 | `tools/check_production_wording.py` | Verifies validated production paths are not described as experimental. |
 | `tools/check_refactor_backlog.py` | Verifies `docs/refactor_backlog.md` lists the current non-LVLSET source-size hotspots. |

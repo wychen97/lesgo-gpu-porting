@@ -129,6 +129,7 @@ The readiness wrapper runs these portable checks:
 ```bash
 python3 tools/check_source_hygiene.py
 python3 tools/check_repo_paths.py
+python3 tools/check_preprocessor_macro_inventory.py
 python3 tools/check_cmake_option_docs.py
 python3 tools/check_cmake_cache_docs.py
 python3 tools/check_build_profile_args.py
