@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `81`
+Total broad imports: `79`
 
 ## Highest-Count Files
 
@@ -24,7 +24,6 @@ Total broad imports: `81`
 | `scalars.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
 | `fft_gpu.f90` | 2 |
-| `forcing.f90` | 2 |
 | `io.f90` | 2 |
 | `main.f90` | 2 |
 | `param_output.f90` | 2 |
@@ -34,6 +33,7 @@ Total broad imports: `81`
 | `convec.f90` | 1 |
 | `fft.f90` | 1 |
 | `interpolag_Sdep.f90` | 1 |
+| `interpolag_Ssim.f90` | 1 |
 
 ## Full List
 
@@ -47,8 +47,6 @@ Total broad imports: `81`
 | `fft.f90` | 26 | `fft` | `iso_c_binding` |
 | `fft_gpu.f90` | 45 | `fft_gpu` | `cufft` |
 | `fft_gpu.f90` | 46 | `fft_gpu` | `openacc` |
-| `forcing.f90` | 385 | `forcing::project` | `param` |
-| `forcing.f90` | 386 | `forcing::project` | `sim_param` |
 | `initial.f90` | 25 | `initial` | `param` |
 | `initial.f90` | 391 | `initial::ic_dns` | `param` |
 | `initial.f90` | 482 | `initial::ic_les` | `param` |
