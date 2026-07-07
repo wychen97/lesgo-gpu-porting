@@ -1385,7 +1385,7 @@ use derivatives, only : filt_da, ddx, ddy, ddz_uv, ddz_w
 #ifdef PPMPI
 use mpi_defs, only :  mpi_sync_real_array, MPI_SYNC_DOWNUP
 #endif
-use fft
+use fft, only : back, forw_big, unpadd
 use messages, only : error
 #if defined(PPSCALARS_GPU) && defined(PPCONVEC_GPU)
 use convec_gpu_m, only : convec_gpu_big_available,                            &
@@ -1725,8 +1725,8 @@ end subroutine scalars_transport
 !*******************************************************************************
 subroutine to_big(a, a_big)
 !*******************************************************************************
-use fft
-use param, only : lbz, nx, ny, nz
+use fft, only : back_big, forw, padd
+use param, only : lbz, ld, ld_big, nx, ny, ny2, nz
 
 real(rprec), dimension(ld, ny, lbz:nz), intent(inout) ::  a
 real(rprec), dimension(ld_big, ny2, lbz:nz), intent(inout) :: a_big
