@@ -28,11 +28,10 @@ use sgs_param, only : Cs_opt2, F_LM, F_MM, F_QN, F_NN
 #ifdef PPDYN_TN
 use sgs_param, only : F_ee2, F_deedt2, ee_past
 #endif
-#if defined(PPTURBINES) && !defined(PPATM)
+#if (defined(PPTURBINES) && !defined(PPATM)) || defined(PPLVLSET)
 use sim_param, only : fxa, fya, fza
 #endif
 #ifdef PPLVLSET
-use sim_param, only : fxa, fya, fza
 use sim_param, only : fx, fy, fz
 #endif
 use string_util, only : string_concat

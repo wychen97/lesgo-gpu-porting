@@ -46,14 +46,14 @@ character(:), allocatable :: checkpoint_file
 ! character(*), parameter :: checkpoint_spectra_file = path // 'spectra.out'
 #ifdef PPWRITE_BIG_ENDIAN
 character(*), parameter :: write_endian = 'BIG_ENDIAN'
-#elif PPWRITE_LITTLE_ENDIAN
+#elif defined(PPWRITE_LITTLE_ENDIAN)
 character(*), parameter :: write_endian = 'LITTLE_ENDIAN'
 #else
 character(*), parameter :: write_endian = 'NATIVE'
 #endif
 #ifdef PPREAD_BIG_ENDIAN
 character(*), parameter :: read_endian = 'BIG_ENDIAN'
-#elif PPREAD_LITTLE_ENDIAN
+#elif defined(PPREAD_LITTLE_ENDIAN)
 character(*), parameter :: read_endian = 'LITTLE_ENDIAN'
 #else
 character(*), parameter :: read_endian = 'NATIVE'

@@ -46,6 +46,9 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_doc_source_refs.py` | Verifies documented Fortran source references point to tracked files. |
 | `tools/check_docs_index.py` | Verifies `docs/README.md` indexes tracked collaborator docs. |
 | `tools/check_environment_switch_docs.py` | Verifies `LESGO_*` runtime switches used in source are documented. |
+| `tools/check_fortran_broad_import_audit.py` | Verifies the generated broad Fortran import audit is current. |
+| `tools/check_fortran_interface_hygiene.py` | Verifies Fortran preprocessor symbols, module/program `implicit none`, and `use ..., only:` import/export boundaries. |
+| `tools/check_fortran_interface_hygiene_selftest.py` | Regression-tests the Fortran interface hygiene checker on synthetic module snippets. |
 | `tools/check_gpu_benchmark_manifest.py` | Verifies the benchmark manifest covers every GPU validation matrix row and uses valid, internally consistent CMake build settings. |
 | `tools/check_gpu_comment_labels.py` | Verifies production GPU source comments do not use stale internal optimization labels. |
 | `tools/check_gpu_contract_source_groups.py` | Verifies GPU contracts document every named CMake source group. |
@@ -100,6 +103,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/report_gpu_release_objective_status.py` | Generates the release-objective status report tying static source coverage to validation evidence. |
 | `tools/report_gpu_static_candidate_review.py` | Generates the full static unmarked-candidate GPU review report. |
 | `tools/report_gpu_static_full_inventory.py` | Generates the full static GPU classification inventory for every tracked non-LVLSET subprogram. |
+| `tools/report_fortran_broad_imports.py` | Generates the broad Fortran import audit for future import-boundary cleanup. |
 | `tools/script_inventory.py` | Shared tracked-script discovery helpers for readiness checks. |
 | `tools/report_gpu_static_inventory.py` | Reports static non-LVLSET Fortran subprogram GPU-marker coverage and review buckets for audits. |
 | `tools/report_gpu_validation_gaps.py` | Reports open GPU validation and paired-speedup evidence gaps by runbook batch. |

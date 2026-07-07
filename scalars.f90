@@ -1368,7 +1368,7 @@ end subroutine obukhov
 subroutine scalars_transport()
 !*******************************************************************************
 use param, only : lbz, nx, nz, nx2, ny2, nproc, coord, dt, tadv1, tadv2,       &
-    jt_total, dt, wbase
+    jt_total, wbase
 use param, only : lbc_mom, ubc_mom, dz
 #if defined(PPSCALARS_GPU) && defined(PPGPU_AWARE_MPI)
 use param, only : ld, ny, MPI_RPREC, down, up, comm, status, ierr

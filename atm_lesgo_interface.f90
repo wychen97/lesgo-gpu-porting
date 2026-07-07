@@ -68,7 +68,7 @@ use grid_m, only : grid
 #ifdef PPMPI
   use mpi_defs
   use mpi
-  use param, only : ierr, mpi_rprec, comm, coord, up, down
+  use param, only : ierr, mpi_rprec, comm, up, down
 #endif
 
 ! Interpolating function for interpolating the velocity field to each

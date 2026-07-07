@@ -23,6 +23,7 @@ module turbine_indicator
 use types, only : rprec
 use param, only : nx, ny, nz, lh
 
+implicit none
 private
 public :: turb_ind_func_t
 

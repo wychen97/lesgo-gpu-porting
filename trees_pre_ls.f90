@@ -19,6 +19,8 @@
 
 module trees_pre_ls_mod
 
+implicit none
+
 contains
 
 subroutine trees_pre_ls

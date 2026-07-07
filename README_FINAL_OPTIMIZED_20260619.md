@@ -25,6 +25,8 @@ docs/gpu_development_guidelines.md
 docs/environment_switches.md
 docs/refactor_backlog.md
 docs/collaboration_readiness_status.md
+docs/architecture_hardening_audit.md
+docs/fortran_broad_import_audit.md
 CONTRIBUTING.md
 tools/README.md
 ```
@@ -139,6 +141,9 @@ python3 tools/check_lesgo_conf_validation_map.py
 python3 tools/check_lesgo_conf_key_validation_report.py
 python3 tools/check_source_comment_hygiene.py
 python3 tools/check_source_inventory.py
+python3 tools/check_fortran_interface_hygiene.py
+python3 tools/check_fortran_interface_hygiene_selftest.py
+python3 tools/check_fortran_broad_import_audit.py
 python3 tools/check_sgs_model_constants.py
 python3 tools/check_refactor_backlog.py
 python3 tools/check_navigation_maps.py

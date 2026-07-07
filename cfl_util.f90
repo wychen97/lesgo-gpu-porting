@@ -25,6 +25,7 @@ module cfl_util
 ! quantities
 !
 
+implicit none
 save
 private
 

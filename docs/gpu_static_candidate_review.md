@@ -22,23 +22,23 @@ runtime correctness and timing evidence must close each bucket.
 
 | File:line | Subprogram | Review bucket | Validation rows |
 | --- | --- | --- | --- |
-| `actuator_turbine_model.f90:707` | `atm_create_points` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:896` | `atm_update` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:925` | `atm_control_yaw` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:956` | `atm_computeRotorSpeed` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1137` | `atm_rotateBlades` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1242` | `atm_compute_cl_correction` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1403` | `s_fit` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1440` | `atm_calculate_variables` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1610` | `atm_airfoil_blend_info` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1684` | `atm_computeBladeForce` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1928` | `atm_computeNacelleForce` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1977` | `atm_integrate_u` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2000` | `atm_yawNacelle` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2287` | `atm_compute_power` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2405` | `atm_solve_structure` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2698` | `solve_linear_system_banded_dp` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2761` | `solve_linear_system_dp` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:708` | `atm_create_points` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:897` | `atm_update` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:926` | `atm_control_yaw` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:957` | `atm_computeRotorSpeed` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1138` | `atm_rotateBlades` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1243` | `atm_compute_cl_correction` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1404` | `s_fit` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1441` | `atm_calculate_variables` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1611` | `atm_airfoil_blend_info` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1685` | `atm_computeBladeForce` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1929` | `atm_computeNacelleForce` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1978` | `atm_integrate_u` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2001` | `atm_yawNacelle` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2288` | `atm_compute_power` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2406` | `atm_solve_structure` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2699` | `solve_linear_system_banded_dp` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2762` | `solve_linear_system_dp` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:40` | `error` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:57` | `interpolate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:122` | `vector_add` | `atm-host-model` | `atm_line`, `large_windfarm` |
@@ -117,14 +117,14 @@ runtime correctness and timing evidence must close each bucket.
 | `stability.f90:60` | `calc_psi_m` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
 | `stability.f90:96` | `calc_psi_h` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
 | `std_dynamic.f90:21` | `std_dynamic` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `test_filtermodule.f90:150` | `test_filter` | `diagnostic-profiling` | `diagnostics_output` |
-| `test_filtermodule.f90:174` | `test_filter_3` | `diagnostic-profiling` | `diagnostics_output` |
-| `test_filtermodule.f90:189` | `test_filter_6` | `diagnostic-profiling` | `diagnostics_output` |
-| `test_filtermodule.f90:207` | `test_test_filter` | `diagnostic-profiling` | `diagnostics_output` |
-| `test_filtermodule.f90:231` | `test_test_filter_3` | `diagnostic-profiling` | `diagnostics_output` |
-| `test_filtermodule.f90:246` | `test_test_filter_6` | `diagnostic-profiling` | `diagnostics_output` |
+| `test_filtermodule.f90:151` | `test_filter` | `diagnostic-profiling` | `diagnostics_output` |
+| `test_filtermodule.f90:175` | `test_filter_3` | `diagnostic-profiling` | `diagnostics_output` |
+| `test_filtermodule.f90:190` | `test_filter_6` | `diagnostic-profiling` | `diagnostics_output` |
+| `test_filtermodule.f90:208` | `test_test_filter` | `diagnostic-profiling` | `diagnostics_output` |
+| `test_filtermodule.f90:232` | `test_test_filter_3` | `diagnostic-profiling` | `diagnostics_output` |
+| `test_filtermodule.f90:247` | `test_test_filter_6` | `diagnostic-profiling` | `diagnostics_output` |
 | `tridag_array.f90:250` | `tridag_array` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `turbine_indicator.f90:52` | `val` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
+| `turbine_indicator.f90:53` | `val` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbines.f90:316` | `turbines_nodes` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbines.f90:989` | `turbines_forcing_acc` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbines.f90:999` | `turbines_forcing` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |

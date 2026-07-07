@@ -1453,12 +1453,12 @@ fx_tot = fxa(1:nx,1:ny,1:nz)
 fy_tot = fya(1:nx,1:ny,1:nz)
 fz_tot = fza(1:nx,1:ny,1:nz)
 
-#elif PPATM
+#elif defined(PPATM)
 fx_tot = fxa(1:nx,1:ny,1:nz)
 fy_tot = fya(1:nx,1:ny,1:nz)
 fz_tot = fza(1:nx,1:ny,1:nz)
 
-#elif PPLVLSET
+#elif defined(PPLVLSET)
 fx_tot = fx(1:nx,1:ny,1:nz)+fxa(1:nx,1:ny,1:nz)
 fy_tot = fy(1:nx,1:ny,1:nz)+fya(1:nx,1:ny,1:nz)
 fz_tot = fz(1:nx,1:ny,1:nz)+fza(1:nx,1:ny,1:nz)

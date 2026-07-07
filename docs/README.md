@@ -91,6 +91,16 @@ branch.  Read these files before changing solver code.
    - production-scope and deferred-work status;
    - editing rule for readability-only versus solver changes.
 
+19. `architecture_hardening_audit.md`
+   - source-maintenance guardrails added for this hardening pass;
+   - classes of similar mistakes now checked automatically;
+   - limits of the source-level checks versus numerical validation.
+
+20. `fortran_broad_import_audit.md`
+   - generated map of broad `use module` imports without `only:` lists;
+   - non-blocking guide for future import-boundary cleanup;
+   - helps keep readability refactors small and reviewable.
+
 ## Historical References
 
 - `gpu_port_refactor_history.md`: historical architecture plan that informed

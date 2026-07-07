@@ -36,6 +36,7 @@ use param, only : nx, ny, nz, lbz
 use cgns
 #endif
 
+implicit none
 private
 public :: tavg_t
 

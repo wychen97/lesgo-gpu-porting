@@ -26,6 +26,7 @@ use param, only : nx, ny, nz, lh
 use turbine_indicator
 #endif
 
+implicit none
 save
 public
 

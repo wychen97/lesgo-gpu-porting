@@ -33,6 +33,7 @@ module test_filtermodule
 use types, only : rprec
 use param, only : lh, ny
 
+implicit none
 private lh, ny
 
 ! the implicit filter (1=grid size)

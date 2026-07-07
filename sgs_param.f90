@@ -22,6 +22,7 @@ module sgs_param
 !*******************************************************************************
 use types, only : rprec
 
+implicit none
 save
 private rprec
 public

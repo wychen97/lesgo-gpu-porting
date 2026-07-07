@@ -10,11 +10,11 @@ structure, but they should be split only when a clean ownership boundary exists.
 
 | Priority | File | Current size | Refactor direction |
 | --- | --- | ---: | --- |
-| 1 | `atm_lesgo_interface.f90` | 140,848 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
-| 2 | `actuator_turbine_model.f90` | 117,817 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
+| 1 | `atm_lesgo_interface.f90` | 140,841 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
+| 2 | `actuator_turbine_model.f90` | 117,911 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
 | 3 | `lagrange_Sdep_gpu.f90` | 93,203 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
-| 4 | `scalars.f90` | 63,152 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
-| 5 | `io.f90` | 60,448 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
+| 4 | `scalars.f90` | 63,148 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
+| 5 | `io.f90` | 60,466 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
 | 6 | `sgs_gpu.f90` | 55,422 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
 | 7 | `atm_input_util.f90` | 54,346 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |
 | 8 | `iwmles.f90` | 52,722 bytes | Separate wall-model paths after preserving identical `(i,j)` surface-field semantics. |

@@ -37,6 +37,9 @@ PYTHON_CHECKS = [
     # Fortran source inventory, navigation, and GPU-module contracts.
     ("source comment hygiene", "tools/check_source_comment_hygiene.py"),
     ("source inventory", "tools/check_source_inventory.py"),
+    ("Fortran interface hygiene", "tools/check_fortran_interface_hygiene.py"),
+    ("Fortran interface hygiene self-test", "tools/check_fortran_interface_hygiene_selftest.py"),
+    ("Fortran broad-import audit", "tools/check_fortran_broad_import_audit.py"),
     ("SGS model constants", "tools/check_sgs_model_constants.py"),
     ("refactor backlog hotspots", "tools/check_refactor_backlog.py"),
     ("large-file navigation maps", "tools/check_navigation_maps.py"),

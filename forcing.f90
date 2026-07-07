@@ -238,17 +238,18 @@ subroutine forcing_applied()
 use types, only : rprec
 use param, only : nx, ny, nz, lbz
 
+#if defined(PPTURBINES) || defined(PPATM)
+use sim_param, only : fxa, fya, fza
+#endif
+
 #if defined(PPTURBINES) && !defined(PPATM)
 #ifdef PPLES_GPU
-use sim_param, only : u, v, w, fxa, fya, fza
-#else
-use sim_param, only : fxa, fya, fza
+use sim_param, only : u, v, w
 #endif
 use turbines, only:turbines_forcing, turbines_acc_available, turbines_forcing_acc
 #endif
 
 #ifdef PPATM
-use sim_param, only : fxa, fya, fza ! The body force components
 use atm_lesgo_interface, only : atm_lesgo_forcing
 #endif
 

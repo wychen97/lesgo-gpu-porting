@@ -15,7 +15,6 @@ EXEC_SUFFIX_ORDER = [
     ("USE_TURBINES", "-turbines"),
     ("USE_ATM", "-ATM"),
     ("USE_LES_GPU", "-lesgpu"),
-    ("OUTPUT_EXTRA", "-exout"),
     ("USE_DYN_TN", "-dyntn"),
     ("USE_CGNS", "-cgns"),
     ("USE_SCALARS_GPU", "-scalgpu"),

@@ -357,11 +357,6 @@ if (USE_LES_GPU)
     set(exec_name "${exec_name}-lesgpu")
 endif (USE_LES_GPU)
 
-if (OUTPUT_EXTRA)
-    add_definitions(-DPPOUTPUT_EXTRA)
-    set(exec_name "${exec_name}-exout")
-endif (OUTPUT_EXTRA)
-
 if (USE_DYN_TN)
     add_definitions(-DPPDYN_TN)
     set(exec_name "${exec_name}-dyntn")

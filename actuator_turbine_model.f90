@@ -51,7 +51,8 @@ module actuator_turbine_model
 !     written here; LESGO field/checkpoint output remains in io.f90.
 
 ! Imported modules
-use atm_base ! Include basic types and precision of real numbers
+use atm_base, only : rprec, error, interpolate, interpolate_i, vector_add,      &
+    vector_divide, vector_mag, rotatePoint, cross_product, distance, int2str
 
 use atm_input_util ! Utilities to read input files
 use param, only : coord

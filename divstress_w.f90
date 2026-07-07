@@ -26,7 +26,7 @@ subroutine divstress_w(divt, tx, ty, tz)
 ! except at top, where 1:nz is provided
 !
 use types, only : rprec
-use param, only : ld, nx, ny, nz, coord, BOGUS, lbz, nproc, coord
+use param, only : ld, nx, ny, nz, coord, BOGUS, lbz, nproc
 use derivatives, only : ddz_uv, stress_w_xy_derivs
 implicit none
 
