@@ -93,12 +93,12 @@ claims.
 | `cfl_util.f90:98` | `get_cfl_dt` | `gpu-marked` |  |  |
 | `clocks.f90:47` | `start` | `host-boundary` |  |  |
 | `clocks.f90:65` | `stop` | `host-boundary` |  |  |
-| `concurrent_precursor.f90:102` | `cps_timer_start` | `gpu-marked` |  |  |
-| `concurrent_precursor.f90:116` | `cps_timer_accum` | `gpu-marked` |  |  |
-| `concurrent_precursor.f90:133` | `cps_stage_report` | `host-or-diagnostic` |  |  |
-| `concurrent_precursor.f90:167` | `initialize_cps` | `gpu-marked` |  |  |
-| `concurrent_precursor.f90:222` | `synchronize_cps` | `gpu-marked` |  |  |
-| `concurrent_precursor.f90:434` | `inflow_cps` | `gpu-marked` |  |  |
+| `concurrent_precursor.f90:99` | `cps_timer_start` | `gpu-marked` |  |  |
+| `concurrent_precursor.f90:113` | `cps_timer_accum` | `gpu-marked` |  |  |
+| `concurrent_precursor.f90:130` | `cps_stage_report` | `host-or-diagnostic` |  |  |
+| `concurrent_precursor.f90:164` | `initialize_cps` | `gpu-marked` |  |  |
+| `concurrent_precursor.f90:219` | `synchronize_cps` | `gpu-marked` |  |  |
+| `concurrent_precursor.f90:431` | `inflow_cps` | `gpu-marked` |  |  |
 | `convec.f90:24` | `convec` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `convec_gpu.f90:71` | `convec_gpu_init` | `gpu-marked` |  |  |
 | `convec_gpu.f90:108` | `convec_gpu_finalize` | `gpu-marked` |  |  |

@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `84`
+Total broad imports: `81`
 
 ## Highest-Count Files
 
@@ -19,7 +19,6 @@ Total broad imports: `84`
 | `derivatives.f90` | 4 |
 | `lagrange_Sdep_gpu.f90` | 4 |
 | `sgs_stag_util.f90` | 4 |
-| `concurrent_precursor.f90` | 3 |
 | `initial.f90` | 3 |
 | `mpi_defs.f90` | 3 |
 | `scalars.f90` | 3 |
@@ -34,14 +33,12 @@ Total broad imports: `84`
 | `trees_setup_ls.f90` | 2 |
 | `convec.f90` | 1 |
 | `fft.f90` | 1 |
+| `interpolag_Sdep.f90` | 1 |
 
 ## Full List
 
 | File | Line | Scope | Module |
 | --- | ---: | --- | --- |
-| `concurrent_precursor.f90` | 24 | `concurrent_precursor` | `mpi_defs` |
-| `concurrent_precursor.f90` | 25 | `concurrent_precursor` | `fringe` |
-| `concurrent_precursor.f90` | 27 | `concurrent_precursor` | `openacc` |
 | `convec.f90` | 37 | `convec` | `fft` |
 | `derivatives.f90` | 96 | `derivatives::ddx` | `fft` |
 | `derivatives.f90` | 139 | `derivatives::ddy` | `fft` |

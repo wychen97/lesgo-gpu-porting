@@ -21,11 +21,8 @@
 module concurrent_precursor
 !*******************************************************************************
 use types, only : rprec
-use mpi_defs
-use fringe
-#ifdef PPLES_GPU
-use openacc
-#endif
+use mpi_defs, only : BLUE, RED, color, interComm
+use fringe, only : fringe_t
 implicit none
 
 save
