@@ -63,17 +63,27 @@ HOST_OR_DIAGNOSTIC_NAME_RE = re.compile(
     re.IGNORECASE,
 )
 
-GPU_SOURCE_FILES = {
-    "convec_gpu.f90",
-    "derivatives_gpu.f90",
-    "fft_gpu.f90",
-    "hit_inflow_gpu.f90",
-    "lagrange_Sdep_gpu.f90",
-    "press_gpu.f90",
-    "sgs_gpu.f90",
-    "tridag_gpu.f90",
-    "turbines_gpu.f90",
-}
+def tracked_gpu_source_names() -> set[str]:
+    """Return tracked root-level GPU helper source filenames."""
+    result = subprocess.run(
+        ["git", "ls-files", "*_gpu.f90", "*_gpu.F90"],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+    )
+    names: set[str] = set()
+    for name in result.stdout.splitlines():
+        path = Path(name)
+        lower_name = path.name.lower()
+        if path.parent != Path("."):
+            continue
+        if lower_name.startswith("level_set") or lower_name.startswith("trees_"):
+            continue
+        names.add(path.name)
+    return names
+
+
+GPU_SOURCE_FILES = tracked_gpu_source_names()
 
 REVIEW_BUCKET_DESCRIPTIONS = {
     "atm-host-model": (
