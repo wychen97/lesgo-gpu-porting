@@ -20,6 +20,11 @@ MPI_REQUIRED_FILES = {
 SYNC_SYMBOL_RE = re.compile(r"\b(mpi_sync_real_array|mpi_sync_down\w*)\b", re.I)
 RAW_MPI_IMPORT_RE = re.compile(r"^\s*use\s+mpi(?:\s*,|\s*$)", re.I)
 MPI_CALL_RE = re.compile(r"\bcall\s+mpi_\w+", re.I)
+RAW_MPI_CONSTANT_RE = re.compile(
+    r"\bMPI_(?:COMM_WORLD|COMM_NULL|STATUS_SIZE|REQUEST_NULL|INTEGER|"
+    r"MAX|MIN|SUM|REAL|COMPLEX|DOUBLE_PRECISION|DOUBLE_COMPLEX)\b",
+    re.I,
+)
 POSITIVE_PPMPI_GUARDS = {"PPMPI", "PPGPU_AWARE_MPI"}
 
 
@@ -76,6 +81,9 @@ def check_file(path: Path) -> list[str]:
             continue
         if MPI_CALL_RE.search(code) and not guarded:
             issues.append(f"{rel}:{line_no}: direct MPI call must be guarded by PPMPI")
+            continue
+        if RAW_MPI_CONSTANT_RE.search(code) and not guarded:
+            issues.append(f"{rel}:{line_no}: raw MPI constant must be guarded by PPMPI")
             continue
         if not SYNC_SYMBOL_RE.search(code):
             continue
