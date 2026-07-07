@@ -231,7 +231,10 @@ subroutine ws_equilibrium_lbc
 !*******************************************************************************
 use param, only : dz, ld, nx, ny, vonk, zo
 use sim_param, only : u, v, ustar_lbc
-use test_filtermodule, only : test_filter, test_filter_plane_gpu
+use test_filtermodule, only : test_filter
+#if defined(PPSGS_GPU)
+use test_filtermodule, only : test_filter_plane_gpu
+#endif
 #ifdef PPSCALARS
 use scalars, only : obukhov, phi_m, passive_scalar
 #endif
@@ -346,7 +349,10 @@ subroutine ws_equilibrium_ubc
 !*******************************************************************************
 use param, only : dz, ld, nx, ny, vonk, zo
 use sim_param, only : u, v
-use test_filtermodule, only : test_filter, test_filter_plane_gpu
+use test_filtermodule, only : test_filter
+#if defined(PPSGS_GPU)
+use test_filtermodule, only : test_filter_plane_gpu
+#endif
 implicit none
 integer :: i, j
 real(rprec), dimension(nx, ny) :: denom, u_avg, ustar

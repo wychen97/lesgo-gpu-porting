@@ -225,11 +225,11 @@ claims.
 | `iwmles.f90:174` | `iwm_init` | `gpu-marked` |  |  |
 | `iwmles.f90:297` | `iwm_finalize` | `gpu-marked` |  |  |
 | `iwmles.f90:352` | `iwm_calc_lhs` | `gpu-marked` |  |  |
-| `iwmles.f90:630` | `iwm_slv` | `unmarked-runtime-candidate` | `iwm-wallmodel-profile` | `iwm_wall_model` |
-| `iwmles.f90:655` | `iwm_calc_wallstress` | `gpu-marked` |  |  |
-| `iwmles.f90:1162` | `iwm_monitor` | `gpu-marked` |  |  |
-| `iwmles.f90:1204` | `iwm_checkPoint` | `gpu-marked` |  |  |
-| `iwmles.f90:1238` | `iwm_read_checkPoint` | `gpu-marked` |  |  |
+| `iwmles.f90:633` | `iwm_slv` | `unmarked-runtime-candidate` | `iwm-wallmodel-profile` | `iwm_wall_model` |
+| `iwmles.f90:658` | `iwm_calc_wallstress` | `gpu-marked` |  |  |
+| `iwmles.f90:1165` | `iwm_monitor` | `gpu-marked` |  |  |
+| `iwmles.f90:1207` | `iwm_checkPoint` | `gpu-marked` |  |  |
+| `iwmles.f90:1241` | `iwm_read_checkPoint` | `gpu-marked` |  |  |
 | `lagrange_Sdep.f90:21` | `lagrange_Sdep` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `lagrange_Sdep_gpu.f90:135` | `lagrange_Sdep_gpu_init` | `gpu-marked` |  |  |
 | `lagrange_Sdep_gpu.f90:215` | `lagrange_Ssim_gpu` | `gpu-marked` |  |  |
@@ -307,9 +307,9 @@ claims.
 | `scalars.f90:1025` | `scalars_checkpoint` | `gpu-marked` |  |  |
 | `scalars.f90:1045` | `scalars_deriv` | `gpu-marked` |  |  |
 | `scalars.f90:1124` | `obukhov` | `gpu-marked` |  |  |
-| `scalars.f90:1366` | `scalars_transport` | `gpu-marked` |  |  |
-| `scalars.f90:1717` | `to_big` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:1741` | `buoyancy_force` | `gpu-marked` |  |  |
+| `scalars.f90:1369` | `scalars_transport` | `gpu-marked` |  |  |
+| `scalars.f90:1720` | `to_big` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:1744` | `buoyancy_force` | `gpu-marked` |  |  |
 | `scaledep_dynamic.f90:21` | `scaledep_dynamic` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `sgs_gpu.f90:109` | `divstress_gpu_init` | `gpu-marked` |  |  |
 | `sgs_gpu.f90:126` | `std_dynamic_pples_gpu` | `gpu-marked` |  |  |
@@ -414,7 +414,7 @@ claims.
 | `wallstress.f90:164` | `ws_dns_lbc` | `gpu-marked` |  |  |
 | `wallstress.f90:197` | `ws_dns_ubc` | `gpu-marked` |  |  |
 | `wallstress.f90:230` | `ws_equilibrium_lbc` | `gpu-marked` |  |  |
-| `wallstress.f90:345` | `ws_equilibrium_ubc` | `gpu-marked` |  |  |
+| `wallstress.f90:348` | `ws_equilibrium_ubc` | `gpu-marked` |  |  |
 
 Regenerate this file with:
 

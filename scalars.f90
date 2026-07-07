@@ -1127,7 +1127,10 @@ use param, only : vonk, dz, zo, nx, ny, ld, u_star, lbz, total_time_dim, pi
 use sim_param, only : ustar_lbc
 use coriolis, only : repeat_interval
 use functions, only : linear_interp
-use test_filtermodule, only : test_filter, test_filter_plane_gpu
+use test_filtermodule, only : test_filter
+#if defined(PPSCALARS_GPU)
+use test_filtermodule, only : test_filter_plane_gpu
+#endif
 
 real(rprec), dimension(nx, ny), intent(in) :: u_avg
 real(rprec), dimension(ld, ny) :: theta1
