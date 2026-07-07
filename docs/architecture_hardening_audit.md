@@ -16,6 +16,9 @@ The default readiness gate now checks these architecture risks:
 - module/program scopes missing top-level `implicit none`;
 - `use ..., only:` imports from default-private modules that do not mark the
   imported symbol public;
+- `use ..., only:` imports from tracked modules when the requested symbol is
+  not actually exported, including lost re-exports after replacing broad
+  module imports with explicit `only:` lists;
 - duplicate names inside one `use ..., only:` list;
 - repeated imports of the same local name from the same module within one
   module/subroutine/function scope;
@@ -60,6 +63,9 @@ mechanical patches.
 - added a broad-import parser self-test so the generated audit keeps handling
   plain `use module`, `use module, only: ...`, and `use, intrinsic :: ...`
   forms distinctly;
+- added a tracked-module import resolver after finding that narrowing `param`'s
+  MPI import can otherwise drop legacy `MPI_COMM_WORLD` re-exports without a
+  local compile failure;
 - regenerated static inventory and refactor-hotspot documentation after source
   changes.
 
