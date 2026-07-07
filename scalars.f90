@@ -830,8 +830,7 @@ subroutine ic_scal(interp_flag)
 !*******************************************************************************
 ! Set initial profile for scalar
 use param, only : coord
-use string_util
-use grid_m
+use string_util, only : string_concat
 logical :: interp_flag
 
 fname = path // 'scal.out'
@@ -870,7 +869,6 @@ subroutine ic_scal_file
 ! Read initial profile for scalar from file
 use param, only : nx, nz, read_endian
 use mpi_defs, only :  mpi_sync_real_array, MPI_SYNC_DOWNUP
-use grid_m
 
 open(12, file=fname, form='unformatted', convert=read_endian)
 read(12) theta(:, :, 1:nz), RHS_T(:, :, 1:nz), psi_m(1:nx, :)
@@ -887,7 +885,7 @@ end subroutine ic_scal_file
 subroutine ic_scal_les
 !*******************************************************************************
 use param, only : lbz, nz
-use grid_m
+use grid_m, only : grid
 use functions, only : linear_interp
 
 integer :: i
@@ -909,8 +907,8 @@ subroutine ic_scal_interp()
 ! interpolates onto the current grid
 !
 use param, only : nx, ny, nz, lbz, read_endian, path
-use grid_m
-use functions
+use grid_m, only : grid
+use functions, only : binary_search
 integer :: nproc_f, Nx_f, Ny_f, Nz_f
 real(rprec) :: Lx_f, Ly_f, Lz_f
 integer :: i, j, k, z1, z2, ld_f, lh_f, Nz_tot_f
@@ -1049,7 +1047,7 @@ subroutine scalars_deriv
 use param, only : lbz, ld, ny, nz, coord, nproc
 #if defined(PPSCALARS_GPU) && defined(PPGPU_AWARE_MPI)
 use param, only : MPI_RPREC, down, up, comm, status, ierr
-use mpi
+use mpi, only : mpi_sendrecv
 #endif
 use mpi_defs, only :  mpi_sync_real_array, MPI_SYNC_DOWNUP
 use derivatives, only : filt_da, ddz_uv
@@ -1129,7 +1127,7 @@ use param, only : vonk, dz, zo, nx, ny, ld, u_star, lbz, total_time_dim, pi
 use sim_param, only : ustar_lbc
 use coriolis, only : repeat_interval
 use functions, only : linear_interp
-use test_filtermodule
+use test_filtermodule, only : test_filter
 
 real(rprec), dimension(nx, ny), intent(in) :: u_avg
 real(rprec), dimension(ld, ny) :: theta1
@@ -1372,13 +1370,12 @@ use param, only : lbz, nx, nz, nx2, ny2, nproc, coord, dt, tadv1, tadv2,       &
 use param, only : lbc_mom, ubc_mom, dz
 #if defined(PPSCALARS_GPU) && defined(PPGPU_AWARE_MPI)
 use param, only : ld, ny, MPI_RPREC, down, up, comm, status, ierr
-use mpi
+use mpi, only : mpi_sendrecv
 #endif
 use sim_param, only : u, v, w
 use sgs_param, only : Nu_t
 use derivatives, only : filt_da, ddx, ddy, ddz_uv, ddz_w
 use mpi_defs, only :  mpi_sync_real_array, MPI_SYNC_DOWNUP
-use test_filtermodule
 use fft
 use messages, only : error
 #if defined(PPSCALARS_GPU) && defined(PPCONVEC_GPU)

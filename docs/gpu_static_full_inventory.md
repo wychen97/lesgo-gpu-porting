@@ -301,15 +301,15 @@ claims.
 | `scalars.f90:693` | `scalars_rhs_theta_acc` | `gpu-marked` |  |  |
 | `scalars.f90:745` | `scalars_init` | `gpu-marked` |  |  |
 | `scalars.f90:829` | `ic_scal` | `gpu-marked` |  |  |
-| `scalars.f90:868` | `ic_scal_file` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:887` | `ic_scal_les` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:906` | `ic_scal_interp` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:1027` | `scalars_checkpoint` | `gpu-marked` |  |  |
-| `scalars.f90:1047` | `scalars_deriv` | `gpu-marked` |  |  |
-| `scalars.f90:1126` | `obukhov` | `gpu-marked` |  |  |
-| `scalars.f90:1368` | `scalars_transport` | `gpu-marked` |  |  |
-| `scalars.f90:1720` | `to_big` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:1744` | `buoyancy_force` | `gpu-marked` |  |  |
+| `scalars.f90:867` | `ic_scal_file` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:885` | `ic_scal_les` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:904` | `ic_scal_interp` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:1025` | `scalars_checkpoint` | `gpu-marked` |  |  |
+| `scalars.f90:1045` | `scalars_deriv` | `gpu-marked` |  |  |
+| `scalars.f90:1124` | `obukhov` | `gpu-marked` |  |  |
+| `scalars.f90:1366` | `scalars_transport` | `gpu-marked` |  |  |
+| `scalars.f90:1717` | `to_big` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:1741` | `buoyancy_force` | `gpu-marked` |  |  |
 | `scaledep_dynamic.f90:21` | `scaledep_dynamic` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `sgs_gpu.f90:109` | `divstress_gpu_init` | `gpu-marked` |  |  |
 | `sgs_gpu.f90:126` | `std_dynamic_pples_gpu` | `gpu-marked` |  |  |

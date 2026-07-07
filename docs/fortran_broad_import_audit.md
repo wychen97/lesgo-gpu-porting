@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `126`
+Total broad imports: `116`
 
 ## Highest-Count Files
 
@@ -16,7 +16,6 @@ Total broad imports: `126`
 | --- | ---: |
 | `level_set.f90` | 17 |
 | `input_util.f90` | 15 |
-| `scalars.f90` | 13 |
 | `main.f90` | 11 |
 | `turbines.f90` | 10 |
 | `atm_lesgo_interface.f90` | 4 |
@@ -27,6 +26,7 @@ Total broad imports: `126`
 | `initial.f90` | 3 |
 | `mpi_defs.f90` | 3 |
 | `press_stag_array.f90` | 3 |
+| `scalars.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
 | `fft_gpu.f90` | 2 |
 | `forcing.f90` | 2 |
@@ -127,18 +127,8 @@ Total broad imports: `126`
 | `press_stag_array.f90` | 57 | `press_stag_array` | `mpi` |
 | `rmsdiv.f90` | 28 | `rmsdiv` | `param` |
 | `scalars.f90` | 47 | `scalars` | `openacc` |
-| `scalars.f90` | 833 | `scalars::ic_scal` | `string_util` |
-| `scalars.f90` | 834 | `scalars::ic_scal` | `grid_m` |
-| `scalars.f90` | 873 | `scalars::ic_scal_file` | `grid_m` |
-| `scalars.f90` | 890 | `scalars::ic_scal_les` | `grid_m` |
-| `scalars.f90` | 912 | `scalars::ic_scal_interp` | `grid_m` |
-| `scalars.f90` | 913 | `scalars::ic_scal_interp` | `functions` |
-| `scalars.f90` | 1052 | `scalars::scalars_deriv` | `mpi` |
-| `scalars.f90` | 1132 | `scalars::obukhov` | `test_filtermodule` |
-| `scalars.f90` | 1375 | `scalars::scalars_transport` | `mpi` |
-| `scalars.f90` | 1381 | `scalars::scalars_transport` | `test_filtermodule` |
-| `scalars.f90` | 1382 | `scalars::scalars_transport` | `fft` |
-| `scalars.f90` | 1722 | `scalars::to_big` | `fft` |
+| `scalars.f90` | 1379 | `scalars::scalars_transport` | `fft` |
+| `scalars.f90` | 1719 | `scalars::to_big` | `fft` |
 | `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` |
 | `sgs_stag_util.f90` | 62 | `sgs_stag_util::sgs_stag` | `param` |
 | `sgs_stag_util.f90` | 64 | `sgs_stag_util::sgs_stag` | `sgs_param` |
