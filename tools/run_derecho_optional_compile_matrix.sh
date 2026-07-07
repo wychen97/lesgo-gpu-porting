@@ -13,6 +13,10 @@
 #   DERECHO_COMPILE_ROOT   Remote output directory. Defaults to a timestamped
 #                          directory under /glade/work/wchen/lesgo_versions.
 #   BUILD_JOBS             Parallel build jobs passed to CMake. Defaults to 8.
+#
+# This script validates isolated optional features and common paired feature
+# combinations.  It intentionally excludes LVLSET because the public optimized
+# branch does not support or claim LVLSET validation.
 
 set -euo pipefail
 
@@ -58,8 +62,6 @@ export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
 base_common=(
     -Dhostname=derecho
     -DUSE_MPI=ON
-    -DUSE_TURBINES=OFF
-    -DUSE_ATM=OFF
     -DUSE_LVLSET=OFF
     -DUSE_CGNS=OFF
 )
@@ -104,36 +106,91 @@ run_config() {
 
 run_config hit_gpu \
     "${gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
     -DUSE_CPS=OFF -DUSE_HIT=ON -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
     -DUSE_DYN_TN=OFF
 
 run_config hit_cpu \
     "${cpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
     -DUSE_CPS=OFF -DUSE_HIT=ON -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
     -DUSE_DYN_TN=OFF
 
 run_config cps_gpu \
     "${gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
     -DUSE_CPS=ON -DUSE_HIT=OFF -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
     -DUSE_DYN_TN=OFF
 
 run_config cps_cpu \
     "${cpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
     -DUSE_CPS=ON -DUSE_HIT=OFF -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
     -DUSE_DYN_TN=OFF
 
 run_config scalars_gpu \
     "${gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
     -DUSE_CPS=OFF -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=ON \
     -DUSE_DYN_TN=OFF
 
 run_config scalars_cpu \
     "${cpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_CPS=OFF -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config cps_scalars_gpu \
+    "${gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_CPS=ON -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=ON \
+    -DUSE_DYN_TN=OFF
+
+run_config cps_scalars_cpu \
+    "${cpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_CPS=ON -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config hit_scalars_gpu \
+    "${gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_CPS=OFF -DUSE_HIT=ON -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=ON \
+    -DUSE_DYN_TN=OFF
+
+run_config hit_scalars_cpu \
+    "${cpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
+    -DUSE_CPS=OFF -DUSE_HIT=ON -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config atm_scalars_gpu \
+    "${gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=ON \
+    -DUSE_CPS=OFF -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=ON \
+    -DUSE_DYN_TN=OFF
+
+run_config atm_scalars_cpu \
+    "${cpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=ON \
+    -DUSE_CPS=OFF -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=OFF \
+    -DUSE_DYN_TN=OFF
+
+run_config turbines_scalars_gpu \
+    "${gpu_common[@]}" \
+    -DUSE_TURBINES=ON -DUSE_ATM=OFF \
+    -DUSE_CPS=OFF -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=ON \
+    -DUSE_DYN_TN=OFF
+
+run_config turbines_scalars_cpu \
+    "${cpu_common[@]}" \
+    -DUSE_TURBINES=ON -DUSE_ATM=OFF \
     -DUSE_CPS=OFF -DUSE_HIT=OFF -DUSE_SCALARS=ON -DUSE_SCALARS_GPU=OFF \
     -DUSE_DYN_TN=OFF
 
 run_config dyntn_gpu \
     "${gpu_common[@]}" \
+    -DUSE_TURBINES=OFF -DUSE_ATM=OFF \
     -DUSE_CPS=OFF -DUSE_HIT=OFF -DUSE_SCALARS=OFF -DUSE_SCALARS_GPU=OFF \
     -DUSE_DYN_TN=ON
 
