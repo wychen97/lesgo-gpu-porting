@@ -8,14 +8,13 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `100`
+Total broad imports: `91`
 
 ## Highest-Count Files
 
 | File | Broad imports |
 | --- | ---: |
 | `level_set.f90` | 17 |
-| `turbines.f90` | 10 |
 | `input_util.f90` | 8 |
 | `atm_lesgo_interface.f90` | 4 |
 | `derivatives.f90` | 4 |
@@ -34,6 +33,7 @@ Total broad imports: `100`
 | `param_output.f90` | 2 |
 | `tools/validate_filt_da_cufft.F90` | 2 |
 | `trees_setup_ls.f90` | 2 |
+| `actuator_turbine_model.f90` | 1 |
 
 ## Full List
 
@@ -130,12 +130,3 @@ Total broad imports: `100`
 | `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` |
 | `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` |
 | `turbines.f90` | 36 | `turbines` | `param` |
-| `turbines.f90` | 37 | `turbines` | `grid_m` |
-| `turbines.f90` | 38 | `turbines` | `messages` |
-| `turbines.f90` | 39 | `turbines` | `string_util` |
-| `turbines.f90` | 40 | `turbines` | `turbine_indicator` |
-| `turbines.f90` | 712 | `turbines::turbines_acc_sync_device_field` | `mpi` |
-| `turbines.f90` | 744 | `turbines::turbines_forcing_acc` | `mpi` |
-| `turbines.f90` | 1007 | `turbines::turbines_forcing` | `mpi` |
-| `turbines.f90` | 1269 | `turbines::place_turbines` | `messages` |
-| `turbines.f90` | 1417 | `turbines::read_control_files` | `messages` |

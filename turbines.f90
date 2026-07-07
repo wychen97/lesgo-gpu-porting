@@ -34,10 +34,10 @@ module turbines
 
 use types, only : rprec
 use param
-use grid_m
-use messages
-use string_util
-use turbine_indicator
+use grid_m, only : grid
+use messages, only : error, warn
+use string_util, only : string_splice
+use turbine_indicator, only : turb_ind_func_t
 use turbines_gpu, only : turbines_cuda_enabled, turbines_interp_w_to_uv_gpu
 use functions, only : count_lines
 use stat_defs, only : wind_farm
@@ -709,7 +709,7 @@ subroutine turbines_acc_sync_device_field(F)
 ! avoid non-contiguous slice temporaries for padded arrays.
 !
 #ifdef PPMPI
-use mpi
+use mpi, only : mpi_sendrecv
 #endif
 implicit none
 
@@ -741,7 +741,7 @@ subroutine turbines_forcing_acc()
 use sim_param, only : u, v, w, fxa, fya, fza
 use functions, only : linear_interp
 #ifdef PPMPI
-use mpi
+use mpi, only : MPI_Allreduce, MPI_SUM
 #endif
 implicit none
 
@@ -1004,7 +1004,7 @@ subroutine turbines_forcing()
 use param, only : pi, lbz
 use sim_param, only : u, v, w, fxa, fya, fza
 use functions, only : linear_interp, interp_to_uv_grid, interp_to_w_grid
-use mpi
+use mpi, only : MPI_Allreduce, MPI_SUM
 implicit none
 
 character(*), parameter :: sub_name = mod_name // '.turbines_forcing'
@@ -1266,7 +1266,7 @@ subroutine place_turbines
 ! theta2, and Ct_prime.
 !
 use param, only: pi, z_i
-use messages
+use messages, only : error, warn
 implicit none
 
 character(*), parameter :: sub_name = mod_name // '.place_turbines'
@@ -1414,7 +1414,6 @@ subroutine read_control_files
 ! theta2, and Ct_prime. This is calles from turbines_init.
 !
 use param, only: pi
-use messages
 implicit none
 
 character(*), parameter :: sub_name = mod_name // '.place_turbines'
