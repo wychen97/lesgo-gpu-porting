@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `92`
+Total broad imports: `88`
 
 ## Highest-Count Files
 
@@ -19,7 +19,6 @@ Total broad imports: `92`
 | `scalars.f90` | 5 |
 | `sgs_stag_util.f90` | 5 |
 | `turbines.f90` | 5 |
-| `derivatives.f90` | 4 |
 | `mpi_defs.f90` | 4 |
 | `forcing.f90` | 3 |
 | `lagrange_Sdep_gpu.f90` | 3 |
@@ -34,6 +33,7 @@ Total broad imports: `92`
 | `tools/validate_filt_da_cufft.F90` | 2 |
 | `trees_setup_ls.f90` | 2 |
 | `atm_lesgo_interface.f90` | 1 |
+| `concurrent_precursor.f90` | 1 |
 
 ## Full List
 
@@ -48,10 +48,6 @@ Total broad imports: `92`
 | `convec.f90` | 37 | `convec` | `fft` |
 | `coriolis.f90` | 182 | `coriolis::coriolis_calc` | `mpi` |
 | `cuda_mpi_debug.f90` | 4 | `cuda_mpi_debug` | `mpi` |
-| `derivatives.f90` | 96 | `derivatives::ddx` | `fft` |
-| `derivatives.f90` | 139 | `derivatives::ddy` | `fft` |
-| `derivatives.f90` | 182 | `derivatives::ddxy` | `fft` |
-| `derivatives.f90` | 228 | `derivatives::filt_da` | `fft` |
 | `fft.f90` | 26 | `fft` | `iso_c_binding` |
 | `fft_gpu.f90` | 45 | `fft_gpu` | `cufft` |
 | `fft_gpu.f90` | 46 | `fft_gpu` | `openacc` |

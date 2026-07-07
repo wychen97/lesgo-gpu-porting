@@ -93,7 +93,7 @@ subroutine ddx(f,dfdx,lbz)
 !
 use types, only : rprec
 use param, only : ld, nx, ny, nz
-use fft
+use fft, only : back, forw, kx
 use emul_complex, only : OPERATOR(.MULI.)
 implicit none
 
@@ -136,7 +136,7 @@ subroutine ddy(f,dfdy, lbz)
 !
 use types, only : rprec
 use param, only : ld, nx, ny, nz
-use fft
+use fft, only : back, forw, ky
 use emul_complex, only : OPERATOR(.MULI.)
 implicit none
 
@@ -179,7 +179,7 @@ subroutine ddxy (f, dfdx, dfdy, lbz)
 !
 use types, only : rprec
 use param, only : ld, nx, ny, nz
-use fft
+use fft, only : back, forw, kx, ky
 use emul_complex, only : OPERATOR(.MULI.)
 implicit none
 
@@ -225,7 +225,7 @@ subroutine filt_da(f,dfdx,dfdy, lbz)
 !
 use types, only : rprec
 use param, only : ld, nx, ny, nz
-use fft
+use fft, only : back, forw, kx, ky
 use emul_complex, only : OPERATOR(.MULI.)
 implicit none
 
