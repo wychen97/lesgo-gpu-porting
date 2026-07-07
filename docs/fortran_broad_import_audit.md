@@ -8,16 +8,16 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `116`
+Total broad imports: `109`
 
 ## Highest-Count Files
 
 | File | Broad imports |
 | --- | ---: |
 | `level_set.f90` | 17 |
-| `input_util.f90` | 15 |
 | `main.f90` | 11 |
 | `turbines.f90` | 10 |
+| `input_util.f90` | 8 |
 | `atm_lesgo_interface.f90` | 4 |
 | `derivatives.f90` | 4 |
 | `lagrange_Sdep_gpu.f90` | 4 |
@@ -62,20 +62,13 @@ Total broad imports: `116`
 | `initial.f90` | 391 | `initial::ic_dns` | `param` |
 | `initial.f90` | 482 | `initial::ic_les` | `param` |
 | `input_util.f90` | 65 | `input_util::read_input_conf` | `param` |
-| `input_util.f90` | 66 | `input_util::read_input_conf` | `messages` |
 | `input_util.f90` | 149 | `input_util::read_input_conf::domain_block` | `param` |
 | `input_util.f90` | 260 | `input_util::read_input_conf::model_block` | `param` |
 | `input_util.f90` | 318 | `input_util::read_input_conf::coriolis_block` | `param` |
-| `input_util.f90` | 319 | `input_util::read_input_conf::coriolis_block` | `coriolis` |
-| `input_util.f90` | 378 | `input_util::read_input_conf::time_block` | `param` |
-| `input_util.f90` | 434 | `input_util::read_input_conf::flow_cond_block` | `param` |
-| `input_util.f90` | 435 | `input_util::read_input_conf::flow_cond_block` | `sponge` |
-| `input_util.f90` | 566 | `input_util::read_input_conf::output_block` | `param` |
-| `input_util.f90` | 671 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
-| `input_util.f90` | 754 | `input_util::read_input_conf::turbines_block` | `turbines` |
-| `input_util.f90` | 834 | `input_util::read_input_conf::scalars_block` | `scalars` |
-| `input_util.f90` | 953 | `input_util::parse_vector_real` | `messages` |
-| `input_util.f90` | 988 | `input_util::parse_vector_point3d` | `messages` |
+| `input_util.f90` | 379 | `input_util::read_input_conf::time_block` | `param` |
+| `input_util.f90` | 435 | `input_util::read_input_conf::flow_cond_block` | `param` |
+| `input_util.f90` | 565 | `input_util::read_input_conf::output_block` | `param` |
+| `input_util.f90` | 670 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
 | `interpolag_Sdep.f90` | 37 | `interpolag_sdep` | `param` |
 | `interpolag_Ssim.f90` | 36 | `interpolag_ssim` | `param` |
 | `io.f90` | 46 | `io` | `cgns` |

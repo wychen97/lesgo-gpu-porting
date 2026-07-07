@@ -63,7 +63,7 @@ contains
 subroutine read_input_conf ()
 !*******************************************************************************
 use param
-use messages
+use messages, only : error, mesg
 use string_util, only : eat_whitespace, uppercase
 implicit none
 
@@ -316,7 +316,8 @@ end subroutine model_block
 subroutine coriolis_block()
 !*******************************************************************************
 use param
-use coriolis
+use coriolis, only : coriolis_forcing, fc, G, alpha, pid_time, phi_set,        &
+    height_set, Kp, Ki, Kd, repeat_interval
 implicit none
 
 character(*), parameter :: block_name = 'CORIOLIS'
@@ -432,8 +433,6 @@ end subroutine  time_block
 subroutine flow_cond_block()
 !*******************************************************************************
 use param
-use sponge
-
 #ifdef PPHIT
 ! Type hit has all the information inside
 use hit_inflow, only : hit
@@ -751,7 +750,10 @@ end subroutine  level_set_block
 !*******************************************************************************
 subroutine turbines_block()
 !*******************************************************************************
-use turbines
+use turbines, only : num_x, num_y, dia_all, height_all, thk_all, orientation,  &
+    stag_perc, theta1_all, theta2_all, Ct_prime, read_param, dyn_theta1,       &
+    dyn_theta2, dyn_Ct_prime, use_rotation, tip_speed_ratio, T_avg_dim,        &
+    alpha1, alpha2, filter_cutoff, adm_correction, tbase
 implicit none
 
 character(*), parameter :: block_name = 'TURBINES'
@@ -831,7 +833,9 @@ end subroutine turbines_block
 !*******************************************************************************
 subroutine scalars_block()
 !*******************************************************************************
-use scalars
+use scalars, only : lbc_scal, scal_bot, flux_bot, read_lbc_scal, lapse_rate,  &
+    ic_nloc, ic_z, ic_theta, ic_no_vel_noise_z, g, zo_s, T_scale,             &
+    passive_scalar, Pr_sgs
 implicit none
 
 character(*), parameter :: block_name = 'SCALARS'
@@ -950,7 +954,7 @@ end subroutine readline
 subroutine parse_vector_real( string, nelem, vector )
 !*******************************************************************************
 use types, only : rprec
-use messages
+use messages, only : error
 use string_util, only : split_string
 
 implicit none
@@ -985,7 +989,7 @@ end subroutine parse_vector_real
 subroutine parse_vector_point3D( string, nelem, vector )
 !*******************************************************************************
 use types, only : rprec, point3D_t
-use messages
+use messages, only : error
 use string_util, only : split_string
 
 implicit none
