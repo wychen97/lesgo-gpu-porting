@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `76`
+Total broad imports: `75`
 
 ## Highest-Count Files
 
@@ -22,12 +22,12 @@ Total broad imports: `76`
 | `forcing.f90` | 3 |
 | `lagrange_Sdep_gpu.f90` | 3 |
 | `main.f90` | 3 |
-| `scalars.f90` | 3 |
 | `cfl_util.f90` | 2 |
 | `clocks.f90` | 2 |
 | `io.f90` | 2 |
 | `param_output.f90` | 2 |
 | `press_stag_array.f90` | 2 |
+| `scalars.f90` | 2 |
 | `trees_setup_ls.f90` | 2 |
 | `atm_lesgo_interface.f90` | 1 |
 | `concurrent_precursor.f90` | 1 |
@@ -95,9 +95,8 @@ Total broad imports: `76`
 | `press_stag_array.f90` | 51 | `press_stag_array` | `param` |
 | `press_stag_array.f90` | 57 | `press_stag_array` | `mpi` |
 | `rmsdiv.f90` | 31 | `rmsdiv` | `mpi` |
-| `scalars.f90` | 47 | `scalars` | `openacc` |
-| `scalars.f90` | 1052 | `scalars::scalars_deriv` | `mpi` |
-| `scalars.f90` | 1380 | `scalars::scalars_transport` | `mpi` |
+| `scalars.f90` | 1051 | `scalars::scalars_deriv` | `mpi` |
+| `scalars.f90` | 1379 | `scalars::scalars_transport` | `mpi` |
 | `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` |
 | `sgs_stag_util.f90` | 62 | `sgs_stag_util::sgs_stag` | `param` |
 | `sgs_stag_util.f90` | 64 | `sgs_stag_util::sgs_stag` | `sgs_param` |

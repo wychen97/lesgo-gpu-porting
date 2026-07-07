@@ -286,30 +286,30 @@ claims.
 | `press_stag_array.f90:44` | `press_stag_array` | `gpu-marked` |  |  |
 | `press_stag_array.f90:534` | `press_apply_env_enabled_unless_false` | `host-or-diagnostic` |  |  |
 | `rmsdiv.f90:21` | `rmsdiv` | `gpu-marked` |  |  |
-| `scalars.f90:165` | `scalars_acc_sync` | `gpu-marked` |  |  |
-| `scalars.f90:191` | `scalars_timer_start` | `host-or-diagnostic` |  |  |
-| `scalars.f90:203` | `scalars_timer_accum` | `host-or-diagnostic` |  |  |
-| `scalars.f90:220` | `scalars_stage_report` | `host-or-diagnostic` |  |  |
-| `scalars.f90:248` | `scalars_deriv_xy_big_acc` | `gpu-marked` |  |  |
-| `scalars.f90:379` | `scalars_to_big_acc` | `gpu-marked` |  |  |
-| `scalars.f90:428` | `scalars_return_rhs_acc` | `gpu-marked` |  |  |
-| `scalars.f90:468` | `scalars_divergence_acc` | `gpu-marked` |  |  |
-| `scalars.f90:528` | `scalars_update_device_state` | `gpu-marked` |  |  |
-| `scalars.f90:540` | `scalars_copy_rhs_acc` | `gpu-marked` |  |  |
-| `scalars.f90:559` | `scalars_advective_acc` | `gpu-marked` |  |  |
-| `scalars.f90:609` | `scalars_flux_acc` | `gpu-marked` |  |  |
-| `scalars.f90:693` | `scalars_rhs_theta_acc` | `gpu-marked` |  |  |
-| `scalars.f90:745` | `scalars_init` | `gpu-marked` |  |  |
-| `scalars.f90:829` | `ic_scal` | `gpu-marked` |  |  |
-| `scalars.f90:867` | `ic_scal_file` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:887` | `ic_scal_les` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:906` | `ic_scal_interp` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:1027` | `scalars_checkpoint` | `gpu-marked` |  |  |
-| `scalars.f90:1047` | `scalars_deriv` | `gpu-marked` |  |  |
-| `scalars.f90:1128` | `obukhov` | `gpu-marked` |  |  |
-| `scalars.f90:1373` | `scalars_transport` | `gpu-marked` |  |  |
-| `scalars.f90:1726` | `to_big` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
-| `scalars.f90:1750` | `buoyancy_force` | `gpu-marked` |  |  |
+| `scalars.f90:164` | `scalars_acc_sync` | `gpu-marked` |  |  |
+| `scalars.f90:190` | `scalars_timer_start` | `host-or-diagnostic` |  |  |
+| `scalars.f90:202` | `scalars_timer_accum` | `host-or-diagnostic` |  |  |
+| `scalars.f90:219` | `scalars_stage_report` | `host-or-diagnostic` |  |  |
+| `scalars.f90:247` | `scalars_deriv_xy_big_acc` | `gpu-marked` |  |  |
+| `scalars.f90:378` | `scalars_to_big_acc` | `gpu-marked` |  |  |
+| `scalars.f90:427` | `scalars_return_rhs_acc` | `gpu-marked` |  |  |
+| `scalars.f90:467` | `scalars_divergence_acc` | `gpu-marked` |  |  |
+| `scalars.f90:527` | `scalars_update_device_state` | `gpu-marked` |  |  |
+| `scalars.f90:539` | `scalars_copy_rhs_acc` | `gpu-marked` |  |  |
+| `scalars.f90:558` | `scalars_advective_acc` | `gpu-marked` |  |  |
+| `scalars.f90:608` | `scalars_flux_acc` | `gpu-marked` |  |  |
+| `scalars.f90:692` | `scalars_rhs_theta_acc` | `gpu-marked` |  |  |
+| `scalars.f90:744` | `scalars_init` | `gpu-marked` |  |  |
+| `scalars.f90:828` | `ic_scal` | `gpu-marked` |  |  |
+| `scalars.f90:866` | `ic_scal_file` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:886` | `ic_scal_les` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:905` | `ic_scal_interp` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:1026` | `scalars_checkpoint` | `gpu-marked` |  |  |
+| `scalars.f90:1046` | `scalars_deriv` | `gpu-marked` |  |  |
+| `scalars.f90:1127` | `obukhov` | `gpu-marked` |  |  |
+| `scalars.f90:1372` | `scalars_transport` | `gpu-marked` |  |  |
+| `scalars.f90:1725` | `to_big` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
+| `scalars.f90:1749` | `buoyancy_force` | `gpu-marked` |  |  |
 | `scaledep_dynamic.f90:21` | `scaledep_dynamic` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `sgs_gpu.f90:109` | `divstress_gpu_init` | `gpu-marked` |  |  |
 | `sgs_gpu.f90:126` | `std_dynamic_pples_gpu` | `gpu-marked` |  |  |

@@ -44,7 +44,6 @@ module scalars
 use types, only : rprec
 use param, only : path
 #ifdef PPSCALARS_GPU
-use openacc
 use fft_gpu, only : fft_gpu_exec_d2z, fft_gpu_exec_z2d,                       &
     plan_forw_small_full, plan_back_small_full, plan_back_big_full,            &
     plan_forw_big_nzm1, plan_back_small_nzm1
