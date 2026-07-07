@@ -397,17 +397,17 @@ claims.
 | `turbine_indicator.f90:77` | `init` | `host-or-diagnostic` |  |  |
 | `turbines.f90:160` | `turbines_init` | `gpu-marked` |  |  |
 | `turbines.f90:316` | `turbines_nodes` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
-| `turbines.f90:516` | `turbines_acc_metadata_init` | `gpu-marked` |  |  |
-| `turbines.f90:662` | `turbines_acc_finalize` | `host-or-diagnostic` |  |  |
-| `turbines.f90:703` | `turbines_acc_sync_device_field` | `gpu-marked` |  |  |
-| `turbines.f90:736` | `turbines_forcing_acc` | `gpu-marked` |  |  |
-| `turbines.f90:989` | `turbines_forcing_acc` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
-| `turbines.f90:999` | `turbines_forcing` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
-| `turbines.f90:1175` | `turbines_finalize` | `gpu-marked` |  |  |
-| `turbines.f90:1195` | `turbines_checkpoint` | `host-or-diagnostic` |  |  |
-| `turbines.f90:1220` | `turbine_vel_init` | `host-or-diagnostic` |  |  |
-| `turbines.f90:1260` | `place_turbines` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
-| `turbines.f90:1410` | `read_control_files` | `host-or-diagnostic` |  |  |
+| `turbines.f90:519` | `turbines_acc_metadata_init` | `gpu-marked` |  |  |
+| `turbines.f90:665` | `turbines_acc_finalize` | `host-or-diagnostic` |  |  |
+| `turbines.f90:706` | `turbines_acc_sync_device_field` | `gpu-marked` |  |  |
+| `turbines.f90:739` | `turbines_forcing_acc` | `gpu-marked` |  |  |
+| `turbines.f90:992` | `turbines_forcing_acc` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
+| `turbines.f90:1002` | `turbines_forcing` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
+| `turbines.f90:1178` | `turbines_finalize` | `gpu-marked` |  |  |
+| `turbines.f90:1198` | `turbines_checkpoint` | `host-or-diagnostic` |  |  |
+| `turbines.f90:1223` | `turbine_vel_init` | `host-or-diagnostic` |  |  |
+| `turbines.f90:1263` | `place_turbines` | `unmarked-runtime-candidate` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
+| `turbines.f90:1413` | `read_control_files` | `host-or-diagnostic` |  |  |
 | `turbines_gpu.f90:35` | `turbines_interp_w_to_uv_gpu` | `gpu-file-unmarked` |  |  |
 | `wallstress.f90:21` | `wallstress` | `gpu-marked` |  |  |
 | `wallstress.f90:137` | `ws_free_ubc` | `gpu-marked` |  |  |

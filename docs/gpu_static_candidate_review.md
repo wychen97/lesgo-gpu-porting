@@ -126,9 +126,9 @@ runtime correctness and timing evidence must close each bucket.
 | `tridag_array.f90:251` | `tridag_array` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `turbine_indicator.f90:53` | `val` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 | `turbines.f90:316` | `turbines_nodes` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
-| `turbines.f90:989` | `turbines_forcing_acc` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
-| `turbines.f90:999` | `turbines_forcing` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
-| `turbines.f90:1260` | `place_turbines` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
+| `turbines.f90:992` | `turbines_forcing_acc` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
+| `turbines.f90:1002` | `turbines_forcing` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
+| `turbines.f90:1263` | `place_turbines` | `adm-cpu-fallback-profile` | `adm_disk`, `adm_dynamic_controls` |
 
 Regenerate this file with:
 

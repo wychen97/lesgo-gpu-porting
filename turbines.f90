@@ -320,6 +320,9 @@ subroutine turbines_nodes
 ! n_hat, num_nodes, and nodes
 !
 use functions, only : cross_product
+#ifdef PPMPI
+use mpi
+#endif
 implicit none
 
 character (*), parameter :: sub_name = mod_name // '.turbines_nodes'

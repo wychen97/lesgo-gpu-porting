@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `90`
+Total broad imports: `91`
 
 ## Highest-Count Files
 
@@ -18,9 +18,9 @@ Total broad imports: `90`
 | `input_util.f90` | 8 |
 | `scalars.f90` | 5 |
 | `sgs_stag_util.f90` | 5 |
+| `turbines.f90` | 5 |
 | `derivatives.f90` | 4 |
 | `mpi_defs.f90` | 4 |
-| `turbines.f90` | 4 |
 | `forcing.f90` | 3 |
 | `lagrange_Sdep_gpu.f90` | 3 |
 | `main.f90` | 3 |
@@ -126,6 +126,7 @@ Total broad imports: `90`
 | `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` |
 | `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` |
 | `turbines.f90` | 36 | `turbines` | `param` |
-| `turbines.f90` | 712 | `turbines::turbines_acc_sync_device_field` | `mpi` |
-| `turbines.f90` | 744 | `turbines::turbines_forcing_acc` | `mpi` |
-| `turbines.f90` | 1007 | `turbines::turbines_forcing` | `mpi` |
+| `turbines.f90` | 324 | `turbines::turbines_nodes` | `mpi` |
+| `turbines.f90` | 715 | `turbines::turbines_acc_sync_device_field` | `mpi` |
+| `turbines.f90` | 747 | `turbines::turbines_forcing_acc` | `mpi` |
+| `turbines.f90` | 1010 | `turbines::turbines_forcing` | `mpi` |
