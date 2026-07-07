@@ -996,7 +996,9 @@ time_loop: do jt_step = nstart, nsteps
             call write_tau_wall_top()
         end if
 
+#ifdef PPMPI
         call mpi_barrier(comm, ierr)
+#endif
 
         ! Check if we are to check the allowable runtime
         if (runtime > 0) then

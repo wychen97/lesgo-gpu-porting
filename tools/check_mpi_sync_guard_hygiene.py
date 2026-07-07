@@ -19,6 +19,7 @@ MPI_REQUIRED_FILES = {
 
 SYNC_SYMBOL_RE = re.compile(r"\b(mpi_sync_real_array|mpi_sync_down\w*)\b", re.I)
 RAW_MPI_IMPORT_RE = re.compile(r"^\s*use\s+mpi(?:\s*,|\s*$)", re.I)
+MPI_CALL_RE = re.compile(r"\bcall\s+mpi_\w+", re.I)
 POSITIVE_PPMPI_GUARDS = {"PPMPI", "PPGPU_AWARE_MPI"}
 
 
@@ -72,6 +73,9 @@ def check_file(path: Path) -> list[str]:
         guarded = any(macros & POSITIVE_PPMPI_GUARDS for macros in guard_stack)
         if RAW_MPI_IMPORT_RE.search(code) and not guarded:
             issues.append(f"{rel}:{line_no}: raw `use mpi` must be guarded by PPMPI")
+            continue
+        if MPI_CALL_RE.search(code) and not guarded:
+            issues.append(f"{rel}:{line_no}: direct MPI call must be guarded by PPMPI")
             continue
         if not SYNC_SYMBOL_RE.search(code):
             continue
