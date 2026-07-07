@@ -37,8 +37,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from cmake_metadata import CMAKE_PATH, cmake_source_groups, strip_cmake_comment
+from repo_paths import ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
 ALLOWED_COMPILER_MACROS = {"__INTEL_COMPILER", "PPXLF"}
 MAX_ISSUES = 200
 MPI_PROCEDURE_NAMES = {

@@ -8,9 +8,7 @@ import tempfile
 from pathlib import Path
 
 import check_fortran_interface_hygiene as hygiene
-
-
-ROOT = Path(__file__).resolve().parents[1]
+from repo_paths import ROOT
 
 
 def write_case(directory: Path, name: str, text: str) -> Path:
