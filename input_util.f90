@@ -146,7 +146,9 @@ contains
 subroutine domain_block()
 !*******************************************************************************
 use types, only : rprec
-use param
+use param, only : coord, dx, dy, dz, L_x, L_y, L_z, ld, ld_big, lh,           &
+                  lh_big, nproc, nx, nx2, ny, ny2, nz, nz_tot,                &
+                  uniform_spacing, z_i
 implicit none
 
 character(*), parameter :: block_name = 'DOMAIN'

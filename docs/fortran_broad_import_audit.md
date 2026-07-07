@@ -8,14 +8,14 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `72`
+Total broad imports: `71`
 
 ## Highest-Count Files
 
 | File | Broad imports |
 | --- | ---: |
 | `level_set.f90` | 17 |
-| `input_util.f90` | 7 |
+| `input_util.f90` | 6 |
 | `sgs_stag_util.f90` | 5 |
 | `turbines.f90` | 5 |
 | `mpi_defs.f90` | 4 |
@@ -50,13 +50,12 @@ Total broad imports: `72`
 | `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` |
 | `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` |
 | `forcing.f90` | 393 | `forcing::project` | `mpi` |
-| `input_util.f90` | 149 | `input_util::read_input_conf::domain_block` | `param` |
-| `input_util.f90` | 260 | `input_util::read_input_conf::model_block` | `param` |
-| `input_util.f90` | 318 | `input_util::read_input_conf::coriolis_block` | `param` |
-| `input_util.f90` | 379 | `input_util::read_input_conf::time_block` | `param` |
-| `input_util.f90` | 435 | `input_util::read_input_conf::flow_cond_block` | `param` |
-| `input_util.f90` | 566 | `input_util::read_input_conf::output_block` | `param` |
-| `input_util.f90` | 671 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
+| `input_util.f90` | 262 | `input_util::read_input_conf::model_block` | `param` |
+| `input_util.f90` | 320 | `input_util::read_input_conf::coriolis_block` | `param` |
+| `input_util.f90` | 381 | `input_util::read_input_conf::time_block` | `param` |
+| `input_util.f90` | 437 | `input_util::read_input_conf::flow_cond_block` | `param` |
+| `input_util.f90` | 568 | `input_util::read_input_conf::output_block` | `param` |
+| `input_util.f90` | 673 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
 | `io.f90` | 42 | `io` | `mpi` |
 | `io.f90` | 46 | `io` | `cgns` |
 | `lagrange_Sdep_gpu.f90` | 220 | `lagrange_sdep_gpu_m::lagrange_ssim_gpu` | `param` |
