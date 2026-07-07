@@ -80,15 +80,15 @@ runtime correctness and timing evidence must close each bucket.
 | `forcing.f90:100` | `lvlset_bridge_time` | `excluded-lvlset-bridge` | `lvlset` |
 | `fringe.f90:59` | `constructor` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |
 | `functions.f90:62` | `interp_to_uv_grid` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:140` | `interp_to_w_grid` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:602` | `bilinear_interp_sa_nocheck` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:638` | `bilinear_interp_sa` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:665` | `bilinear_interp_aa` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:723` | `linear_interp_sa_nocheck` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:749` | `linear_interp_sa` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:775` | `linear_interp_aa` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:810` | `cross_product` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:822` | `binary_search` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:139` | `interp_to_w_grid` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:598` | `bilinear_interp_sa_nocheck` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:634` | `bilinear_interp_sa` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:661` | `bilinear_interp_aa` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:719` | `linear_interp_sa_nocheck` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:745` | `linear_interp_sa` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:771` | `linear_interp_aa` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:806` | `cross_product` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:818` | `binary_search` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
 | `hit_inflow.f90:153` | `extract_HIT_data` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `hit_inflow.f90:320` | `interpolate3D` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `inflow.f90:108` | `apply_inflow` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |

@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `186`
+Total broad imports: `176`
 
 ## Highest-Count Files
 
@@ -19,7 +19,6 @@ Total broad imports: `186`
 | `scalars.f90` | 13 |
 | `io.f90` | 11 |
 | `main.f90` | 11 |
-| `functions.f90` | 10 |
 | `turbines.f90` | 10 |
 | `initial.f90` | 6 |
 | `mpi_defs.f90` | 6 |
@@ -34,6 +33,7 @@ Total broad imports: `186`
 | `inflow.f90` | 3 |
 | `press_stag_array.f90` | 3 |
 | `test_filtermodule.f90` | 3 |
+| `tridag_array.f90` | 3 |
 
 ## Full List
 
@@ -63,16 +63,6 @@ Total broad imports: `186`
 | `forcing.f90` | 386 | `forcing::project` | `sim_param` |
 | `forcing.f90` | 387 | `forcing::project` | `messages` |
 | `forcing.f90` | 391 | `forcing::project` | `mpi` |
-| `functions.f90` | 33 | `functions` | `messages` |
-| `functions.f90` | 80 | `functions::interp_to_uv_grid` | `messages` |
-| `functions.f90` | 161 | `functions::interp_to_w_grid` | `messages` |
-| `functions.f90` | 215 | `functions::cell_indx_w` | `grid_m` |
-| `functions.f90` | 216 | `functions::cell_indx_w` | `messages` |
-| `functions.f90` | 295 | `functions::cell_indx` | `grid_m` |
-| `functions.f90` | 296 | `functions::cell_indx` | `messages` |
-| `functions.f90` | 381 | `functions::trilinear_interp_w` | `grid_m` |
-| `functions.f90` | 506 | `functions::trilinear_interp` | `grid_m` |
-| `functions.f90` | 979 | `functions::count_lines` | `messages` |
 | `hit_inflow.f90` | 26 | `hit_inflow` | `grid_m` |
 | `hit_inflow.f90` | 27 | `hit_inflow` | `fringe` |
 | `inflow.f90` | 25 | `inflow` | `fringe` |

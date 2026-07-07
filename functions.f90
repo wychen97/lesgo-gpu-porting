@@ -30,7 +30,7 @@ module functions
 !
 ! Keep this module limited to small reusable utilities.  Solver-stage logic
 ! should stay in the module that owns the timestep dependency.
-use messages
+use messages, only : error
 use types, only : rprec
 implicit none
 
@@ -77,7 +77,6 @@ function interp_to_uv_grid(var, lbz) result(var_uv)
 
 use types, only : rprec
 use param, only : nz
-use messages
 #ifdef PPMPI
 use param, only : coord, nproc
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWN, MPI_SYNC_DOWNUP
@@ -158,7 +157,6 @@ function interp_to_w_grid(var, lbz) result(var_w)
 
 use types, only : rprec
 use param, only : nz
-use messages
 #ifdef PPMPI
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWN, MPI_SYNC_DOWNUP
 #endif
@@ -212,8 +210,7 @@ integer function cell_indx_w(indx,dx,px)
 !  lbz <= cell_indx < Nz
 !
 use types, only : rprec
-use grid_m
-use messages
+use grid_m, only : grid
 use param, only : nx, ny, nz, L_x, L_y, L_z, lbz
 implicit none
 
@@ -292,8 +289,7 @@ integer function cell_indx(indx,dx,px)
 !  lbz <= cell_indx < Nz
 !
 use types, only : rprec
-use grid_m
-use messages
+use grid_m, only : grid
 use param, only : nx, ny, nz, L_x, L_y, L_z, lbz
 implicit none
 
@@ -378,7 +374,7 @@ real(rprec) function trilinear_interp_w(var,lbz,xyz)
 !  Before calling this function, make sure the point exists on the coord
 !  [ test using: z(1) \leq z_p < z(nz-1) ]
 !
-use grid_m
+use grid_m, only : grid
 use types, only : rprec
 use param, only : dx, dy, dz, coord, nproc, lbc_mom, ubc_mom, nz
 implicit none
@@ -503,7 +499,7 @@ real(rprec) function trilinear_interp(var,lbz,xyz)
 !  Before calling this function, make sure the point exists on the coord
 !  [ test using: z(1) \leq z_p < z(nz-1) ]
 !
-use grid_m
+use grid_m, only : grid
 use types, only : rprec
 use param, only : dx, dy, dz
 implicit none
@@ -976,7 +972,6 @@ function count_lines(fname) result(N)
 !
 ! This function counts the number of lines in a file
 !
-use messages
 use param, only : CHAR_BUFF_LENGTH
 implicit none
 character(*), intent(in) :: fname

@@ -160,18 +160,18 @@ claims.
 | `forcing.f90:380` | `project` | `gpu-marked` |  |  |
 | `fringe.f90:59` | `constructor` | `unmarked-runtime-candidate` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |
 | `functions.f90:62` | `interp_to_uv_grid` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:140` | `interp_to_w_grid` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:602` | `bilinear_interp_sa_nocheck` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:638` | `bilinear_interp_sa` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:665` | `bilinear_interp_aa` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:723` | `linear_interp_sa_nocheck` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:749` | `linear_interp_sa` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:775` | `linear_interp_aa` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:810` | `cross_product` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:822` | `binary_search` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
-| `functions.f90:893` | `get_tau_wall_bot` | `gpu-marked` |  |  |
-| `functions.f90:934` | `get_tau_wall_top` | `gpu-marked` |  |  |
-| `functions.f90:974` | `count_lines` | `host-or-diagnostic` |  |  |
+| `functions.f90:139` | `interp_to_w_grid` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:598` | `bilinear_interp_sa_nocheck` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:634` | `bilinear_interp_sa` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:661` | `bilinear_interp_aa` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:719` | `linear_interp_sa_nocheck` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:745` | `linear_interp_sa` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:771` | `linear_interp_aa` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:806` | `cross_product` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:818` | `binary_search` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
+| `functions.f90:889` | `get_tau_wall_bot` | `gpu-marked` |  |  |
+| `functions.f90:930` | `get_tau_wall_top` | `gpu-marked` |  |  |
+| `functions.f90:970` | `count_lines` | `host-or-diagnostic` |  |  |
 | `grid.f90:44` | `build` | `host-boundary` |  |  |
 | `hit_inflow.f90:82` | `initialize_HIT` | `gpu-marked` |  |  |
 | `hit_inflow.f90:153` | `extract_HIT_data` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
