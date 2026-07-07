@@ -105,6 +105,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/report_gpu_static_candidate_review.py` | Generates the full static unmarked-candidate GPU review report. |
 | `tools/report_gpu_static_full_inventory.py` | Generates the full static GPU classification inventory for every tracked non-LVLSET subprogram. |
 | `tools/report_fortran_broad_imports.py` | Generates the broad Fortran import audit for future import-boundary cleanup. |
+| `tools/run_derecho_compile_matrix.sh` | Stages the current clean `HEAD` to Derecho and compiles the documented GPU case profiles with the Derecho NVHPC scripts. |
 | `tools/script_inventory.py` | Shared tracked-script discovery helpers for readiness checks. |
 | `tools/report_gpu_static_inventory.py` | Reports static non-LVLSET Fortran subprogram GPU-marker coverage and review buckets for audits. |
 | `tools/report_gpu_validation_gaps.py` | Reports open GPU validation and paired-speedup evidence gaps by runbook batch. |
