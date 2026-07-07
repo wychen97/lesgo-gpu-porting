@@ -117,6 +117,13 @@ On a machine with CMake and a suitable compiler wrapper available, also run:
 python3 tools/check_branch_readiness.py --with-cmake-configure
 ```
 
+For edits that touch optional inflow or GPU source membership, also run the
+HIT-plus-LES-GPU configure smoke:
+
+```bash
+python3 tools/check_branch_readiness.py --with-hit-cmake-configure
+```
+
 The readiness wrapper runs these portable checks:
 
 ```bash

@@ -49,6 +49,12 @@ When CMake and a suitable compiler wrapper are available, also run:
 python3 tools/check_branch_readiness.py --with-cmake-configure
 ```
 
+For optional inflow or GPU source-membership changes, also run:
+
+```bash
+python3 tools/check_branch_readiness.py --with-hit-cmake-configure
+```
+
 The exact portable script list and guard descriptions are maintained in
 `README_FINAL_OPTIMIZED_20260619.md` under "Local Readability Checks".
 `tools/README.md` is the index for the individual readiness tools.  Keep those

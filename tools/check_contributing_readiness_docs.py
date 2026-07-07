@@ -12,6 +12,7 @@ CONTRIBUTING_PATH = Path("CONTRIBUTING.md")
 REQUIRED_SNIPPETS = (
     "python3 tools/check_branch_readiness.py",
     "python3 tools/check_branch_readiness.py --with-cmake-configure",
+    "python3 tools/check_branch_readiness.py --with-hit-cmake-configure",
     'README_FINAL_OPTIMIZED_20260619.md` under "Local Readability Checks"',
     "`tools/README.md` is the index for the individual readiness tools",
 )
