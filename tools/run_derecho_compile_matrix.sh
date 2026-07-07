@@ -16,6 +16,8 @@
 #                          scripts.  Defaults to 8.
 #   DERECHO_CASES          Space-separated case list.  Defaults to the four
 #                          public presentation cases.
+#   DERECHO_PROFILES       Space-separated build profiles passed to each
+#                          compile_derecho.sh script.  Defaults to gpu.
 
 set -euo pipefail
 
@@ -32,12 +34,29 @@ timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 remote_root="${DERECHO_COMPILE_ROOT:-/glade/work/wchen/lesgo_versions/benchmarks/derecho_compile_matrix_${commit}_${timestamp}}"
 build_jobs="${BUILD_JOBS:-8}"
 cases_text="${DERECHO_CASES:-channel_flow adm_disk atm_line large_windfarm_3072x384x400_60turbines}"
+profiles_text="${DERECHO_PROFILES:-gpu}"
 
 read -r -a cases <<< "${cases_text}"
 if [[ "${#cases[@]}" -eq 0 ]]; then
     echo "No cases requested." >&2
     exit 2
 fi
+
+read -r -a profiles <<< "${profiles_text}"
+if [[ "${#profiles[@]}" -eq 0 ]]; then
+    echo "No build profiles requested." >&2
+    exit 2
+fi
+
+for profile in "${profiles[@]}"; do
+    case "${profile}" in
+        gpu|cpu) ;;
+        *)
+            echo "Unsupported build profile '${profile}'. Use gpu, cpu, or both." >&2
+            exit 2
+            ;;
+    esac
+done
 
 ssh derecho bash -s <<REMOTE
 set -euo pipefail
@@ -53,19 +72,21 @@ printf 'Derecho compile root: %s\n' "${remote_root}"
 printf 'Commit: %s\n' "${commit}"
 
 for case_name in "${cases[@]}"; do
-    printf '\n== %s gpu ==\n' "${case_name}"
-    ssh derecho bash -s -- "${remote_root}" "${case_name}" "${build_jobs}" <<'REMOTE'
+for profile in "${profiles[@]}"; do
+    printf '\n== %s %s ==\n' "${case_name}" "${profile}"
+    ssh derecho bash -s -- "${remote_root}" "${case_name}" "${profile}" "${build_jobs}" <<'REMOTE'
 set -euo pipefail
 remote_root="$1"
 case_name="$2"
-build_jobs="$3"
+profile="$3"
+build_jobs="$4"
 src="${remote_root}/src"
-log="${remote_root}/compile_${case_name}_gpu.log"
+log="${remote_root}/compile_${case_name}_${profile}.log"
 
-rm -rf "${src}/test-cases/${case_name}/build-derecho-gpu"
-if (cd "${src}" && BUILD_JOBS="${build_jobs}" bash "test-cases/${case_name}/compile_derecho.sh" gpu > "${log}" 2>&1); then
+rm -rf "${src}/test-cases/${case_name}/build-derecho-${profile}"
+if (cd "${src}" && BUILD_JOBS="${build_jobs}" bash "test-cases/${case_name}/compile_derecho.sh" "${profile}" > "${log}" 2>&1); then
     printf 'PASS %s %s\n' "${case_name}" "${log}"
-    grep -E 'Built .*/lesgo-run-exe-gpu|Built target|Linking Fortran executable' "${log}" | tail -n 5 || true
+    grep -E "Built .*/lesgo-run-exe-${profile}|Built target|Linking Fortran executable" "${log}" | tail -n 5 || true
 else
     rc=$?
     printf 'FAIL %s rc=%s %s\n' "${case_name}" "${rc}" "${log}"
@@ -74,5 +95,6 @@ else
 fi
 REMOTE
 done
+done
 
-printf '\nAll requested Derecho GPU compile profiles passed for %s.\n' "${commit}"
+printf '\nAll requested Derecho compile profiles passed for %s.\n' "${commit}"
