@@ -75,8 +75,8 @@ runtime correctness and timing evidence must close each bucket.
 | `emul_complex.f90:93` | `mul_real_complex_2D` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `emul_complex.f90:154` | `mul_real_complex_imag_2D` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `emul_complex.f90:213` | `mul_real_complex_real_2D` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `fft.f90:43` | `padd` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `fft.f90:74` | `unpadd` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
+| `fft.f90:42` | `padd` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
+| `fft.f90:73` | `unpadd` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `forcing.f90:100` | `lvlset_bridge_time` | `excluded-lvlset-bridge` | `lvlset` |
 | `fringe.f90:59` | `constructor` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |
 | `functions.f90:62` | `interp_to_uv_grid` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |

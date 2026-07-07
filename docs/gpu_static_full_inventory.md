@@ -139,10 +139,10 @@ claims.
 | `emul_complex.f90:93` | `mul_real_complex_2D` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `emul_complex.f90:154` | `mul_real_complex_imag_2D` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `emul_complex.f90:213` | `mul_real_complex_real_2D` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `fft.f90:43` | `padd` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `fft.f90:74` | `unpadd` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `fft.f90:102` | `init_fft` | `host-or-diagnostic` |  |  |
-| `fft.f90:131` | `init_wavenumber` | `gpu-marked` |  |  |
+| `fft.f90:42` | `padd` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
+| `fft.f90:73` | `unpadd` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
+| `fft.f90:101` | `init_fft` | `host-or-diagnostic` |  |  |
+| `fft.f90:130` | `init_wavenumber` | `gpu-marked` |  |  |
 | `fft_gpu.f90:80` | `init_fft_gpu` | `gpu-marked` |  |  |
 | `fft_gpu.f90:137` | `make_plan` | `gpu-marked` |  |  |
 | `fft_gpu.f90:172` | `set_stream` | `gpu-marked` |  |  |

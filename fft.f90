@@ -23,7 +23,6 @@
 module fft
 use types, only : rprec
 use param, only : ld, lh, ny, ld_big, ny2
-use iso_c_binding
 implicit none
 include 'fftw3.f'
 save
