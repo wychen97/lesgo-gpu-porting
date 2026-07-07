@@ -271,6 +271,41 @@ def test_module_scope_test_filter_import_satisfies_contained_call(tmpdir: Path) 
         raise AssertionError(f"valid module-scope import failed: {issues!r}")
 
 
+def test_unguarded_gpu_filter_import_is_reported(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "unguarded_gpu_filter.f90",
+        """
+        subroutine unguarded_gpu_filter()
+        use test_filtermodule, only : test_filter_plane_gpu
+        implicit none
+        end subroutine unguarded_gpu_filter
+        """,
+    )
+
+    issues = hygiene.check_gpu_only_test_filter_import_guards([path])
+    assert_contains(issues, "imports GPU-only test_filtermodule procedure(s)")
+
+
+def test_guarded_gpu_filter_import_is_allowed(tmpdir: Path) -> None:
+    path = write_case(
+        tmpdir,
+        "guarded_gpu_filter.f90",
+        """
+        subroutine guarded_gpu_filter()
+        #if defined(PPSGS_GPU)
+        use test_filtermodule, only : test_filter_plane_gpu
+        #endif
+        implicit none
+        end subroutine guarded_gpu_filter
+        """,
+    )
+
+    issues = hygiene.check_gpu_only_test_filter_import_guards([path])
+    if issues:
+        raise AssertionError(f"guarded GPU filter import failed: {issues!r}")
+
+
 def main() -> int:
     tmpdir = Path(tempfile.mkdtemp(prefix=".fortran_hygiene_selftest_", dir=ROOT))
     try:
@@ -285,10 +320,12 @@ def main() -> int:
         test_mpi_procedure_only_import_is_reported(tmpdir)
         test_missing_test_filter_specific_import_is_reported(tmpdir)
         test_module_scope_test_filter_import_satisfies_contained_call(tmpdir)
+        test_unguarded_gpu_filter_import_is_reported(tmpdir)
+        test_guarded_gpu_filter_import_is_allowed(tmpdir)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    print("Fortran interface hygiene self-test passed (11 synthetic cases).")
+    print("Fortran interface hygiene self-test passed (13 synthetic cases).")
     return 0
 
 

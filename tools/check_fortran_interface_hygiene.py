@@ -20,6 +20,8 @@ Fortran codebase:
   the Derecho NVHPC/Cray MPI module interface;
 * direct calls to specific ``test_filtermodule`` procedures without importing
   those specific procedure names.
+* imports of GPU-only ``test_filtermodule`` helper procedures outside GPU
+  preprocessor guards, which would break CPU-profile compiles.
 """
 
 from __future__ import annotations
@@ -62,11 +64,20 @@ MPI_PROCEDURE_NAMES = {
 TEST_FILTER_SPECIFIC_PROCEDURES = {
     "test_filter_3",
     "test_filter_6",
+    "test_filter_b_gpu",
     "test_filter_plane_gpu",
     "test_test_filter_3",
     "test_test_filter_6",
+    "test_test_filter_b_gpu",
     "test_test_filter_plane_gpu",
 }
+GPU_ONLY_TEST_FILTER_PROCEDURES = {
+    "test_filter_b_gpu",
+    "test_filter_plane_gpu",
+    "test_test_filter_b_gpu",
+    "test_test_filter_plane_gpu",
+}
+GPU_TEST_FILTER_GUARD_MACROS = {"PPSGS_GPU", "PPSCALARS_GPU"}
 
 
 @dataclass
@@ -769,6 +780,80 @@ def check_test_filter_specific_imports(paths: list[Path]) -> list[str]:
     return issues
 
 
+def positive_preprocessor_macros(line: str) -> set[str]:
+    """Return macros that are positively required by a simple guard line."""
+    ifdef_match = re.match(r"^#\s*ifdef\s+([A-Z_][A-Z0-9_]*)\b", line)
+    if ifdef_match:
+        return {ifdef_match.group(1)}
+
+    if re.match(r"^#\s*ifndef\b", line):
+        return set()
+
+    condition_match = re.match(r"^#\s*(?:if|elif)\s+(.+)$", line)
+    if not condition_match:
+        return set()
+
+    condition = condition_match.group(1)
+    if re.search(r"!\s*defined\s*\(", condition):
+        return set()
+    return set(re.findall(r"\bdefined\s*\(\s*([A-Z_][A-Z0-9_]*)\s*\)", condition))
+
+
+def check_gpu_only_test_filter_import_guards(paths: list[Path]) -> list[str]:
+    issues: list[str] = []
+
+    for path in paths:
+        guard_stack: list[set[str]] = []
+
+        for line_no, line in logical_lines(path):
+            if re.match(r"^#\s*(?:ifdef|ifndef|if)\b", line):
+                guard_stack.append(positive_preprocessor_macros(line))
+                continue
+            if re.match(r"^#\s*elif\b", line):
+                if guard_stack:
+                    guard_stack[-1] = positive_preprocessor_macros(line)
+                continue
+            if re.match(r"^#\s*else\b", line):
+                if guard_stack:
+                    guard_stack[-1] = set()
+                continue
+            if re.match(r"^#\s*endif\b", line):
+                if guard_stack:
+                    guard_stack.pop()
+                continue
+
+            use_match = re.match(
+                r"^use\s*(?:,\s*[^:]+::\s*)?test_filtermodule"
+                r"\s*,\s*only\s*:\s*(.+)$",
+                line,
+                flags=re.I,
+            )
+            if not use_match:
+                continue
+
+            imported = {
+                local_symbol(name)
+                for name in split_names(use_match.group(1))
+                if local_symbol(name)
+            }
+            gpu_only_imports = sorted(imported & GPU_ONLY_TEST_FILTER_PROCEDURES)
+            if not gpu_only_imports:
+                continue
+
+            active_positive_macros = set().union(*guard_stack) if guard_stack else set()
+            if active_positive_macros & GPU_TEST_FILTER_GUARD_MACROS:
+                continue
+
+            rel = path.relative_to(ROOT)
+            issues.append(
+                f"{rel}:{line_no}: imports GPU-only test_filtermodule procedure(s) "
+                + ", ".join(f"`{name}`" for name in gpu_only_imports)
+                + " without a positive GPU preprocessor guard"
+            )
+
+    return issues
+
+
 def check_public_api_symbols(paths: list[Path]) -> list[str]:
     modules = collect_modules(paths)
     issues: list[str] = []
@@ -817,6 +902,7 @@ def main() -> int:
         + check_repeated_scope_imports(paths)
         + check_mpi_procedure_only_imports(paths)
         + check_test_filter_specific_imports(paths)
+        + check_gpu_only_test_filter_import_guards(paths)
         + check_public_api_symbols(paths)
     )
 
@@ -833,8 +919,8 @@ def main() -> int:
         f"({len(paths)} files, no stale/unused macros, missing module/program "
         "implicit-none statements, private-export mismatches, bare flag conditions, "
         "unresolved tracked-module imports, duplicate/repeated imports, unsafe MPI "
-        "procedure-only imports, missing test-filter procedure bindings, or stale "
-        "public API names)."
+        "procedure-only imports, missing/unguarded test-filter procedure bindings, "
+        "or stale public API names)."
     )
     return 0
 
