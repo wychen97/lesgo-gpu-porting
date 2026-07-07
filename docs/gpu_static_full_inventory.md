@@ -158,7 +158,7 @@ claims.
 | `forcing.f90:230` | `forcing_applied` | `gpu-marked` |  |  |
 | `forcing.f90:323` | `forcing_induced` | `gpu-marked` |  |  |
 | `forcing.f90:380` | `project` | `gpu-marked` |  |  |
-| `fringe.f90:60` | `constructor` | `unmarked-runtime-candidate` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |
+| `fringe.f90:59` | `constructor` | `unmarked-runtime-candidate` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |
 | `functions.f90:62` | `interp_to_uv_grid` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
 | `functions.f90:140` | `interp_to_w_grid` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
 | `functions.f90:602` | `bilinear_interp_sa_nocheck` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |

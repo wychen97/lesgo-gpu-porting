@@ -22,7 +22,7 @@ module coriolis
 !*******************************************************************************
 ! This module contains all of the subroutines associated with scalar transport
 use types, only : rprec
-use pid_m
+use pid_m, only : pid_t
 implicit none
 
 save
@@ -85,7 +85,7 @@ subroutine coriolis_init
 !*******************************************************************************
 ! This subroutine initializes the variables for the coriolis
 use param, only : z_i, u_star, L_z, nz, coord, nproc, dz, read_endian
-use grid_m
+use grid_m, only : grid
 use functions, only : binary_search, count_lines
 logical :: exst
 real(rprec) :: e_int

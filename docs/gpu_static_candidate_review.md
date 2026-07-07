@@ -78,7 +78,7 @@ runtime correctness and timing evidence must close each bucket.
 | `fft.f90:43` | `padd` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `fft.f90:74` | `unpadd` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `forcing.f90:100` | `lvlset_bridge_time` | `excluded-lvlset-bridge` | `lvlset` |
-| `fringe.f90:60` | `constructor` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |
+| `fringe.f90:59` | `constructor` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |
 | `functions.f90:62` | `interp_to_uv_grid` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
 | `functions.f90:140` | `interp_to_w_grid` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
 | `functions.f90:602` | `bilinear_interp_sa_nocheck` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |

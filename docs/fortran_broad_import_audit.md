@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `197`
+Total broad imports: `193`
 
 ## Highest-Count Files
 
@@ -52,8 +52,6 @@ Total broad imports: `197`
 | `concurrent_precursor.f90` | 225 | `concurrent_precursor::synchronize_cps` | `messages` |
 | `convec.f90` | 33 | `convec` | `param` |
 | `convec.f90` | 36 | `convec` | `fft` |
-| `coriolis.f90` | 25 | `coriolis` | `pid_m` |
-| `coriolis.f90` | 88 | `coriolis::coriolis_init` | `grid_m` |
 | `derivatives.f90` | 96 | `derivatives::ddx` | `fft` |
 | `derivatives.f90` | 139 | `derivatives::ddy` | `fft` |
 | `derivatives.f90` | 182 | `derivatives::ddxy` | `fft` |
@@ -65,7 +63,6 @@ Total broad imports: `197`
 | `forcing.f90` | 386 | `forcing::project` | `sim_param` |
 | `forcing.f90` | 387 | `forcing::project` | `messages` |
 | `forcing.f90` | 391 | `forcing::project` | `mpi` |
-| `fringe.f90` | 24 | `fringe` | `messages` |
 | `functions.f90` | 33 | `functions` | `messages` |
 | `functions.f90` | 80 | `functions::interp_to_uv_grid` | `messages` |
 | `functions.f90` | 161 | `functions::interp_to_w_grid` | `messages` |
@@ -151,7 +148,6 @@ Total broad imports: `197`
 | `level_set.f90` | 2915 | `level_set::smooth` | `grid_m` |
 | `level_set.f90` | 4257 | `level_set::level_set_forcing` | `sim_param` |
 | `level_set.f90` | 4397 | `level_set::safe_cd` | `grid_m` |
-| `linear_simple.f90` | 27 | `linear_simple` | `messages` |
 | `main.f90` | 40 | `(file scope)` | `clock_m` |
 | `main.f90` | 41 | `(file scope)` | `param` |
 | `main.f90` | 42 | `(file scope)` | `sim_param` |

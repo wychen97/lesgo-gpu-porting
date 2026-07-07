@@ -24,7 +24,7 @@
 module linear_simple
 !use precision
 use types, only : rp => rprec
-use messages
+use messages, only : error, n_l
 implicit none
 
 private

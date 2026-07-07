@@ -21,7 +21,6 @@
 module fringe
 !*******************************************************************************
 use types, only : rprec
-use messages
 
 implicit none
 
