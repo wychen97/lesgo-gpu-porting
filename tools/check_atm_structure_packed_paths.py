@@ -13,12 +13,11 @@ from __future__ import annotations
 
 import re
 import sys
-from pathlib import Path
 
+from repo_paths import repo_path
 
-ROOT = Path(__file__).resolve().parents[1]
-INTERFACE_PATH = ROOT / "atm_lesgo_interface.f90"
-ACTUATOR_PATH = ROOT / "actuator_turbine_model.f90"
+INTERFACE_PATH = repo_path("atm_lesgo_interface.f90")
+ACTUATOR_PATH = repo_path("actuator_turbine_model.f90")
 
 
 def subroutine_block(text: str, name: str) -> str:

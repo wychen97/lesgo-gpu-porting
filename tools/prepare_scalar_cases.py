@@ -11,8 +11,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
+from repo_paths import repo_path
 
 
 @dataclass(frozen=True)
@@ -228,7 +227,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Create compact scalar CPU/GPU validation case directories."
     )
-    parser.add_argument("--base-case", type=Path, default=ROOT / "test-cases/channel_flow")
+    parser.add_argument(
+        "--base-case",
+        type=Path,
+        default=repo_path("test-cases", "channel_flow"),
+    )
     parser.add_argument("--out-root", type=Path, required=True)
     parser.add_argument(
         "--case",
