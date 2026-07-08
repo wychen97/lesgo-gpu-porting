@@ -259,7 +259,8 @@ end subroutine domain_block
 !*******************************************************************************
 subroutine model_block()
 !*******************************************************************************
-use param
+use param, only : Co, DYN_init, coord, cs_count, ifilter, molec,               &
+                  nu_molec, sgs, sgs_model, u_star, vonk, wall_damp_exp
 implicit none
 
 character(*), parameter :: block_name = 'MODEL'
