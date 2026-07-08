@@ -98,7 +98,8 @@ branch.  Read these files before changing solver code.
 
 20. `fortran_broad_import_audit.md`
    - generated map of broad `use module` imports without `only:` lists;
-   - non-blocking guide for future import-boundary cleanup;
+   - readiness-gated guide for import-boundary cleanup: unclassified broad
+     imports must be narrowed or explicitly classified;
    - helps keep readability refactors small and reviewable.
 
 ## Historical References
