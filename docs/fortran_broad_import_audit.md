@@ -8,7 +8,19 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
+The `category` and `recommended action` columns distinguish safe
+cleanup candidates from intentionally broad imports that depend on
+external compiler interfaces or deferred optional modules.
+
 Total broad imports: `56`
+
+## Category Summary
+
+| Category | Broad imports |
+| --- | ---: |
+| MPI compiler interface | 32 |
+| LVLSET deferred | 21 |
+| optional CGNS interface | 3 |
 
 ## Highest-Count Files
 
@@ -37,61 +49,61 @@ Total broad imports: `56`
 
 ## Full List
 
-| File | Line | Scope | Module |
-| --- | ---: | --- | --- |
-| `atm_lesgo_interface.f90` | 69 | `atm_lesgo_interface` | `mpi` |
-| `cfl_util.f90` | 49 | `cfl_util::get_max_cfl` | `mpi` |
-| `cfl_util.f90` | 109 | `cfl_util::get_cfl_dt` | `mpi` |
-| `clocks.f90` | 50 | `clock_m::start` | `mpi` |
-| `clocks.f90` | 68 | `clock_m::stop` | `mpi` |
-| `concurrent_precursor.f90` | 169 | `concurrent_precursor::initialize_cps` | `mpi` |
-| `coriolis.f90` | 182 | `coriolis::coriolis_calc` | `mpi` |
-| `cuda_mpi_debug.f90` | 4 | `cuda_mpi_debug` | `mpi` |
-| `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` |
-| `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` |
-| `forcing.f90` | 393 | `forcing::project` | `mpi` |
-| `input_util.f90` | 687 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
-| `io.f90` | 42 | `io` | `mpi` |
-| `io.f90` | 46 | `io` | `cgns` |
-| `lagrange_Sdep_gpu.f90` | 1906 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` |
-| `level_set.f90` | 27 | `level_set` | `mpi` |
-| `level_set.f90` | 30 | `level_set` | `messages` |
-| `level_set.f90` | 32 | `level_set` | `level_set_base` |
-| `level_set.f90` | 280 | `level_set::level_set_vel_err` | `mpi` |
-| `level_set.f90` | 1784 | `level_set::interp_scal` | `grid_m` |
-| `level_set.f90` | 1786 | `level_set::interp_scal` | `messages` |
-| `level_set.f90` | 1975 | `level_set::interp_tij_u` | `grid_m` |
-| `level_set.f90` | 1976 | `level_set::interp_tij_u` | `messages` |
-| `level_set.f90` | 2184 | `level_set::interp_tij_w` | `grid_m` |
-| `level_set.f90` | 2185 | `level_set::interp_tij_w` | `messages` |
-| `level_set.f90` | 2376 | `level_set::interp_phi` | `grid_m` |
-| `level_set.f90` | 2377 | `level_set::interp_phi` | `messages` |
-| `level_set.f90` | 2552 | `level_set::interp_vel` | `grid_m` |
-| `level_set.f90` | 2553 | `level_set::interp_vel` | `messages` |
-| `level_set.f90` | 2915 | `level_set::smooth` | `grid_m` |
-| `level_set.f90` | 4257 | `level_set::level_set_forcing` | `sim_param` |
-| `level_set.f90` | 4397 | `level_set::safe_cd` | `grid_m` |
-| `main.f90` | 64 | `(file scope)` | `mpi` |
-| `mpi_defs.f90` | 23 | `mpi_defs` | `mpi` |
-| `mpi_defs.f90` | 59 | `mpi_defs::initialize_mpi` | `cgns` |
-| `mpi_defs.f90` | 205 | `mpi_defs::create_mpi_comms_cps` | `mpi` |
-| `mpi_defs.f90` | 272 | `mpi_defs::mpi_sync_real_array` | `mpi` |
-| `mpi_transpose_mod.f90` | 25 | `mpi_transpose_mod` | `mpi` |
-| `param_output.f90` | 38 | `param_output` | `level_set_base` |
-| `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` |
-| `press_stag_array.f90` | 58 | `press_stag_array` | `mpi` |
-| `rmsdiv.f90` | 31 | `rmsdiv` | `mpi` |
-| `scalars.f90` | 1051 | `scalars::scalars_deriv` | `mpi` |
-| `scalars.f90` | 1379 | `scalars::scalars_transport` | `mpi` |
-| `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` |
-| `sgs_stag_util.f90` | 678 | `sgs_stag_util::sgs_stage_report` | `mpi` |
-| `time_average.f90` | 36 | `time_average` | `cgns` |
-| `trees_global_fmask_ls.f90` | 23 | `trees_global_fmask_ls` | `trees_base_ls` |
-| `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` |
-| `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` |
-| `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` |
-| `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` |
-| `turbines.f90` | 329 | `turbines::turbines_nodes` | `mpi` |
-| `turbines.f90` | 720 | `turbines::turbines_acc_sync_device_field` | `mpi` |
-| `turbines.f90` | 752 | `turbines::turbines_forcing_acc` | `mpi` |
-| `turbines.f90` | 1016 | `turbines::turbines_forcing` | `mpi` |
+| File | Line | Scope | Module | Category | Recommended action |
+| --- | ---: | --- | --- | --- | --- |
+| `atm_lesgo_interface.f90` | 69 | `atm_lesgo_interface` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `cfl_util.f90` | 49 | `cfl_util::get_max_cfl` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `cfl_util.f90` | 109 | `cfl_util::get_cfl_dt` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `clocks.f90` | 50 | `clock_m::start` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `clocks.f90` | 68 | `clock_m::stop` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `concurrent_precursor.f90` | 169 | `concurrent_precursor::initialize_cps` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `coriolis.f90` | 182 | `coriolis::coriolis_calc` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `cuda_mpi_debug.f90` | 4 | `cuda_mpi_debug` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `forcing.f90` | 393 | `forcing::project` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `input_util.f90` | 687 | `input_util::read_input_conf::level_set_block` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `io.f90` | 42 | `io` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `io.f90` | 46 | `io` | `cgns` | optional CGNS interface | Keep broad unless the PPCGNS build profile is validated. |
+| `lagrange_Sdep_gpu.f90` | 1906 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `level_set.f90` | 27 | `level_set` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `level_set.f90` | 30 | `level_set` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 32 | `level_set` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 280 | `level_set::level_set_vel_err` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `level_set.f90` | 1784 | `level_set::interp_scal` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 1786 | `level_set::interp_scal` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 1975 | `level_set::interp_tij_u` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 1976 | `level_set::interp_tij_u` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 2184 | `level_set::interp_tij_w` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 2185 | `level_set::interp_tij_w` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 2376 | `level_set::interp_phi` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 2377 | `level_set::interp_phi` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 2552 | `level_set::interp_vel` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 2553 | `level_set::interp_vel` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 2915 | `level_set::smooth` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 4257 | `level_set::level_set_forcing` | `sim_param` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 4397 | `level_set::safe_cd` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `main.f90` | 64 | `(file scope)` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `mpi_defs.f90` | 23 | `mpi_defs` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `mpi_defs.f90` | 59 | `mpi_defs::initialize_mpi` | `cgns` | optional CGNS interface | Keep broad unless the PPCGNS build profile is validated. |
+| `mpi_defs.f90` | 205 | `mpi_defs::create_mpi_comms_cps` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `mpi_defs.f90` | 272 | `mpi_defs::mpi_sync_real_array` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `mpi_transpose_mod.f90` | 25 | `mpi_transpose_mod` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `param_output.f90` | 38 | `param_output` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `press_stag_array.f90` | 58 | `press_stag_array` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `rmsdiv.f90` | 31 | `rmsdiv` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `scalars.f90` | 1051 | `scalars::scalars_deriv` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `scalars.f90` | 1379 | `scalars::scalars_transport` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `sgs_stag_util.f90` | 678 | `sgs_stag_util::sgs_stage_report` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `time_average.f90` | 36 | `time_average` | `cgns` | optional CGNS interface | Keep broad unless the PPCGNS build profile is validated. |
+| `trees_global_fmask_ls.f90` | 23 | `trees_global_fmask_ls` | `trees_base_ls` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `turbines.f90` | 329 | `turbines::turbines_nodes` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `turbines.f90` | 720 | `turbines::turbines_acc_sync_device_field` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `turbines.f90` | 752 | `turbines::turbines_forcing_acc` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `turbines.f90` | 1016 | `turbines::turbines_forcing` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |

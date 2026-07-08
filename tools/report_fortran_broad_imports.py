@@ -24,6 +24,48 @@ class BroadImport:
     module: str
 
 
+@dataclass(frozen=True)
+class ImportClassification:
+    category: str
+    action: str
+
+
+def classify_broad_import(row: BroadImport) -> ImportClassification:
+    """Explain why a remaining broad import is still broad."""
+
+    rel = row.path.relative_to(ROOT).as_posix()
+    module = row.module
+
+    if module == "mpi":
+        return ImportClassification(
+            "MPI compiler interface",
+            "Keep broad unless a guarded `only:` list is validated on Derecho.",
+        )
+    if module == "cgns":
+        return ImportClassification(
+            "optional CGNS interface",
+            "Keep broad unless the PPCGNS build profile is validated.",
+        )
+    if (
+        rel.startswith("level_set")
+        or rel.startswith("trees_")
+        or module in {"level_set_base", "trees_base_ls"}
+    ):
+        return ImportClassification(
+            "LVLSET deferred",
+            "Leave for a separate LVLSET cleanup/validation pass.",
+        )
+    if rel.startswith("level_set") and module in {"grid_m", "messages", "sim_param"}:
+        return ImportClassification(
+            "LVLSET deferred",
+            "Leave for a separate LVLSET cleanup/validation pass.",
+        )
+    return ImportClassification(
+        "candidate",
+        "Review for a narrow `only:` list before changing source.",
+    )
+
+
 def current_scope(line: str, stack: list[str]) -> list[str]:
     lower = line.lower()
     module_match = re.match(r"^module\s+(?!procedure\b)(\w+)", lower)
@@ -72,6 +114,7 @@ def collect_broad_imports(paths: list[Path]) -> list[BroadImport]:
 
 def markdown_report(rows: list[BroadImport]) -> str:
     by_file = Counter(row.path.relative_to(ROOT).as_posix() for row in rows)
+    by_category = Counter(classify_broad_import(row).category for row in rows)
     lines = [
         "# Fortran Broad Import Audit",
         "",
@@ -83,13 +126,30 @@ def markdown_report(rows: list[BroadImport]) -> str:
         "this report to choose small, reviewable import cleanups instead of",
         "rewriting large solver files in one pass.",
         "",
+        "The `category` and `recommended action` columns distinguish safe",
+        "cleanup candidates from intentionally broad imports that depend on",
+        "external compiler interfaces or deferred optional modules.",
+        "",
         f"Total broad imports: `{len(rows)}`",
         "",
-        "## Highest-Count Files",
+        "## Category Summary",
         "",
-        "| File | Broad imports |",
+        "| Category | Broad imports |",
         "| --- | ---: |",
     ]
+
+    for category, count in by_category.most_common():
+        lines.append(f"| {category} | {count} |")
+
+    lines.extend(
+        [
+            "",
+            "## Highest-Count Files",
+            "",
+            "| File | Broad imports |",
+            "| --- | ---: |",
+        ]
+    )
 
     for path, count in by_file.most_common(20):
         lines.append(f"| `{path}` | {count} |")
@@ -99,13 +159,18 @@ def markdown_report(rows: list[BroadImport]) -> str:
             "",
             "## Full List",
             "",
-            "| File | Line | Scope | Module |",
-            "| --- | ---: | --- | --- |",
+            "| File | Line | Scope | Module | Category | Recommended action |",
+            "| --- | ---: | --- | --- | --- | --- |",
         ]
     )
+
     for row in rows:
         rel = row.path.relative_to(ROOT).as_posix()
-        lines.append(f"| `{rel}` | {row.line} | `{row.scope}` | `{row.module}` |")
+        classification = classify_broad_import(row)
+        lines.append(
+            f"| `{rel}` | {row.line} | `{row.scope}` | `{row.module}` | "
+            f"{classification.category} | {classification.action} |"
+        )
 
     lines.append("")
     return "\n".join(lines)
