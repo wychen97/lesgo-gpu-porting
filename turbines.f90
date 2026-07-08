@@ -33,7 +33,12 @@ module turbines
 ! is owned by actuator_turbine_model.f90 and atm_lesgo_interface.f90.
 
 use types, only : rprec
-use param
+use param, only : L_x, L_y, coord, dt_dim, dx, dy, dz, jt_total, lbz, ld,     &
+    nproc, nx, ny, nz, nz_tot, path, pi, total_time, total_time_dim, vonk,    &
+    z_i, zo
+#ifdef PPMPI
+use param, only : MPI_RPREC, comm, down, ierr, status, up
+#endif
 use grid_m, only : grid
 use messages, only : error, warn
 use string_util, only : string_splice
