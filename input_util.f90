@@ -318,7 +318,7 @@ end subroutine model_block
 !*******************************************************************************
 subroutine coriolis_block()
 !*******************************************************************************
-use param
+use param, only : coord
 use coriolis, only : coriolis_forcing, fc, G, alpha, pid_time, phi_set,        &
     height_set, Kp, Ki, Kd, repeat_interval
 implicit none
