@@ -38,8 +38,14 @@ program main
 
 use types, only : rprec
 use clock_m, only : clock_t
-use param
-use sim_param
+use param, only : BOGUS, cfl, coord, dt, dt_dim, dt_f, initu, jt, jt_total,   &
+    lbc_mom, lbz, ld, mean_p_force_x, mean_p_force_y, nenergy, nproc, nsteps, &
+    ny, nz, path, runtime, sgs, sgs_model, stop_random_force, tadv1, tadv2,   &
+    total_time, total_time_dim, u_star, use_cfl_dt, use_mean_p_force,         &
+    use_random_force, wbase, z_i
+use sim_param, only : divtx, divty, divtz, dpdx, dpdy, dpdz, dudx, dudy,      &
+    dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz, fxa, fya, fza, p, rhsx,        &
+    rhsx_f, rhsy, rhsy_f, rhsz, rhsz_f, txx, txy, txz, tyy, tyz, tzz, u, v, w
 use io, only : energy, output_loop, output_final, jt_total
 use io, only : write_tau_wall_bot, write_tau_wall_top
 use derivatives, only : filt_da_vel, ddz_vel
@@ -56,6 +62,7 @@ use sgs_param, only : SGS_MODEL_SMAGORINSKY, SGS_MODEL_STANDARD_DYNAMIC,      &
 
 #ifdef PPMPI
 use mpi
+use param, only : MPI_RPREC, comm, down, ierr, status, up
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWN
 use cuda_mpi_debug, only : mpi_dbg_sendrecv_r
 #endif

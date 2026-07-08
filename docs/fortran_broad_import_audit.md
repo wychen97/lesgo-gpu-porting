@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `58`
+Total broad imports: `56`
 
 ## Highest-Count Files
 
@@ -18,7 +18,6 @@ Total broad imports: `58`
 | `mpi_defs.f90` | 4 |
 | `turbines.f90` | 4 |
 | `forcing.f90` | 3 |
-| `main.f90` | 3 |
 | `cfl_util.f90` | 2 |
 | `clocks.f90` | 2 |
 | `io.f90` | 2 |
@@ -30,6 +29,7 @@ Total broad imports: `58`
 | `cuda_mpi_debug.f90` | 1 |
 | `input_util.f90` | 1 |
 | `lagrange_Sdep_gpu.f90` | 1 |
+| `main.f90` | 1 |
 | `mpi_transpose_mod.f90` | 1 |
 | `param_output.f90` | 1 |
 | `press_gpu.f90` | 1 |
@@ -71,9 +71,7 @@ Total broad imports: `58`
 | `level_set.f90` | 2915 | `level_set::smooth` | `grid_m` |
 | `level_set.f90` | 4257 | `level_set::level_set_forcing` | `sim_param` |
 | `level_set.f90` | 4397 | `level_set::safe_cd` | `grid_m` |
-| `main.f90` | 41 | `(file scope)` | `param` |
-| `main.f90` | 42 | `(file scope)` | `sim_param` |
-| `main.f90` | 58 | `(file scope)` | `mpi` |
+| `main.f90` | 64 | `(file scope)` | `mpi` |
 | `mpi_defs.f90` | 23 | `mpi_defs` | `mpi` |
 | `mpi_defs.f90` | 59 | `mpi_defs::initialize_mpi` | `cgns` |
 | `mpi_defs.f90` | 205 | `mpi_defs::create_mpi_comms_cps` | `mpi` |
