@@ -436,7 +436,12 @@ end subroutine  time_block
 !*******************************************************************************
 subroutine flow_cond_block()
 !*******************************************************************************
-use param
+use param, only : coord, eval_mean_p_force, fringe_region_end,                &
+                  fringe_region_len, inflow_type, inflow_velocity, inilag,    &
+                  initu, L_z, lbc_mom, mean_p_force_x, mean_p_force_y,        &
+                  rms_random_force, sampling_region_end, shift_n,             &
+                  stop_random_force, ubc_mom, ubot, use_mean_p_force,         &
+                  use_random_force, utop, zo
 use sponge, only : use_sponge, sponge_frequency, sponge_height
 #ifdef PPHIT
 ! Type hit has all the information inside
