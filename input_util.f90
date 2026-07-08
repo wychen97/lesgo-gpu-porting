@@ -379,7 +379,8 @@ end subroutine coriolis_block
 subroutine time_block()
 !*******************************************************************************
 use types, only : rprec
-use param
+use param, only : cfl, coord, cumulative_time, dt, dt_dim, nsteps, runtime,   &
+                  tadv1, tadv2, u_star, use_cfl_dt, z_i
 implicit none
 
 character(*), parameter :: block_name = 'TIME'

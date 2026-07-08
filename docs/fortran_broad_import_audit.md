@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `69`
+Total broad imports: `68`
 
 ## Highest-Count Files
 
@@ -17,9 +17,9 @@ Total broad imports: `69`
 | `level_set.f90` | 17 |
 | `sgs_stag_util.f90` | 5 |
 | `turbines.f90` | 5 |
-| `input_util.f90` | 4 |
 | `mpi_defs.f90` | 4 |
 | `forcing.f90` | 3 |
+| `input_util.f90` | 3 |
 | `lagrange_Sdep_gpu.f90` | 3 |
 | `main.f90` | 3 |
 | `cfl_util.f90` | 2 |
@@ -50,10 +50,9 @@ Total broad imports: `69`
 | `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` |
 | `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` |
 | `forcing.f90` | 393 | `forcing::project` | `mpi` |
-| `input_util.f90` | 382 | `input_util::read_input_conf::time_block` | `param` |
-| `input_util.f90` | 438 | `input_util::read_input_conf::flow_cond_block` | `param` |
-| `input_util.f90` | 569 | `input_util::read_input_conf::output_block` | `param` |
-| `input_util.f90` | 674 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
+| `input_util.f90` | 439 | `input_util::read_input_conf::flow_cond_block` | `param` |
+| `input_util.f90` | 570 | `input_util::read_input_conf::output_block` | `param` |
+| `input_util.f90` | 675 | `input_util::read_input_conf::level_set_block` | `level_set_base` |
 | `io.f90` | 42 | `io` | `mpi` |
 | `io.f90` | 46 | `io` | `cgns` |
 | `lagrange_Sdep_gpu.f90` | 220 | `lagrange_sdep_gpu_m::lagrange_ssim_gpu` | `param` |
