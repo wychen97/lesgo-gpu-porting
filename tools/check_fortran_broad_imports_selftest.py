@@ -7,7 +7,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-from report_fortran_broad_imports import collect_broad_imports
+from report_fortran_broad_imports import (
+    BroadImport,
+    ROOT,
+    classify_broad_import,
+    collect_broad_imports,
+)
 
 
 SYNTHETIC_SOURCE = """\
@@ -51,7 +56,26 @@ def main() -> int:
             print(f"  {row[0]} uses {row[1]}")
         return 1
 
-    print("Fortran broad-import parser self-test passed (2 synthetic broad imports).")
+    classification_cases = {
+        "MPI compiler interface": BroadImport(ROOT / "main.f90", 64, "main", "mpi"),
+        "optional CGNS interface": BroadImport(ROOT / "io.f90", 46, "io", "cgns"),
+        "LVLSET deferred": BroadImport(
+            ROOT / "level_set.f90", 32, "level_set", "level_set_base"
+        ),
+        "candidate": BroadImport(ROOT / "forcing.f90", 999, "forcing::demo", "param"),
+    }
+    for expected_category, row in classification_cases.items():
+        observed_category = classify_broad_import(row).category
+        if observed_category != expected_category:
+            print("Broad-import classification self-test failed.")
+            print(f"Expected {expected_category!r} for {row}.")
+            print(f"Observed {observed_category!r}.")
+            return 1
+
+    print(
+        "Fortran broad-import parser/classification self-test passed "
+        "(2 synthetic broad imports, 4 classification cases)."
+    )
     return 0
 
 
