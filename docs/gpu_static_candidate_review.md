@@ -112,7 +112,7 @@ runtime correctness and timing evidence must close each bucket.
 | `scalars.f90:1725` | `to_big` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
 | `scaledep_dynamic.f90:21` | `scaledep_dynamic` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `sgs_stag_util.f90:47` | `sgs_stag` | `diagnostic-profiling` | `diagnostics_output` |
-| `sgs_stag_util.f90:489` | `calc_Sij` | `diagnostic-profiling` | `diagnostics_output` |
+| `sgs_stag_util.f90:494` | `calc_Sij` | `diagnostic-profiling` | `diagnostics_output` |
 | `stability.f90:2` | `stability` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
 | `stability.f90:60` | `calc_psi_m` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
 | `stability.f90:96` | `calc_psi_h` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |

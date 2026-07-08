@@ -320,8 +320,8 @@ claims.
 | `sgs_gpu.f90:1185` | `divstress_w_gpu` | `gpu-marked` |  |  |
 | `sgs_param.f90:111` | `sgs_param_init` | `gpu-marked` |  |  |
 | `sgs_stag_util.f90:47` | `sgs_stag` | `unmarked-runtime-candidate` | `diagnostic-profiling` | `diagnostics_output` |
-| `sgs_stag_util.f90:489` | `calc_Sij` | `unmarked-runtime-candidate` | `diagnostic-profiling` | `diagnostics_output` |
-| `sgs_stag_util.f90:665` | `sgs_stage_report` | `host-or-diagnostic` |  |  |
+| `sgs_stag_util.f90:494` | `calc_Sij` | `unmarked-runtime-candidate` | `diagnostic-profiling` | `diagnostics_output` |
+| `sgs_stag_util.f90:670` | `sgs_stage_report` | `host-or-diagnostic` |  |  |
 | `shifted_inflow.f90:68` | `shifted_inflow_init` | `gpu-marked` |  |  |
 | `shifted_inflow.f90:111` | `inflow_shifted` | `gpu-marked` |  |  |
 | `sim_param.f90:69` | `sim_param_init` | `gpu-marked` |  |  |

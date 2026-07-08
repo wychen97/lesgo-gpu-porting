@@ -8,14 +8,13 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `63`
+Total broad imports: `59`
 
 ## Highest-Count Files
 
 | File | Broad imports |
 | --- | ---: |
 | `level_set.f90` | 17 |
-| `sgs_stag_util.f90` | 5 |
 | `turbines.f90` | 5 |
 | `mpi_defs.f90` | 4 |
 | `forcing.f90` | 3 |
@@ -34,6 +33,7 @@ Total broad imports: `63`
 | `mpi_transpose_mod.f90` | 1 |
 | `param_output.f90` | 1 |
 | `press_gpu.f90` | 1 |
+| `press_stag_array.f90` | 1 |
 
 ## Full List
 
@@ -86,11 +86,7 @@ Total broad imports: `63`
 | `scalars.f90` | 1051 | `scalars::scalars_deriv` | `mpi` |
 | `scalars.f90` | 1379 | `scalars::scalars_transport` | `mpi` |
 | `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` |
-| `sgs_stag_util.f90` | 62 | `sgs_stag_util::sgs_stag` | `param` |
-| `sgs_stag_util.f90` | 64 | `sgs_stag_util::sgs_stag` | `sgs_param` |
-| `sgs_stag_util.f90` | 495 | `sgs_stag_util::calc_sij` | `param` |
-| `sgs_stag_util.f90` | 497 | `sgs_stag_util::calc_sij` | `sgs_param` |
-| `sgs_stag_util.f90` | 673 | `sgs_stag_util::sgs_stage_report` | `mpi` |
+| `sgs_stag_util.f90` | 678 | `sgs_stag_util::sgs_stage_report` | `mpi` |
 | `time_average.f90` | 36 | `time_average` | `cgns` |
 | `trees_global_fmask_ls.f90` | 23 | `trees_global_fmask_ls` | `trees_base_ls` |
 | `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` |

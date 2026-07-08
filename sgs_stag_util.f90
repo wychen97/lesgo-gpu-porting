@@ -59,9 +59,14 @@ subroutine sgs_stag ()
 ! put everything onto w-nodes, follow original version
 
 use types, only : rprec
-use param
+use param, only : BOGUS, Co, DYN_init, coord, cs_count, dt, dz, inilag,        &
+    initu, jt, jt_total, lbc_mom, nproc, nx, ny, nz, sgs, sgs_model,           &
+    ubc_mom, use_cfl_dt, vonk, wall_damp_exp
 use sim_param, only : txx, txy, txz, tyy, tyz, tzz
-use sgs_param
+use sgs_param, only : Cs_opt2, Nu_t, S, S11, S12, S13, S22, S23, S33,          &
+    SGS_MODEL_LAGRANGE_SCALE_DEP, SGS_MODEL_LAGRANGE_SIMILARITY,              &
+    SGS_MODEL_SCALE_DEP_DYNAMIC, SGS_MODEL_SMAGORINSKY,                       &
+    SGS_MODEL_STANDARD_DYNAMIC, delta, lagran_dt, nu
 use messages, only : error
 
 #ifdef PPMPI
@@ -492,9 +497,9 @@ subroutine calc_Sij()
 !   values are stored on w-nodes (1:nz)
 
 use types, only : rprec
-use param
+use param, only : coord, lbc_mom, nproc, nx, ny, nz, ubc_mom
 use sim_param, only : dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz
-use sgs_param
+use sgs_param, only : S11, S12, S13, S22, S23, S33
 #ifdef PPMPI
 use mpi_defs, only : mpi_sync_real_array, MPI_SYNC_DOWN
 #endif
