@@ -572,7 +572,14 @@ end subroutine  flow_cond_block
 !*******************************************************************************
 subroutine output_block()
 !*******************************************************************************
-use param
+use param, only : checkpoint_data, checkpoint_nskip, coord, domain_calc,       &
+    domain_nend, domain_nskip, domain_nstart, lag_cfl_count, nenergy,          &
+    point_calc, point_loc, point_nend, point_nloc, point_nskip, point_nstart,  &
+    tavg_calc, tavg_nend, tavg_nskip, tavg_nstart, wbase, xplane_calc,         &
+    xplane_loc, xplane_nend, xplane_nloc, xplane_nskip, xplane_nstart,         &
+    yplane_calc, yplane_loc, yplane_nend, yplane_nloc, yplane_nskip,           &
+    yplane_nstart, zplane_calc, zplane_loc, zplane_nend, zplane_nloc,          &
+    zplane_nskip, zplane_nstart
 implicit none
 
 character(*), parameter :: block_name = 'OUTPUT'
