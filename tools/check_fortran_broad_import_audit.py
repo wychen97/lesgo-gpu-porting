@@ -19,6 +19,20 @@ def main() -> int:
         print("Regenerate it with:")
         print("  python3 tools/report_fortran_broad_imports.py --write")
         return 1
+    candidates = [
+        row
+        for row in rows
+        if broad_imports.classify_broad_import(row).category == "candidate"
+    ]
+    if candidates:
+        print("Fortran broad-import audit has unclassified cleanup candidates.")
+        print("Narrow these imports or classify why they must remain broad:")
+        for row in candidates:
+            print(
+                f"  {row.path.relative_to(broad_imports.ROOT)}:{row.line} "
+                f"{row.scope} uses {row.module}"
+            )
+        return 1
     print(f"Fortran broad-import audit check passed ({len(rows)} broad imports).")
     return 0
 
