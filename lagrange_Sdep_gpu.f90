@@ -217,7 +217,9 @@ subroutine lagrange_Ssim_gpu()
 ! Batched OpenACC Lagrangian scale-similarity SGS update (sgs_model=4).
 ! Mirrors lagrange_Ssim.f90, but filters all z planes as one batched operation.
 !*******************************************************************************
-use param
+use param, only : DYN_init, coord, cs_count, fringe_region_end,                &
+    fringe_region_len, inflow_type, inilag, jt, ld, nx, ny, nz, pi,            &
+    use_cfl_dt
 use sim_param, only : u, v, w
 use sgs_param, only : F_LM, F_MM, Beta, Cs_opt2, opftime, lagran_dt,            &
                       S11, S12, S13, S22, S23, S33, delta, ee_now, Tn_all
@@ -487,7 +489,9 @@ end subroutine lagrange_Ssim_gpu
 !*******************************************************************************
 subroutine lagrange_Sdep_gpu()
 !*******************************************************************************
-use param
+use param, only : DYN_init, coord, cs_count, fringe_region_end,                &
+    fringe_region_len, inflow_type, inilag, jt, lbc_mom, ld, nproc, nx, ny,   &
+    nz, pi, ubc_mom, use_cfl_dt
 use sim_param, only : u, v, w
 use sgs_param, only : F_LM, F_MM, F_QN, F_NN, beta, Cs_opt2, opftime,           &
                       lagran_dt, S11, S12, S13, S22, S23, S33, delta, ee_now,   &

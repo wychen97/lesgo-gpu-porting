@@ -12,7 +12,7 @@ structure, but they should be split only when a clean ownership boundary exists.
 | --- | --- | ---: | --- |
 | 1 | `atm_lesgo_interface.f90` | 141,001 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
 | 2 | `actuator_turbine_model.f90` | 118,068 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
-| 3 | `lagrange_Sdep_gpu.f90` | 93,175 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
+| 3 | `lagrange_Sdep_gpu.f90` | 93,525 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
 | 4 | `scalars.f90` | 63,405 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
 | 5 | `io.f90` | 60,643 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
 | 6 | `sgs_gpu.f90` | 55,422 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |

@@ -233,10 +233,10 @@ claims.
 | `lagrange_Sdep.f90:21` | `lagrange_Sdep` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `lagrange_Sdep_gpu.f90:135` | `lagrange_Sdep_gpu_init` | `gpu-marked` |  |  |
 | `lagrange_Sdep_gpu.f90:215` | `lagrange_Ssim_gpu` | `gpu-marked` |  |  |
-| `lagrange_Sdep_gpu.f90:488` | `lagrange_Sdep_gpu` | `gpu-marked` |  |  |
-| `lagrange_Sdep_gpu.f90:1081` | `interpolag_Ssim_gpu` | `gpu-marked` |  |  |
-| `lagrange_Sdep_gpu.f90:1248` | `interpolag_Sdep_gpu` | `gpu-marked` |  |  |
-| `lagrange_Sdep_gpu.f90:1895` | `sync_downup_F` | `gpu-marked` |  |  |
+| `lagrange_Sdep_gpu.f90:490` | `lagrange_Sdep_gpu` | `gpu-marked` |  |  |
+| `lagrange_Sdep_gpu.f90:1085` | `interpolag_Ssim_gpu` | `gpu-marked` |  |  |
+| `lagrange_Sdep_gpu.f90:1252` | `interpolag_Sdep_gpu` | `gpu-marked` |  |  |
+| `lagrange_Sdep_gpu.f90:1899` | `sync_downup_F` | `gpu-marked` |  |  |
 | `lagrange_Ssim.f90:21` | `lagrange_Ssim` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `linear_simple.f90:46` | `solve_linear` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `linear_simple.f90:86` | `assert_eq2` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
