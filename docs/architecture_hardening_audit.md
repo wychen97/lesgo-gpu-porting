@@ -25,6 +25,8 @@ The default readiness gate now checks these architecture risks:
 - stale or duplicate explicit module `public` API names;
 - accidental treatment of derived-type components or type-bound `public`
   procedures as module-level public symbols;
+- unclassified broad `use module` imports that are neither narrowed nor
+  documented as intentional compiler-interface/optional-module cases;
 - IWM wall-surface indexing mistakes that collapse `(iwm_i, iwm_j)` into
   diagonal `(iwm_i, iwm_i)` indexing;
 - ATM structure-on packed/gather paths accidentally falling back to
@@ -35,10 +37,12 @@ The synthetic self-test
 Fortran interface rules without depending on the current production source
 layout.
 
-`docs/fortran_broad_import_audit.md` is a generated, non-blocking map of broad
-`use module` imports.  It should guide future cleanup, but existing broad
-imports are not automatically wrong and should not be rewritten in large
-mechanical patches.
+`docs/fortran_broad_import_audit.md` is a generated map of broad `use module`
+imports.  The readiness gate allows classified broad imports that are tied to
+MPI compiler interfaces, optional CGNS interfaces, or the deferred LVLSET
+module, but it fails if a new broad import remains an unclassified cleanup
+candidate.  Existing classified broad imports are not automatically wrong and
+should not be rewritten in large mechanical patches.
 
 ## Issues Fixed In This Pass
 
@@ -66,6 +70,8 @@ mechanical patches.
 - added a tracked-module import resolver after finding that narrowing `param`'s
   MPI import can otherwise drop legacy `MPI_COMM_WORLD` re-exports without a
   local compile failure;
+- classified the remaining broad imports and made unclassified broad-import
+  candidates a readiness-gate failure;
 - regenerated static inventory and refactor-hotspot documentation after source
   changes.
 
@@ -79,6 +85,9 @@ python3 tools/check_branch_readiness.py --with-git-diff-check --with-cmake-confi
 
 For solver behavior changes beyond readability/import/preprocessor cleanup,
 also run the relevant benchmark smoke from `docs/gpu_validation_runbook.md`.
+Before merging a cleaned branch, compile the current committed tree on Derecho
+with the public case matrix and, when optional feature guards changed, the
+optional non-LVLSET compile matrix.
 
 ## Limits
 
