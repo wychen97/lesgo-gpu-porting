@@ -8,7 +8,7 @@ reasonable when the call site is tightly coupled to that module.  Use
 this report to choose small, reviewable import cleanups instead of
 rewriting large solver files in one pass.
 
-Total broad imports: `66`
+Total broad imports: `65`
 
 ## Highest-Count Files
 
@@ -24,7 +24,6 @@ Total broad imports: `66`
 | `cfl_util.f90` | 2 |
 | `clocks.f90` | 2 |
 | `io.f90` | 2 |
-| `param_output.f90` | 2 |
 | `scalars.f90` | 2 |
 | `trees_setup_ls.f90` | 2 |
 | `atm_lesgo_interface.f90` | 1 |
@@ -33,6 +32,7 @@ Total broad imports: `66`
 | `cuda_mpi_debug.f90` | 1 |
 | `input_util.f90` | 1 |
 | `mpi_transpose_mod.f90` | 1 |
+| `param_output.f90` | 1 |
 | `press_gpu.f90` | 1 |
 
 ## Full List
@@ -81,8 +81,7 @@ Total broad imports: `66`
 | `mpi_defs.f90` | 205 | `mpi_defs::create_mpi_comms_cps` | `mpi` |
 | `mpi_defs.f90` | 272 | `mpi_defs::mpi_sync_real_array` | `mpi` |
 | `mpi_transpose_mod.f90` | 25 | `mpi_transpose_mod` | `mpi` |
-| `param_output.f90` | 23 | `param_output` | `param` |
-| `param_output.f90` | 25 | `param_output` | `level_set_base` |
+| `param_output.f90` | 38 | `param_output` | `level_set_base` |
 | `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` |
 | `press_stag_array.f90` | 58 | `press_stag_array` | `mpi` |
 | `rmsdiv.f90` | 31 | `rmsdiv` | `mpi` |

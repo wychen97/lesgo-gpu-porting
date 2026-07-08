@@ -20,7 +20,20 @@
 !*******************************************************************************
 subroutine param_output()
 !*******************************************************************************
-use param
+use param, only : Co, L_x, L_y, L_z, cfl, checkpoint_data, checkpoint_nskip,   &
+    cs_count, cumulative_time, domain_calc, domain_nend, domain_nskip,         &
+    domain_nstart, dt, dx, dy, dz, fringe_region_end, fringe_region_len,       &
+    ifilter, inflow_type, inflow_velocity, inilag, initu, lag_cfl_count,       &
+    lbc_mom, mean_p_force_x, mean_p_force_y, molec, nenergy, nproc, nsteps,   &
+    nu_molec, nx, ny, nz, nz_tot, path, point_calc, point_loc, point_nend,     &
+    point_nloc, point_nskip, point_nstart, rms_random_force, runtime, sgs,     &
+    sgs_model, stop_random_force, tavg_calc, tavg_nend, tavg_nskip,            &
+    tavg_nstart, ubc_mom, ubot, use_cfl_dt, use_mean_p_force,                 &
+    use_random_force, u_star, utop, vonk, wall_damp_exp, wbase, write_endian,  &
+    xplane_calc, xplane_loc, xplane_nend, xplane_nloc, xplane_nskip,           &
+    xplane_nstart, yplane_calc, yplane_loc, yplane_nend, yplane_nloc,          &
+    yplane_nskip, yplane_nstart, z_i, zo, zplane_calc, zplane_loc,             &
+    zplane_nend, zplane_nloc, zplane_nskip, zplane_nstart
 #ifdef PPLVLSET
 use level_set_base
 #endif
