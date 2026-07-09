@@ -27,6 +27,8 @@ The default readiness gate now checks these architecture risks:
   procedures as module-level public symbols;
 - unclassified broad `use module` imports that are neither narrowed nor
   documented as intentional compiler-interface/optional-module cases;
+- non-portable `use mpi, only: ...` imports, including MPI constants, because
+  Cray/NVHPC MPI module exports differ across Derecho and Delta;
 - IWM wall-surface indexing mistakes that collapse `(iwm_i, iwm_j)` into
   diagonal `(iwm_i, iwm_i)` indexing;
 - ATM structure-on packed/gather paths accidentally falling back to
@@ -60,6 +62,9 @@ should not be rewritten in large mechanical patches.
   import from `messages.f90`;
 - removed repeated scoped imports in `atm_lesgo_interface.f90`, `initial.f90`,
   and `forcing.f90`;
+- kept MPI vendor-interface imports broad for Derecho/Delta Cray/NVHPC
+  portability, while preserving explicit `only:` imports for LESGO-owned
+  modules;
 - narrowed ATM-side module imports so turbine metadata, actuator entry points,
   and MPI calls are imported from their owning modules explicitly;
 - fixed the broad-import audit parser so `use module, only: ...` imports are not

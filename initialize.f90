@@ -32,7 +32,8 @@ use iwmles, only : iwm_init
 use param, only : lbc_mom
 use sponge, only : sponge_init
 #ifdef PPMPI
-use param, only : MPI_COMM_WORLD, ierr
+use mpi
+use param, only : ierr
 #else
 use param, only : chcoord, nproc
 #endif

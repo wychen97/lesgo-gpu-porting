@@ -12,13 +12,13 @@ The `category` and `recommended action` columns distinguish safe
 cleanup candidates from intentionally broad imports that depend on
 external compiler interfaces or deferred optional modules.
 
-Total broad imports: `56`
+Total broad imports: `60`
 
 ## Category Summary
 
 | Category | Broad imports |
 | --- | ---: |
-| MPI compiler interface | 32 |
+| MPI compiler interface | 36 |
 | LVLSET deferred | 21 |
 | optional CGNS interface | 3 |
 
@@ -39,13 +39,13 @@ Total broad imports: `56`
 | `concurrent_precursor.f90` | 1 |
 | `coriolis.f90` | 1 |
 | `cuda_mpi_debug.f90` | 1 |
+| `finalize.f90` | 1 |
+| `initialize.f90` | 1 |
 | `input_util.f90` | 1 |
 | `lagrange_Sdep_gpu.f90` | 1 |
 | `main.f90` | 1 |
 | `mpi_transpose_mod.f90` | 1 |
-| `param_output.f90` | 1 |
-| `press_gpu.f90` | 1 |
-| `press_stag_array.f90` | 1 |
+| `param.f90` | 1 |
 
 ## Full List
 
@@ -59,9 +59,11 @@ Total broad imports: `56`
 | `concurrent_precursor.f90` | 169 | `concurrent_precursor::initialize_cps` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `coriolis.f90` | 182 | `coriolis::coriolis_calc` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `cuda_mpi_debug.f90` | 4 | `cuda_mpi_debug` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `finalize.f90` | 30 | `finalize` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `forcing.f90` | 393 | `forcing::project` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `initialize.f90` | 35 | `initialize` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `input_util.f90` | 687 | `input_util::read_input_conf::level_set_block` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
 | `io.f90` | 42 | `io` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `io.f90` | 46 | `io` | `cgns` | optional CGNS interface | Keep broad unless the PPCGNS build profile is validated. |
@@ -89,6 +91,7 @@ Total broad imports: `56`
 | `mpi_defs.f90` | 205 | `mpi_defs::create_mpi_comms_cps` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `mpi_defs.f90` | 272 | `mpi_defs::mpi_sync_real_array` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `mpi_transpose_mod.f90` | 25 | `mpi_transpose_mod` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `param.f90` | 28 | `param` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `param_output.f90` | 38 | `param_output` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
 | `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `press_stag_array.f90` | 58 | `press_stag_array` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
@@ -102,6 +105,7 @@ Total broad imports: `56`
 | `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
 | `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
 | `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `tridag_array.f90` | 49 | `tridag_array` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `turbines.f90` | 329 | `turbines::turbines_nodes` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `turbines.f90` | 720 | `turbines::turbines_acc_sync_device_field` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |

@@ -46,7 +46,7 @@ use types, only : rprec
 use param, only : comm, coord, down, ierr, ld, lh, MPI_RPREC, nproc, ny, nz,  &
     status, up
 use cuda_mpi_debug, only : mpi_dbg_send_r, mpi_dbg_recv_r
-use mpi, only : MPI_REQUEST_NULL
+use mpi
 implicit none
 
 real(rprec), dimension(lh,ny,nz+1), intent(in) :: a, b, c

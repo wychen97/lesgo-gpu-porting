@@ -27,7 +27,8 @@ subroutine finalize()
 use param, only : coord, lbc_mom
 use iwmles, only : iwm_finalize
 #ifdef PPMPI
-use param, only : MPI_COMM_WORLD, ierr
+use mpi
+use param, only : ierr
 #endif
 #if defined(PPTURBINES) && !defined(PPATM)
 use turbines, only : turbines_finalize

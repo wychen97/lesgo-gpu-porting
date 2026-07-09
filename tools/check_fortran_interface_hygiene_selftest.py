@@ -214,20 +214,20 @@ def test_missing_module_implicit_none_is_reported(tmpdir: Path) -> None:
     assert_contains(issues, "does not declare `implicit none`")
 
 
-def test_mpi_procedure_only_import_is_reported(tmpdir: Path) -> None:
+def test_mpi_only_import_is_reported(tmpdir: Path) -> None:
     path = write_case(
         tmpdir,
-        "mpi_only_proc.f90",
+        "mpi_only_import.f90",
         """
-        subroutine mpi_only_proc()
-        use mpi, only : MPI_SUM, mpi_isend
+        subroutine mpi_only_import()
+        use mpi, only : MPI_SUM, MPI_COMM_WORLD
         implicit none
-        end subroutine mpi_only_proc
+        end subroutine mpi_only_import
         """,
     )
 
-    issues = hygiene.check_mpi_procedure_only_imports([path])
-    assert_contains(issues, "imports MPI procedure(s) with `use mpi, only:`")
+    issues = hygiene.check_mpi_only_imports([path])
+    assert_contains(issues, "imports MPI symbol(s) with `use mpi, only:`")
 
 
 def test_missing_test_filter_specific_import_is_reported(tmpdir: Path) -> None:
@@ -576,7 +576,7 @@ def main() -> int:
         test_repeated_scope_imports_are_reported(tmpdir)
         test_bare_flag_condition_is_reported(tmpdir)
         test_missing_module_implicit_none_is_reported(tmpdir)
-        test_mpi_procedure_only_import_is_reported(tmpdir)
+        test_mpi_only_import_is_reported(tmpdir)
         test_missing_test_filter_specific_import_is_reported(tmpdir)
         test_module_scope_test_filter_import_satisfies_contained_call(tmpdir)
         test_unguarded_gpu_filter_import_is_reported(tmpdir)

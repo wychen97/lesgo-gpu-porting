@@ -25,7 +25,7 @@ module param
 !
 use types, only : rprec, point3D_t
 #ifdef PPMPI
-use mpi, only : MPI_COMM_WORLD, MPI_STATUS_SIZE
+use mpi
 #endif
 implicit none
 

@@ -16,8 +16,8 @@ Fortran codebase:
 * ``use module, only: symbol`` imports that are not actually exported by a
   tracked module, including symbols that were previously re-exported through a
   broad module import.
-* ``use mpi, only:`` imports of MPI procedures that are not portable across
-  the Derecho NVHPC/Cray MPI module interface;
+* ``use mpi, only:`` imports that are not portable across Cray/NVHPC MPI
+  module interfaces on Derecho/Delta;
 * direct calls to specific ``test_filtermodule`` procedures without importing
   those specific procedure names.
 * imports of GPU-only ``test_filtermodule`` helper procedures outside GPU
@@ -41,30 +41,6 @@ from repo_paths import ROOT
 
 ALLOWED_COMPILER_MACROS = {"__INTEL_COMPILER", "PPXLF"}
 MAX_ISSUES = 200
-MPI_PROCEDURE_NAMES = {
-    "mpi_abort",
-    "mpi_allreduce",
-    "mpi_barrier",
-    "mpi_cart_coords",
-    "mpi_cart_create",
-    "mpi_cart_rank",
-    "mpi_cart_shift",
-    "mpi_comm_rank",
-    "mpi_comm_size",
-    "mpi_comm_split",
-    "mpi_get_processor_name",
-    "mpi_init",
-    "mpi_intercomm_create",
-    "mpi_irecv",
-    "mpi_isend",
-    "mpi_recv",
-    "mpi_reduce",
-    "mpi_send",
-    "mpi_sendrecv",
-    "mpi_wait",
-    "mpi_waitall",
-    "mpi_wtime",
-}
 TEST_FILTER_SPECIFIC_PROCEDURES = {
     "test_filter_3",
     "test_filter_6",
@@ -702,7 +678,7 @@ def check_repeated_scope_imports(paths: list[Path]) -> list[str]:
     return issues
 
 
-def check_mpi_procedure_only_imports(paths: list[Path]) -> list[str]:
+def check_mpi_only_imports(paths: list[Path]) -> list[str]:
     issues: list[str] = []
 
     for path in paths:
@@ -715,20 +691,12 @@ def check_mpi_procedure_only_imports(paths: list[Path]) -> list[str]:
             if not match:
                 continue
 
-            procedures = sorted(
-                {
-                    clean_symbol(name)
-                    for name in split_names(match.group(1))
-                    if clean_symbol(name) in MPI_PROCEDURE_NAMES
-                }
+            rel = path.relative_to(ROOT)
+            names = ", ".join(f"`{clean_symbol(name)}`" for name in split_names(match.group(1)))
+            issues.append(
+                f"{rel}:{line_no}: imports MPI symbol(s) with `use mpi, only:` "
+                f"{names}; use broad `use mpi` for Cray/NVHPC MPI portability"
             )
-            if procedures:
-                rel = path.relative_to(ROOT)
-                issues.append(
-                    f"{rel}:{line_no}: imports MPI procedure(s) with `use mpi, only:` "
-                    + ", ".join(f"`{procedure}`" for procedure in procedures)
-                    + "; use broad `use mpi` for Derecho NVHPC/Cray MPI portability"
-                )
 
     return issues
 
@@ -1191,7 +1159,7 @@ def main() -> int:
         + check_use_only_imports_resolve(paths)
         + check_duplicate_use_only_symbols(paths)
         + check_repeated_scope_imports(paths)
-        + check_mpi_procedure_only_imports(paths)
+        + check_mpi_only_imports(paths)
         + check_test_filter_specific_imports(paths)
         + check_gpu_only_test_filter_import_guards(paths)
         + check_optional_feature_import_guards(paths)
