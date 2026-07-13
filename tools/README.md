@@ -100,6 +100,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/import_p0_archived_evidence.py` | Imports archived public p0 CPU/GPU runs from `run-archives/<label>/lesgo_<label>.log` into the paired validation evidence ledger. |
 | `tools/parse_lesgo_timing.py` | Parses LESGO stdout/stderr timing blocks into JSON for validation evidence import. |
 | `tools/compare_scalar_checkpoint.py` | Compares CPU/GPU `scal.out.c*` scalar checkpoints and reports scalar-field differences. |
+| `tools/compare_atm_restart_runs.py` | Compares uninterrupted and split channel, ADM, or ATM runs, including model-owned sidecars and streamed LES checkpoint fields. |
 | `tools/prepare_sgs_matrix_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for `sgs=false`, `sgs_model=1..5`, and optional `USE_DYN_TN=ON` validation. |
 | `tools/prepare_scalar_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for passive and active scalar validation. |
 | `tools/readiness_manifest.py` | Shared parser for the readiness wrapper's `PYTHON_CHECKS` manifest. |

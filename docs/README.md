@@ -102,6 +102,11 @@ branch.  Read these files before changing solver code.
      imports must be narrowed or explicitly classified;
    - helps keep readability refactors small and reviewable.
 
+21. `restart_state_contract.md`
+   - synchronized LES, SGS, ATM, controller, and structural restart state;
+   - CPU/GPU device-ownership requirements at restart;
+   - continuous-versus-split validation protocol.
+
 ## Historical References
 
 - `gpu_port_refactor_history.md`: historical architecture plan that informed

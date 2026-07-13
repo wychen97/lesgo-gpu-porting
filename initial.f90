@@ -176,6 +176,19 @@ call mpi_sync_real_array( u, 0, MPI_SYNC_DOWNUP )
 call mpi_sync_real_array( v, 0, MPI_SYNC_DOWNUP )
 call mpi_sync_real_array( w, 0, MPI_SYNC_DOWNUP )
 
+! Restart files store physical planes 1:nz, not the lower overlap plane at
+! index 0. Reconstruct every saved history used across a rank interface before
+! the first resumed AB2 or Lagrangian SGS update.
+if (initu) then
+    call mpi_sync_real_array( RHSx, 0, MPI_SYNC_DOWNUP )
+    call mpi_sync_real_array( RHSy, 0, MPI_SYNC_DOWNUP )
+    call mpi_sync_real_array( RHSz, 0, MPI_SYNC_DOWNUP )
+    call mpi_sync_real_array( F_LM, 0, MPI_SYNC_DOWNUP )
+    call mpi_sync_real_array( F_MM, 0, MPI_SYNC_DOWNUP )
+    call mpi_sync_real_array( F_QN, 0, MPI_SYNC_DOWNUP )
+    call mpi_sync_real_array( F_NN, 0, MPI_SYNC_DOWNUP )
+endif
+
 !--set 0-level velocities to BOGUS
 if (coord == 0) then
     u(:, :, lbz) = BOGUS

@@ -48,7 +48,7 @@ use test_filtermodule, only : G_test, G_test_test
 #endif
 use sim_param, only : sim_param_init
 #ifdef PPLES_GPU
-use sim_param, only : u, v, w
+use sim_param, only : u, v, w, RHSx, RHSy, RHSz
 #endif
 #ifdef PPSGS_GPU
 use sgs_param, only : Cs_opt2, F_LM, F_MM, F_QN, F_NN
@@ -216,9 +216,10 @@ end if
 call initial()
 
 #ifdef PPLES_GPU
-! From the first timestep onward, velocity is owned by the device hot path.
-! Host readers must use explicit update self at their diagnostic/output boundary.
-!$acc update device(u, v, w)
+! From the first timestep onward, velocity and AB2 history are owned by the
+! device hot path. A restart reads all six arrays on the host in initial(), so
+! transfer the saved RHS history as well as velocity before advancing.
+!$acc update device(u, v, w, RHSx, RHSy, RHSz)
 #endif
 
 #ifdef PPSGS_GPU

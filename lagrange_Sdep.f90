@@ -25,8 +25,8 @@ subroutine lagrange_Sdep()
 ! dependent model
 !
 use types, only : rprec
-use param, only : coord, cs_count, DYN_init, fringe_region_end,               &
-    fringe_region_len, inflow_type, inilag, jt, lbc_mom, ld, nproc, nx, ny,   &
+use param, only : coord, DYN_init, fringe_region_end,                          &
+    fringe_region_len, inflow_type, jt_total, lbc_mom, ld, nproc, nx, ny,     &
     nz, pi, ubc_mom, use_cfl_dt
 use sim_param, only : u, v, w
 use sgs_param, only : F_LM, F_MM, F_QN, F_NN, beta, Cs_opt2, opftime,          &
@@ -253,9 +253,9 @@ do jz = 1, nz
     ee_now(:,:,jz) = L11**2+L22**2+L33**2+2._rprec*(L12**2+L13**2+L23**2) &
          -2._rprec*LM*Cs_opt2(:,:,jz) + MM*Cs_opt2(:,:,jz)**2
 
-    ! Using local time counter to reinitialize SGS quantities when restarting
-    if (inilag) then
-      if ((.not. F_LM_MM_init) .and. (jt == cs_count .or. jt == DYN_init)) then
+    ! Initialize on the physical SGS start step, even if this process was
+    ! launched from a checkpoint written before DYN_init.
+    if ((.not. F_LM_MM_init) .and. jt_total == DYN_init) then
          print *,'F_MM and F_LM initialized'
          F_MM (:,:,jz) = MM
          F_LM (:,:,jz) = 0.03_rprec*MM
@@ -263,7 +263,6 @@ do jz = 1, nz
          F_LM(ld-1:ld,:,jz)=1._rprec
 
          if (jz == nz) F_LM_MM_init = .true.
-      end if
     end if
 
     ! Inflow
@@ -312,9 +311,7 @@ do jz = 1, nz
     ! Clip, if necessary
     Cs_opt2_2d(:,:)=max( zero, Cs_opt2_2d(:,:) )
 
-    ! Using local time counter to reinitialize SGS quantities when restarting
-    if (inilag) then
-        if ((.not. F_QN_NN_init) .and. (jt == cs_count .or. jt == DYN_init)) then
+    if ((.not. F_QN_NN_init) .and. jt_total == DYN_init) then
             print *,'F_NN and F_QN initialized'
             F_NN (:,:,jz) = NN
             F_QN (:,:,jz) = 0.03_rprec*NN
@@ -322,7 +319,6 @@ do jz = 1, nz
             F_QN(ld-1:ld,:,jz)=1._rprec
 
             if (jz == nz) F_QN_NN_init = .true.
-        end if
     end if
 
     ! Update running averages (F_QN, F_NN)

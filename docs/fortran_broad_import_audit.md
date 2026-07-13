@@ -67,7 +67,7 @@ Total broad imports: `60`
 | `input_util.f90` | 687 | `input_util::read_input_conf::level_set_block` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
 | `io.f90` | 42 | `io` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `io.f90` | 46 | `io` | `cgns` | optional CGNS interface | Keep broad unless the PPCGNS build profile is validated. |
-| `lagrange_Sdep_gpu.f90` | 1906 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `lagrange_Sdep_gpu.f90` | 1902 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `level_set.f90` | 27 | `level_set` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `level_set.f90` | 30 | `level_set` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
 | `level_set.f90` | 32 | `level_set` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |

@@ -57,7 +57,7 @@ use types, only : rprec
 use param, only : ld, nx, ny, nz, lbz, dz, BOGUS,                              &
                   coord, nproc, lbc_mom, ubc_mom,                              &
                   jt, jt_total, dt, DYN_init, cs_count, sgs, sgs_model,        &
-                  use_cfl_dt, initu, inilag, Co, wall_damp_exp, vonk
+                  use_cfl_dt, inilag, Co, wall_damp_exp, vonk
 use sim_param, only : dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz
 use sim_param, only : u, v, w
 use sim_param, only : txx, txy, txz, tyy, tyz, tzz
@@ -567,7 +567,7 @@ real(rprec) :: dsq, wall_exp, zloc, lsgs, lsq, domain_height
 if (use_cfl_dt) then
     if (sgs_model == SGS_MODEL_LAGRANGE_SIMILARITY .or.                       &
         sgs_model == SGS_MODEL_LAGRANGE_SCALE_DEP) then
-        if ((jt >= DYN_init - cs_count + 1) .or. initu) then
+        if (jt_total >= DYN_init - cs_count + 1) then
             lagran_dt = lagran_dt + dt
         end if
     end if
@@ -594,20 +594,18 @@ end if
 
 ! ----- 3b. Dynamic-coefficient updates.
 ! Mirrors the CPU sgs_stag dispatch EXACTLY (sgs_stag_util.f90:192):
-!   ( (jt >= DYN_init) .OR. initu ) .AND. mod(jt_total, cs_count) == 0
-! Note jt (local step counter, resets each run) vs jt_total (cumulative): on a
-! fresh start jt == jt_total; on a restart `initu` is .true. so the `jt`
-! threshold is bypassed, matching CPU. Uses the freshly computed S11..S33 from
-! calc_Sij_gpu above; updates Cs_opt2 on device so step 5 (Nu_t) picks it up.
-if (sgs .and. ((jt >= DYN_init) .or. initu) .and.                              &
+!   jt_total >= DYN_init .AND. mod(jt_total, cs_count) == 0
+! The cumulative counter preserves the dynamic-model schedule across a restart;
+! the local jt counter resets to one for every resumed segment.
+if (sgs .and. jt_total >= DYN_init .and.                                       &
     mod(jt_total, cs_count) == 0) then
     select case (sgs_model)
     case (SGS_MODEL_STANDARD_DYNAMIC)
-        if (jt == DYN_init .and. coord == 0) write(*,*)                         &
+        if (jt_total == DYN_init .and. coord == 0) write(*,*)                   &
             'running dynamic sgs_model = ', sgs_model, ' (GPU)'
         call std_dynamic_pples_gpu()
     case (SGS_MODEL_SCALE_DEP_DYNAMIC)
-        if (jt == DYN_init .and. coord == 0) write(*,*)                         &
+        if (jt_total == DYN_init .and. coord == 0) write(*,*)                   &
             'running dynamic sgs_model = ', sgs_model, ' (GPU)'
         call scaledep_dynamic_pples_gpu()
     case (SGS_MODEL_LAGRANGE_SIMILARITY)

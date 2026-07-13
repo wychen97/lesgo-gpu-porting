@@ -123,7 +123,8 @@ real(rprec), allocatable, dimension(:,:,:) :: w_uv
 #endif
 
 private
-public atm_lesgo_initialize, atm_lesgo_forcing, atm_lesgo_finalize
+public atm_lesgo_initialize, atm_lesgo_forcing, atm_lesgo_finalize,           &
+    atm_lesgo_checkpoint
 
 ! This is a list that stores all the points in the domain with a body
 ! force due to the turbines.
@@ -200,6 +201,7 @@ real(rprec), save :: atm_time_apply = 0._rprec
 real(rprec), save :: atm_time_output = 0._rprec
 real(rprec), save :: atm_time_barrier = 0._rprec
 integer, save :: atm_forcing_calls = 0
+integer, save :: atm_last_checkpoint_step = -1
 logical, save :: atm_diag_load_printed = .false.
 
 contains
@@ -614,7 +616,8 @@ w_uv = 0._rprec
 !$acc update device(w_uv)
 #endif
 
-call atm_initialize () ! Initialize the atm (ATM)
+atm_last_checkpoint_step = -1
+call atm_initialize(jt_total, total_time) ! Initialize the ATM state
 
 ! Allocate the body force variables. It is an array with one per turbine.
 allocate(forceFieldUV(numberOfTurbines))
@@ -647,16 +650,42 @@ allocate(forceFieldW(numberOfTurbines))
 end subroutine atm_lesgo_initialize
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_lesgo_checkpoint(checkpoint_step, checkpoint_time)
+! Write ATM state at the same logical timestep as the LES field checkpoint.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: checkpoint_step
+real(rprec), intent(in) :: checkpoint_time
+integer :: i
+
+if (checkpoint_step == atm_last_checkpoint_step) return
+
+do i = 1, numberOfTurbines
+    if (coord == turbineArray(i)%master) then
+        call atm_write_restart(i, checkpoint_step, checkpoint_time)
+    endif
+enddo
+
+#ifdef PPMPI
+call mpi_barrier(comm, ierr)
+#endif
+atm_last_checkpoint_step = checkpoint_step
+
+end subroutine atm_lesgo_checkpoint
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine atm_lesgo_finalize ()
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Initialize the actuator turbine model
 implicit none
 
-! Counter for turbines
-integer ::  i
-
 call atm_lesgo_report_timing()
 call atm_structure_timing_report()
+
+! output_final normally wrote this timestep already. Keep finalization safe for
+! callers that bypass the normal output driver; duplicate writes are skipped.
+call atm_lesgo_checkpoint(jt_total, total_time)
 
 #ifdef PPLES_GPU
 call atm_lesgo_destroy_force_shadows()
@@ -667,13 +696,6 @@ call atm_lesgo_destroy_blade_mirrors()
 if (coord == 0) then
     write(*,*) 'Finalizing ATM...'
 endif
-
-    ! Loop through all turbines and finalize
-    do i = 1, numberOfTurbines
-        if (coord == turbineArray(i) % master) then
-            call atm_write_restart(i) ! Write the restart file
-        endif
-    end do
 
 if (coord == 0) then
     write(*,*) 'Done finalizing ATM'
@@ -1285,6 +1307,16 @@ if ( mod(jt_total-1, updateInterval) == 0) then
 !~     call myClock % stop()
 !~     write(*,*) 'coord ', coord, '  MPI Gather ', myClock % time
 
+    ! The force/basis state produced above is the load consumed by the next
+    ! structural update. Fresh and legacy restarts skip structural advancement
+    ! until this first complete load has been assembled.
+    if (atm_structure_enabled()) then
+        do i = 1, numberOfTurbines
+            if (turbineArray(i)%operate) then
+                turbineArray(i)%structure_load_history_valid = .true.
+            endif
+        enddo
+    endif
 
     end if   ! ph /= 2  (sampling + blade force + gather)
 

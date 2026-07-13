@@ -217,8 +217,8 @@ subroutine lagrange_Ssim_gpu()
 ! Batched OpenACC Lagrangian scale-similarity SGS update (sgs_model=4).
 ! Mirrors lagrange_Ssim.f90, but filters all z planes as one batched operation.
 !*******************************************************************************
-use param, only : DYN_init, coord, cs_count, fringe_region_end,                &
-    fringe_region_len, inflow_type, inilag, jt, ld, nx, ny, nz, pi,            &
+use param, only : DYN_init, coord, fringe_region_end,                           &
+    fringe_region_len, inflow_type, jt_total, ld, nx, ny, nz, pi,              &
     use_cfl_dt
 use sim_param, only : u, v, w
 use sgs_param, only : F_LM, F_MM, Beta, Cs_opt2, opftime, lagran_dt,            &
@@ -390,8 +390,7 @@ end do
 end do
 end do
 
-if (inilag .and. (.not. F_LM_MM_init) .and.                                   &
-    (jt == cs_count .or. jt == DYN_init)) then
+if ((.not. F_LM_MM_init) .and. jt_total == DYN_init) then
     if (coord == 0) print *, 'F_MM and F_LM initialized (GPU)'
     !$acc parallel loop collapse(3) default(present) async(1)
     do jz = 1, nz
@@ -489,8 +488,8 @@ end subroutine lagrange_Ssim_gpu
 !*******************************************************************************
 subroutine lagrange_Sdep_gpu()
 !*******************************************************************************
-use param, only : DYN_init, coord, cs_count, fringe_region_end,                &
-    fringe_region_len, inflow_type, inilag, jt, lbc_mom, ld, nproc, nx, ny,   &
+use param, only : DYN_init, coord, fringe_region_end,                           &
+    fringe_region_len, inflow_type, jt_total, lbc_mom, ld, nproc, nx, ny,      &
     nz, pi, ubc_mom, use_cfl_dt
 use sim_param, only : u, v, w
 use sgs_param, only : F_LM, F_MM, F_QN, F_NN, beta, Cs_opt2, opftime,           &
@@ -819,13 +818,11 @@ end do
 end do
 
 ! ---------------------------------------------------------------------------
-! Step 8: One-shot init of F_LM/F_MM/F_QN/F_NN at the first qualifying step
-! (jt == cs_count or jt == DYN_init). Mirrors the CPU `inilag` branch but
-! batched across all jz at once. F_LM_MM_init / F_QN_NN_init are
-! module-private save logicals, set true after the first init.
+! Step 8: One-shot init of F_LM/F_MM/F_QN/F_NN at the physical dynamic-SGS
+! start step. The cumulative counter preserves this initialization across a
+! process restart before DYN_init.
 ! ---------------------------------------------------------------------------
-if (inilag .and. (.not. F_LM_MM_init) .and.                                     &
-    (jt == cs_count .or. jt == DYN_init)) then
+if ((.not. F_LM_MM_init) .and. jt_total == DYN_init) then
     if (coord == 0) print *, 'F_MM and F_LM initialized (GPU)'
     !$acc parallel loop collapse(3) default(present) async(1)
     do jz = 1, nz
@@ -932,8 +929,7 @@ end do
 ! ---------------------------------------------------------------------------
 ! Step 11: One-shot init of F_QN/F_NN at the first qualifying step.
 ! ---------------------------------------------------------------------------
-if (inilag .and. (.not. F_QN_NN_init) .and.                                     &
-    (jt == cs_count .or. jt == DYN_init)) then
+if ((.not. F_QN_NN_init) .and. jt_total == DYN_init) then
     if (coord == 0) print *, 'F_NN and F_QN initialized (GPU)'
     !$acc parallel loop collapse(3) default(present) async(1)
     do jz = 1, nz

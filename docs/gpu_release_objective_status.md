@@ -21,7 +21,7 @@ python3 tools/require_gpu_release_objective.py
 | `gpu-marked` | 147 | Contains OpenACC, CUDA, GPU-aware MPI, or GPU preprocessor markers. |
 | `gpu-file-unmarked` | 2 | Helper inside a GPU source file but without a local marker. |
 | `host-boundary` | 102 | Setup, I/O, configuration, MPI definitions, or other expected host boundary. |
-| `host-or-diagnostic` | 41 | Diagnostics, initialization, reporting, restart, or low-frequency host work. |
+| `host-or-diagnostic` | 52 | Diagnostics, initialization, reporting, restart, or low-frequency host work. |
 | `unmarked-runtime-candidate` | 107 | Needs runtime validation or profiling before broad GPU speed claims. |
 
 ## Validation Evidence Summary

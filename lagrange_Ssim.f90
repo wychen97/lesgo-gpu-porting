@@ -25,8 +25,8 @@ subroutine lagrange_Ssim()
 ! JFM, 319: 353-385 (1996) DOI: 10.1017/S0022112096007379
 !
 use types, only : rprec
-use param, only : coord, cs_count, DYN_init, fringe_region_end,               &
-    fringe_region_len, inflow_type, inilag, jt, ld, nx, ny, nz, pi,           &
+use param, only : coord, DYN_init, fringe_region_end,                          &
+    fringe_region_len, inflow_type, jt_total, ld, nx, ny, nz, pi,             &
     use_cfl_dt
 use sim_param, only : u, v, w
 use sgs_param, only : F_LM, F_MM, Beta, Cs_opt2, opftime, lagran_dt
@@ -167,9 +167,9 @@ do jz = 1,nz
     ee_now(:,:,jz) = L11**2+L22**2+L33**2+2._rprec*(L12**2+L13**2+L23**2)      &
         -2._rprec*LM*Cs_opt2(:,:,jz) + MM*Cs_opt2(:,:,jz)**2
 
-    ! Using local time counter to reinitialize SGS quantities when restarting
-    if (inilag) then
-        if ((.not. F_LM_MM_init) .and. (jt == cs_count .or. jt == DYN_init)) then
+    ! Initialize on the physical SGS start step, even if this process was
+    ! launched from a checkpoint written before DYN_init.
+    if ((.not. F_LM_MM_init) .and. jt_total == DYN_init) then
             print *,'F_MM and F_LM initialized'
             F_MM (:,:,jz) = MM
             F_LM (:,:,jz) = 0.025_rprec*MM
@@ -190,7 +190,6 @@ do jz = 1,nz
             endif
 
             if (jz == nz) F_LM_MM_init = .true.
-        endif
     endif
 
     ! Inflow

@@ -81,6 +81,10 @@ real(rprec) :: rpmRadSec =  pi/30._rprec ! Set the revolutions/min to radians/s
 
 logical :: pastFirstTimeStep ! Establishes if we are at the first time step
 
+character(len=*), parameter :: atm_restart_magic = 'ATM_RESTART_STATE_V2'
+character(len=*), parameter :: atm_restart_footer = 'END_ATM_RESTART_STATE_V2'
+integer, parameter :: atm_restart_version = 2
+
 integer, save :: atm_structure_timing_calls = 0
 real(rprec), save :: atm_structure_time_total = 0._rprec
 real(rprec), save :: atm_structure_time_assembly = 0._rprec
@@ -301,22 +305,26 @@ end subroutine atm_structure_diag_snapshot
 
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_initialize()
+subroutine atm_initialize(restart_step, restart_time)
 ! This subroutine initializes the ATM. It calls the subroutines in
 ! atm_input_util to read the input data and creates the initial geometry
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 implicit none
+integer, intent(in) :: restart_step
+real(rprec), intent(in) :: restart_time
 integer :: i
-logical :: file_exists
+logical :: file_exists, points_exist, restart_v2_loaded
+logical :: restart_requested
 
 pastFirstTimeStep=.false. ! The first time step not reached yet
+restart_requested = restart_step > 0
 
 write(*,*) 'Reading Actuator Turbine Model Input...'
 call read_input_conf()  ! Read input data
 write(*,*) 'Done Reading Actuator Turbine Model Input'
 do i = 1,numberOfTurbines
     inquire(file = "./turbineOutput/"//trim(turbineArray(i) % turbineName)//   &
-                   "/actuatorPoints", exist=file_exists)
+                   "/actuatorPoints", exist=points_exist)
 
     ! Creates the ATM points defining the geometry
     call atm_create_points(i)
@@ -324,7 +332,7 @@ do i = 1,numberOfTurbines
     turbineArray(i) % deltaNacYaw = turbineArray(i) % nacYaw
     call atm_yawNacelle(i)
 
-    if (file_exists .eqv. .true.) then
+    if (restart_requested .and. points_exist) then
         write(*,*) 'Reading bladePoints from Previous Simulation'
         call atm_read_actuator_points(i)
     endif
@@ -334,9 +342,17 @@ do i = 1,numberOfTurbines
     inquire(file = "./turbineOutput/"//trim(turbineArray(i) % turbineName)//   &
                    "/restart", exist=file_exists)
 
-    if (file_exists .eqv. .true.) then
+    restart_v2_loaded = .false.
+    if (restart_requested .and. file_exists) then
         write(*,*) 'Reading Turbine Properties from Previous Simulation'
-        call atm_read_restart(i)
+        call atm_read_restart(i, restart_step, restart_time, restart_v2_loaded)
+        if (.not. restart_v2_loaded .and. .not. points_exist) then
+            call error('legacy ATM restart is missing actuatorPoints')
+        endif
+    elseif (restart_requested) then
+        call error('LESGO restart requested, but ATM restart file is missing')
+    elseif (file_exists .or. points_exist) then
+        write(*,*) 'Ignoring stale ATM restart files because restart_step is 0.'
     endif
 
 end do
@@ -398,12 +414,15 @@ endif
 end subroutine atm_read_actuator_points
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_read_restart(i)
+subroutine atm_read_restart(i, expected_step, expected_time, v2_loaded)
 ! This subroutine reads the rotor speed
 ! It is used if the simulation wants to start from a previous simulation
 ! without having to start the turbine from the original omega
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 integer, intent(in) :: i  ! Indicates the turbine number
+integer, intent(in) :: expected_step
+real(rprec), intent(in) :: expected_time
+logical, intent(out) :: v2_loaded
 integer :: structureFile=789
 logical :: structure_exists
 character(len=512) :: structure_path
@@ -415,11 +434,8 @@ open( unit=1, file="./turbineOutput/"//trim(turbineArray(i) % turbineName)//   &
 ! Bring the pointer to the last line
 !~ backspace 1
 
-! Read past the first line
-read(1,*)
-
 ! Read the restart variables
-read(1,*) turbineArray(i) % rotSpeed
+call atm_read_restart_first_real(1, turbineArray(i)%rotSpeed)
 read(1,*) turbineArray(i) % torqueGen
 read(1,*) turbineArray(i) % torqueRotor
 read(1,*) turbineArray(i) % u_infinity
@@ -429,7 +445,10 @@ read(1,*) turbineArray(i) % IntSpeedError
 read(1,*) turbineArray(i) % nacYaw
 read(1,*) turbineArray(i) % rotorApex
 read(1,*) turbineArray(i) % uvShaft
+call atm_read_restart_v2(1, i, expected_step, expected_time, v2_loaded)
 close(1)
+
+turbineArray(i) % controller_history_valid = .true.
 
 write(*,*) ' RotSpeed Value from previous simulation is ',                     &
                 turbineArray(i) % rotSpeed
@@ -448,7 +467,7 @@ write(*,*) ' Rotor Apex Value from previous simulation is ',                   &
 write(*,*) ' uvShaft Value from previous simulation is ',                      &
                 turbineArray(i) % uvShaft
 
-if (atm_structure_enabled()) then
+if (atm_structure_enabled() .and. .not. v2_loaded) then
     structure_path = "./turbineOutput/"//trim(turbineArray(i) % turbineName)// &
         "/structure_restart"
     inquire(file=trim(structure_path), exist=structure_exists)
@@ -476,10 +495,360 @@ if (atm_structure_enabled()) then
     endif
 endif
 
+if (.not. v2_loaded) then
+    write(*,*) 'WARNING: legacy ATM restart has no du/uy_opt_vec history; ',    &
+        'the induced-velocity correction will warm start from zero.'
+    if (atm_structure_enabled()) then
+        write(*,*) 'WARNING: legacy structural restart has no previous ',       &
+            'aerodynamic load; the first structural update will be skipped.'
+    endif
+endif
+
 end subroutine atm_read_restart
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_write_restart(i)
+subroutine atm_read_restart_first_real(fid, value)
+! Legacy NVHPC list-directed character output may wrap the header over more
+! than one record. Scan to the first numeric record instead of assuming one.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid
+real(rprec), intent(out) :: value
+integer :: file_ios, parse_ios
+character(len=1024) :: line
+
+do
+    read(fid,'(A)',iostat=file_ios) line
+    if (file_ios /= 0) call error('ATM restart has no numeric state records')
+    read(line,*,iostat=parse_ios) value
+    if (parse_ios == 0) exit
+enddo
+
+end subroutine atm_read_restart_first_real
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_read_restart_v2(fid, i, expected_step, expected_time, loaded)
+! Read the versioned continuation block appended after the legacy ATM prefix.
+! Old executables ignore this block; new executables can still read old files.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid, i, expected_step
+real(rprec), intent(in) :: expected_time
+logical, intent(out) :: loaded
+integer :: ios, version, file_step, file_num_bl, file_num_annulus
+integer :: file_num_points, file_tip_correction, file_structure
+integer :: file_structure_load
+integer :: current_tip_correction, current_structure
+real(rprec) :: file_time, time_tol
+character(len=256) :: line, msg
+
+loaded = .false.
+read(fid,'(A)',iostat=ios) line
+if (ios < 0) return
+if (ios /= 0) call error('failed reading ATM restart extension header')
+if (trim(line) /= atm_restart_magic) then
+    call error('unknown data after legacy ATM restart fields')
+endif
+
+read(fid,*,iostat=ios) version, file_step, file_time, file_num_bl,             &
+    file_num_annulus, file_num_points, file_tip_correction, file_structure,   &
+    file_structure_load
+if (ios /= 0) call error('invalid ATM restart extension metadata')
+if (version /= atm_restart_version) then
+    write(msg,'(A,I0)') 'unsupported ATM restart version ', version
+    call error(trim(msg))
+endif
+if (file_step /= expected_step) then
+    write(msg,'(A,I0,A,I0)') 'ATM restart step ', file_step,                   &
+        ' does not match LES checkpoint step ', expected_step
+    call error(trim(msg))
+endif
+time_tol = 100._rprec * epsilon(1._rprec) *                                   &
+    max(1._rprec, abs(expected_time))
+if (abs(file_time - expected_time) > time_tol) then
+    call error('ATM restart time does not match LES checkpoint time')
+endif
+if (file_num_bl /= turbineModel(turbineArray(i)%turbineTypeID)%numBl .or.     &
+    file_num_annulus /= turbineArray(i)%numAnnulusSections .or.               &
+    file_num_points /= turbineArray(i)%numBladePoints) then
+    call error('ATM restart turbine dimensions do not match current input')
+endif
+
+current_tip_correction = merge(1, 0, turbineArray(i)%tipALMCorrection)
+current_structure = merge(1, 0, atm_structure_enabled())
+if (file_tip_correction /= current_tip_correction) then
+    call error('ATM restart tip-correction setting does not match current input')
+endif
+if (file_structure /= current_structure) then
+    call error('ATM restart structure setting does not match current run')
+endif
+
+call atm_expect_restart_label(fid, 'AZIMUTH_DELTA_NACYAW')
+read(fid,*,iostat=ios) turbineArray(i)%azimuth, turbineArray(i)%deltaNacYaw
+if (ios /= 0) call error('invalid ATM azimuth/yaw restart state')
+
+call atm_expect_restart_label(fid, 'BLADE_POINTS')
+call atm_read_restart_vec3(fid, turbineArray(i)%bladePoints)
+call atm_expect_restart_label(fid, 'DU')
+call atm_read_restart_vec3(fid, turbineArray(i)%du)
+call atm_expect_restart_label(fid, 'UY_OPT_VEC')
+call atm_read_restart_vec3(fid, turbineArray(i)%uy_opt_vec)
+
+if (file_structure == 1) then
+    call atm_expect_restart_label(fid, 'BLADE_POINTS_RIGID')
+    call atm_read_restart_vec3(fid, turbineArray(i)%bladePoints_rigid)
+    call atm_expect_restart_label(fid, 'FLAP_DISP')
+    call atm_read_restart_scalar(fid, turbineArray(i)%flap_disp)
+    call atm_expect_restart_label(fid, 'THETA_DISP')
+    call atm_read_restart_scalar(fid, turbineArray(i)%theta_disp)
+    call atm_expect_restart_label(fid, 'FLAP_VEL')
+    call atm_read_restart_scalar(fid, turbineArray(i)%flap_vel)
+    call atm_expect_restart_label(fid, 'THETA_VEL')
+    call atm_read_restart_scalar(fid, turbineArray(i)%theta_vel)
+    call atm_expect_restart_label(fid, 'FLAP_ACC')
+    call atm_read_restart_scalar(fid, turbineArray(i)%flap_acc)
+    call atm_expect_restart_label(fid, 'THETA_ACC')
+    call atm_read_restart_scalar(fid, turbineArray(i)%theta_acc)
+    call atm_expect_restart_label(fid, 'EDGE_DISP')
+    call atm_read_restart_scalar(fid, turbineArray(i)%edge_disp)
+    call atm_expect_restart_label(fid, 'EDGE_THETA_DISP')
+    call atm_read_restart_scalar(fid, turbineArray(i)%edge_theta_disp)
+    call atm_expect_restart_label(fid, 'EDGE_VEL')
+    call atm_read_restart_scalar(fid, turbineArray(i)%edge_vel)
+    call atm_expect_restart_label(fid, 'EDGE_THETA_VEL')
+    call atm_read_restart_scalar(fid, turbineArray(i)%edge_theta_vel)
+    call atm_expect_restart_label(fid, 'EDGE_ACC')
+    call atm_read_restart_scalar(fid, turbineArray(i)%edge_acc)
+    call atm_expect_restart_label(fid, 'EDGE_THETA_ACC')
+    call atm_read_restart_scalar(fid, turbineArray(i)%edge_theta_acc)
+    call atm_expect_restart_label(fid, 'ELASTIC_TWIST')
+    call atm_read_restart_scalar(fid, turbineArray(i)%elastic_twist)
+    call atm_expect_restart_label(fid, 'BLADE_FORCES')
+    call atm_read_restart_vec3(fid, turbineArray(i)%bladeForces)
+    call atm_expect_restart_label(fid, 'BLADE_ALIGNED_VECTORS')
+    call atm_read_restart_basis(fid, turbineArray(i)%bladeAlignedVectors)
+    call atm_expect_restart_label(fid, 'PITCHING_MOMENT')
+    call atm_read_restart_scalar(fid, turbineArray(i)%pitchingMoment)
+endif
+
+call atm_expect_restart_label(fid, atm_restart_footer)
+turbineArray(i)%structure_load_history_valid = file_structure_load == 1
+loaded = .true.
+
+end subroutine atm_read_restart_v2
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_write_restart_v2(fid, i, checkpoint_step, checkpoint_time)
+! Append restart state that is consumed before it is recomputed. The formatted
+! representation is intentionally compiler- and CPU/GPU-independent.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid, i, checkpoint_step
+real(rprec), intent(in) :: checkpoint_time
+integer :: j, structure_flag, structure_load_flag, tip_correction_flag
+
+j = turbineArray(i)%turbineTypeID
+structure_flag = merge(1, 0, atm_structure_enabled())
+structure_load_flag = merge(1, 0,                                       &
+    turbineArray(i)%structure_load_history_valid)
+tip_correction_flag = merge(1, 0, turbineArray(i)%tipALMCorrection)
+
+write(fid,'(A)') atm_restart_magic
+write(fid,'(2(I0,1X),ES26.17E3,1X,6(I0,1X))') atm_restart_version,             &
+    checkpoint_step, checkpoint_time, turbineModel(j)%numBl,                  &
+    turbineArray(i)%numAnnulusSections, turbineArray(i)%numBladePoints,       &
+    tip_correction_flag, structure_flag, structure_load_flag
+write(fid,'(A)') 'AZIMUTH_DELTA_NACYAW'
+write(fid,'(2(ES26.17E3,1X))') turbineArray(i)%azimuth,                        &
+    turbineArray(i)%deltaNacYaw
+
+write(fid,'(A)') 'BLADE_POINTS'
+call atm_write_restart_vec3(fid, turbineArray(i)%bladePoints)
+write(fid,'(A)') 'DU'
+call atm_write_restart_vec3(fid, turbineArray(i)%du)
+write(fid,'(A)') 'UY_OPT_VEC'
+call atm_write_restart_vec3(fid, turbineArray(i)%uy_opt_vec)
+
+if (structure_flag == 1) then
+    write(fid,'(A)') 'BLADE_POINTS_RIGID'
+    call atm_write_restart_vec3(fid, turbineArray(i)%bladePoints_rigid)
+    write(fid,'(A)') 'FLAP_DISP'
+    call atm_write_restart_scalar(fid, turbineArray(i)%flap_disp)
+    write(fid,'(A)') 'THETA_DISP'
+    call atm_write_restart_scalar(fid, turbineArray(i)%theta_disp)
+    write(fid,'(A)') 'FLAP_VEL'
+    call atm_write_restart_scalar(fid, turbineArray(i)%flap_vel)
+    write(fid,'(A)') 'THETA_VEL'
+    call atm_write_restart_scalar(fid, turbineArray(i)%theta_vel)
+    write(fid,'(A)') 'FLAP_ACC'
+    call atm_write_restart_scalar(fid, turbineArray(i)%flap_acc)
+    write(fid,'(A)') 'THETA_ACC'
+    call atm_write_restart_scalar(fid, turbineArray(i)%theta_acc)
+    write(fid,'(A)') 'EDGE_DISP'
+    call atm_write_restart_scalar(fid, turbineArray(i)%edge_disp)
+    write(fid,'(A)') 'EDGE_THETA_DISP'
+    call atm_write_restart_scalar(fid, turbineArray(i)%edge_theta_disp)
+    write(fid,'(A)') 'EDGE_VEL'
+    call atm_write_restart_scalar(fid, turbineArray(i)%edge_vel)
+    write(fid,'(A)') 'EDGE_THETA_VEL'
+    call atm_write_restart_scalar(fid, turbineArray(i)%edge_theta_vel)
+    write(fid,'(A)') 'EDGE_ACC'
+    call atm_write_restart_scalar(fid, turbineArray(i)%edge_acc)
+    write(fid,'(A)') 'EDGE_THETA_ACC'
+    call atm_write_restart_scalar(fid, turbineArray(i)%edge_theta_acc)
+    write(fid,'(A)') 'ELASTIC_TWIST'
+    call atm_write_restart_scalar(fid, turbineArray(i)%elastic_twist)
+    write(fid,'(A)') 'BLADE_FORCES'
+    call atm_write_restart_vec3(fid, turbineArray(i)%bladeForces)
+    write(fid,'(A)') 'BLADE_ALIGNED_VECTORS'
+    call atm_write_restart_basis(fid, turbineArray(i)%bladeAlignedVectors)
+    write(fid,'(A)') 'PITCHING_MOMENT'
+    call atm_write_restart_scalar(fid, turbineArray(i)%pitchingMoment)
+endif
+
+write(fid,'(A)') atm_restart_footer
+
+end subroutine atm_write_restart_v2
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_expect_restart_label(fid, expected)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid
+character(len=*), intent(in) :: expected
+integer :: ios
+character(len=256) :: line
+
+read(fid,'(A)',iostat=ios) line
+if (ios /= 0 .or. trim(line) /= trim(expected)) then
+    call error('ATM restart is truncated or has an unexpected section')
+endif
+
+end subroutine atm_expect_restart_label
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_write_restart_vec3(fid, values)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid
+real(rprec), intent(in) :: values(:,:,:,:)
+integer :: m, n, q
+
+do m = 1, size(values,1)
+    do n = 1, size(values,2)
+        do q = 1, size(values,3)
+            write(fid,'(3(ES26.17E3,1X))') values(m,n,q,1:3)
+        enddo
+    enddo
+enddo
+
+end subroutine atm_write_restart_vec3
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_read_restart_vec3(fid, values)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid
+real(rprec), intent(out) :: values(:,:,:,:)
+integer :: m, n, q, ios
+
+do m = 1, size(values,1)
+    do n = 1, size(values,2)
+        do q = 1, size(values,3)
+            read(fid,*,iostat=ios) values(m,n,q,1:3)
+            if (ios /= 0) call error('truncated ATM vector restart field')
+        enddo
+    enddo
+enddo
+
+end subroutine atm_read_restart_vec3
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_write_restart_scalar(fid, values)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid
+real(rprec), intent(in) :: values(:,:,:)
+integer :: m, n, q
+
+do m = 1, size(values,1)
+    do n = 1, size(values,2)
+        do q = 1, size(values,3)
+            write(fid,'(ES26.17E3)') values(m,n,q)
+        enddo
+    enddo
+enddo
+
+end subroutine atm_write_restart_scalar
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_read_restart_scalar(fid, values)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid
+real(rprec), intent(out) :: values(:,:,:)
+integer :: m, n, q, ios
+
+do m = 1, size(values,1)
+    do n = 1, size(values,2)
+        do q = 1, size(values,3)
+            read(fid,*,iostat=ios) values(m,n,q)
+            if (ios /= 0) call error('truncated ATM scalar restart field')
+        enddo
+    enddo
+enddo
+
+end subroutine atm_read_restart_scalar
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_write_restart_basis(fid, values)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid
+real(rprec), intent(in) :: values(:,:,:,:,:)
+integer :: m, n, q
+
+do m = 1, size(values,1)
+    do n = 1, size(values,2)
+        do q = 1, size(values,3)
+            write(fid,'(9(ES26.17E3,1X))') values(m,n,q,1:3,1:3)
+        enddo
+    enddo
+enddo
+
+end subroutine atm_write_restart_basis
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_read_restart_basis(fid, values)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer, intent(in) :: fid
+real(rprec), intent(out) :: values(:,:,:,:,:)
+integer :: m, n, q, ios
+
+do m = 1, size(values,1)
+    do n = 1, size(values,2)
+        do q = 1, size(values,3)
+            read(fid,*,iostat=ios) values(m,n,q,1:3,1:3)
+            if (ios /= 0) call error('truncated ATM basis restart field')
+        enddo
+    enddo
+enddo
+
+end subroutine atm_read_restart_basis
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_write_restart(i, checkpoint_step, checkpoint_time)
 ! This subroutine reads the rotor speed
 ! It is used if the simulation wants to start from a previous simulation
 ! without having to start the turbine from the original omega
@@ -487,6 +856,8 @@ subroutine atm_write_restart(i)
 implicit none
 
 integer, intent(in) :: i ! Indicates the turbine number
+integer, intent(in) :: checkpoint_step
+real(rprec), intent(in) :: checkpoint_time
 integer :: pointsFile=787 ! File to write the actuator points
 integer :: restartFile=21 ! File to write restart data
 integer :: rigidPointsFile=788 ! File to write undeformed blade backbone points
@@ -497,20 +868,22 @@ integer j, m,n,q ! counters
 open( unit=restartFile, file="./turbineOutput/"//                              &
             trim(turbineArray(i) % turbineName)//"/restart", status="replace")
 
-write(restartFile,*) 'RotSpeed ', 'torqueGen ', 'torqueRotor ', 'u_infinity ', &
-                     'induction_a ', 'PitchControlAngle ', 'IntSpeedError ',   &
-                     'nacYaw ', 'rotorApex ', 'uvShaft'
-! Store the rotSpeed value
-write(restartFile,*) turbineArray(i) % rotSpeed
-write(restartFile,*) turbineArray(i) % torqueGen
-write(restartFile,*) turbineArray(i) % torqueRotor
-write(restartFile,*) turbineArray(i) % u_infinity
-write(restartFile,*) turbineArray(i) % induction_a
-write(restartFile,*) turbineArray(i) % PitchControlAngle
-write(restartFile,*) turbineArray(i) % IntSpeedError
-write(restartFile,*) turbineArray(i) % nacYaw
-write(restartFile,*) turbineArray(i) % rotorApex
-write(restartFile,*) turbineArray(i) % uvShaft
+! Keep this to one explicit record. Older readers discard exactly one header
+! record, while the new reader also accepts historical wrapped headers.
+write(restartFile,'(A)') 'ATM_RESTART_LEGACY_PREFIX'
+! Preserve the historical one-record-per-field layout, but avoid
+! compiler-dependent list-directed precision in controller/rotor state.
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % rotSpeed
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % torqueGen
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % torqueRotor
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % u_infinity
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % induction_a
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % PitchControlAngle
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % IntSpeedError
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % nacYaw
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % rotorApex
+write(restartFile,'(*(ES26.17E3,1X))') turbineArray(i) % uvShaft
+call atm_write_restart_v2(restartFile, i, checkpoint_step, checkpoint_time)
 close(restartFile)
 
 ! Write the actuator points at every time-step regardless
@@ -912,9 +1285,11 @@ call atm_rotateBlades(i)
 call atm_control_yaw(i, time)
 
 if (atm_structure_enabled()) then
-    call atm_structure_diag_snapshot(i, 'pre_solve', dt, time)
-    call atm_solve_structure(i, dt)
-    call atm_structure_diag_snapshot(i, 'post_solve', dt, time)
+    if (turbineArray(i)%structure_load_history_valid) then
+        call atm_structure_diag_snapshot(i, 'pre_solve', dt, time)
+        call atm_solve_structure(i, dt)
+        call atm_structure_diag_snapshot(i, 'post_solve', dt, time)
+    endif
 endif
 
 !~ if(pastFirstTimeStep) then
@@ -1060,7 +1435,7 @@ PitchControlAngle => turbineArray(i) % PitchControlAngle
         ! want it to instantly be at its desired value on the first time
         ! step, but smoothly vary from there).
         if ((abs((torqueGen - torqueGenOld)/dt) > RateLimitGenTorque) &
-              .and. (pastFirstTimeStep)) then
+              .and. turbineArray(i)%controller_history_valid) then
 
             if (torqueGen > torqueGenOld) then
 
@@ -1087,7 +1462,7 @@ PitchControlAngle => turbineArray(i) % PitchControlAngle
     ! Note that this current method does NOT support Coning in the rotor
     elseif (turbineModel(j) % TorqueControllerType == "fixedTSR") then
 
-        if (pastFirstTimeStep) then
+        if (turbineArray(i)%controller_history_valid) then
             ! Integrate the velocity along all actuator points
             call atm_integrate_u(i)
 
@@ -1133,6 +1508,7 @@ PitchControlAngle => turbineArray(i) % PitchControlAngle
 
     ! Compute the change in blade position at new rotor speed.
     turbineArray(i) % deltaAzimuth = rotSpeed * dt
+    turbineArray(i) % controller_history_valid = .true.
 
 end subroutine atm_computeRotorSpeed
 

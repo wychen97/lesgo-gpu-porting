@@ -10,13 +10,13 @@ structure, but they should be split only when a clean ownership boundary exists.
 
 | Priority | File | Current size | Refactor direction |
 | --- | --- | ---: | --- |
-| 1 | `atm_lesgo_interface.f90` | 141,001 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
-| 2 | `actuator_turbine_model.f90` | 118,068 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
-| 3 | `lagrange_Sdep_gpu.f90` | 93,525 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
+| 1 | `atm_lesgo_interface.f90` | 142,290 bytes | Separate configuration switches, diagnostics/timing, point-owner load-balance helpers, gather/scatter helpers, and LESGO force application. |
+| 2 | `actuator_turbine_model.f90` | 133,887 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, and turbine output writing. |
+| 3 | `lagrange_Sdep_gpu.f90` | 93,225 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
 | 4 | `scalars.f90` | 63,405 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
-| 5 | `io.f90` | 60,643 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
-| 6 | `sgs_gpu.f90` | 55,422 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
-| 7 | `atm_input_util.f90` | 54,367 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |
+| 5 | `io.f90` | 61,928 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
+| 6 | `sgs_gpu.f90` | 55,232 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
+| 7 | `atm_input_util.f90` | 54,708 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |
 | 8 | `turbines.f90` | 52,909 bytes | Separate ADM input, node search, GPU metadata, and forcing/output paths. |
 
 `level_set.f90` and `trees_*_ls.f90` are intentionally lower priority because

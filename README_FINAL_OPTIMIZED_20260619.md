@@ -27,6 +27,7 @@ docs/refactor_backlog.md
 docs/collaboration_readiness_status.md
 docs/architecture_hardening_audit.md
 docs/fortran_broad_import_audit.md
+docs/restart_state_contract.md
 CONTRIBUTING.md
 tools/README.md
 ```

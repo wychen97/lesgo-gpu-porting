@@ -36,7 +36,7 @@ use param, only : cumulative_time
 use sim_param , only : w, dudz, dvdz
 use sgs_param , only : Cs_opt2
 use string_util, only : string_concat, string_splice
-use messages, only : warn
+use messages, only : error, warn
 use time_average, only : tavg_t
 #ifdef PPMPI
 use mpi
@@ -70,22 +70,44 @@ contains
 subroutine openfiles()
 !*******************************************************************************
 use param, only : use_cfl_dt, dt, cfl_f, checkpoint_file
+use sgs_param, only : lagran_dt
 implicit none
 logical :: exst
+integer :: ios
+character(len=512) :: restart_line
 
 ! Time-step and CFL values read from cumulative-time restart metadata.
-real(rprec) :: dt_r, cfl_r
+real(rprec) :: dt_r, cfl_r, lagran_dt_r
 
 ! Create file names
 allocate(fcumulative_time, source = path // 'total_time.dat')
 allocate(checkpoint_file , source = path // 'vel.out')
+dt_r = dt
+cfl_r = cfl_f
+lagran_dt_r = 0._rprec
 
 if (cumulative_time) then
     inquire (file=fcumulative_time, exist=exst)
     if (exst) then
         open (1, file=fcumulative_time)
-        read(1, *) jt_total, total_time, total_time_dim, dt_r, cfl_r
+        read(1, '(a)', iostat=ios) restart_line
         close (1)
+        if (ios /= 0) then
+            call error('openfiles', 'Could not read cumulative restart metadata')
+        else
+            read(restart_line, *, iostat=ios) jt_total, total_time,             &
+                total_time_dim, dt_r, cfl_r, lagran_dt_r
+            if (ios /= 0) then
+                ! Backward compatibility with the historical five-value file.
+                read(restart_line, *) jt_total, total_time, total_time_dim,     &
+                    dt_r, cfl_r
+                lagran_dt_r = 0._rprec
+                if (coord == 0) call warn('openfiles',                         &
+                    'Legacy total_time.dat has no lagran_dt SGS history; ' //  &
+                    'using zero until the next dynamic update')
+            end if
+            lagran_dt = lagran_dt_r
+        end if
     else
         ! assume this is the first run on cumulative time
         if ( coord == 0 ) then
@@ -1540,7 +1562,7 @@ use param, only : nz, checkpoint_file, tavg_calc, lbc_mom, L_x, L_y, L_z, path
 use param, only : comm, ierr
 #endif
 use sim_param, only : u, v, w, RHSx, RHSy, RHSz
-use sgs_param, only : Cs_opt2, F_LM, F_MM, F_QN, F_NN
+use sgs_param, only : Cs_opt2, F_LM, F_MM, F_QN, F_NN, lagran_dt
 use param, only : jt_total, total_time, total_time_dim, dt,                    &
     use_cfl_dt, cfl, write_endian, inflow_type
 use cfl_util, only : get_max_cfl
@@ -1550,6 +1572,9 @@ use turbines, only : turbines_checkpoint
 #endif
 #ifdef PPSCALARS
 use scalars, only : scalars_checkpoint
+#endif
+#ifdef PPATM
+use atm_lesgo_interface, only : atm_lesgo_checkpoint
 #endif
 use coriolis, only : coriolis_finalize
 
@@ -1625,13 +1650,20 @@ call turbines_checkpoint
 call scalars_checkpoint
 #endif
 
+#ifdef PPATM
+! Keep ATM controller, induced-velocity, geometry, and structural histories at
+! the same logical timestep as vel.out and total_time.dat.
+call atm_lesgo_checkpoint(jt_total, total_time)
+#endif
+
 call coriolis_finalize()
 
 !  Update total_time.dat after simulation
 if (coord == 0) then
     !--only do this for true final output, not intermediate recording
     open (1, file=fcumulative_time)
-    write(1, *) jt_total, total_time, total_time_dim, dt, cfl_w
+    write(1, '(i0,1x,5(es26.17e3,1x))') jt_total, total_time, total_time_dim,   &
+        dt, cfl_w, lagran_dt
     close(1)
 end if
 

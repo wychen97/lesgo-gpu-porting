@@ -60,7 +60,7 @@ subroutine sgs_stag ()
 
 use types, only : rprec
 use param, only : BOGUS, Co, DYN_init, coord, cs_count, dt, dz, inilag,        &
-    initu, jt, jt_total, lbc_mom, nproc, nx, ny, nz, sgs, sgs_model,           &
+    jt, jt_total, lbc_mom, nproc, nx, ny, nz, sgs, sgs_model,                  &
     ubc_mom, use_cfl_dt, vonk, wall_damp_exp
 use sim_param, only : txx, txy, txz, tyy, tyz, tzz
 use sgs_param, only : Cs_opt2, Nu_t, S, S11, S12, S13, S22, S23, S33,          &
@@ -96,7 +96,7 @@ call calc_Sij ()
 if (use_cfl_dt) then
     if (sgs_model == SGS_MODEL_LAGRANGE_SIMILARITY .OR.                       &
         sgs_model == SGS_MODEL_LAGRANGE_SCALE_DEP) then
-        if ( ( jt .GE. DYN_init-cs_count + 1 ) .OR.  initu ) then
+        if (jt_total .GE. DYN_init-cs_count + 1) then
             lagran_dt = lagran_dt + dt
         endif
     endif
@@ -211,10 +211,10 @@ if (sgs) then
             Cs_opt2 = 0.03_rprec
 
         ! Update Sij, Cs every cs_count timesteps (specified in param)
-        elseif ( ((jt.GE.DYN_init).OR.(initu)) .AND.                           &
+        elseif ( (jt_total.GE.DYN_init) .AND.                                  &
             (mod(jt_total,cs_count)==0) ) then
 
-            if (jt == DYN_init) then
+            if (jt_total == DYN_init) then
                 write(*,*) 'running dynamic sgs_model = ', sgs_model
             end if
 

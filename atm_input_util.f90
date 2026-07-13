@@ -83,12 +83,12 @@ type turbineArray_t
     real(rprec) :: optimalEpsilonChord = 0.25 ! The optimal epsilon / chord
 
     ! Not read variables
-    real(rprec) :: thrust ! Total turbine thrust
-    real(rprec) :: torqueRotor ! Rotor torque
-    real(rprec) :: torqueGen ! Generator torque
-    real(rprec) :: powerRotor ! Rotor Power
-    real(rprec) :: powerGen ! Generator Power
-    logical :: nacelle  ! Includes a nacelle yes or no
+    real(rprec) :: thrust = 0._rprec ! Total turbine thrust
+    real(rprec) :: torqueRotor = 0._rprec ! Rotor torque
+    real(rprec) :: torqueGen = 0._rprec ! Generator torque
+    real(rprec) :: powerRotor = 0._rprec ! Rotor Power
+    real(rprec) :: powerGen = 0._rprec ! Generator Power
+    logical :: nacelle = .false. ! Includes a nacelle yes or no
     real(rprec) :: nacelleEpsilon ! Width of the smearing Gaussian function
     real(rprec) :: nacelleCd = 0._rprec ! Drag coefficient for the nacelle
     real(rprec) :: VelNacelle_sampled = 0._rprec ! Sampled nacelle Vel
@@ -102,7 +102,12 @@ type turbineArray_t
     integer :: master
 
     ! Flag to know if this turbine operates or not in this processor
-    logical :: operate
+    logical :: operate = .false.
+
+    ! Fresh starts have no previous aerodynamic/controller load. Restart
+    ! readers set these only after the corresponding state has been restored.
+    logical :: controller_history_valid = .false.
+    logical :: structure_load_history_valid = .false.
 
     integer :: turbineTypeID ! Identifies the type of turbine
 
@@ -130,7 +135,7 @@ type turbineArray_t
     ! Forces on each actuator point (blade, annular section, point, 3)
     real(rprec), allocatable, dimension(:,:,:,:) :: bladeForces
     ! Drag force of Nacelle
-    real(rprec), dimension(3) :: nacelleForce
+    real(rprec), dimension(3) :: nacelleForce = 0._rprec
     ! Forces on each actuator point (blade, annular section, point, 3)
     real(rprec), allocatable, dimension(:,:,:,:) :: integratedBladeForces
     ! Vectors at each actuator point defining the local reference frame
