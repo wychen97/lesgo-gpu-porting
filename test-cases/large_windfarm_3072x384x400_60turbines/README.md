@@ -1,9 +1,9 @@
 # LESGO 3072 x 384 x 400 / 60-Turbine Input Case
 
 Purpose: provide the initial configuration files for the large wind-farm case
-used during GPU scaling diagnostics. This directory is retained in the final
-optimized non-LVLSET branch so collaborators can reproduce the 3072 x 384 x 400
-/ 60-turbine benchmark setup from a clean checkout.
+used during CPU/GPU validation. This CPU branch keeps the same 3072 x 384 x 400
+/ 60-turbine benchmark setup, but defaults to a CPU executable and a CPU
+submission script.
 
 Default benchmark geometry:
 
@@ -34,22 +34,22 @@ non-dimensional domain in `lesgo.conf` is `Lx = 28.224`, `Ly = 3.78`,
 
 ```bash
 cd /path/to/lesgo/test-cases/large_windfarm_3072x384x400_60turbines
-./compile_derecho.sh
+./compile_derecho.sh cpu
 qsub submit_derecho.pbs
 ```
 
-The default large-case submission settings are:
+The default large-case CPU smoke submission settings are:
 
 ```text
 MPI_RANKS=16
-MPI_PPN=4
-PBS select=4 nodes x 4 A100 GPUs/node
+MPI_PPN=8
+PBS select=2 shared CPU nodes x 8 MPI ranks/node
 grid and timestep settings are read directly from lesgo.conf
 ```
 
 Edit `lesgo.conf` directly when running a smaller smoke test or changing
-`nsteps`, `wbase`, or output controls. If you change the GPU count, update both
-the PBS resource line and the `MPI_RANKS` / `MPI_PPN` values in
+`nsteps`, `wbase`, or output controls. If you change the MPI rank count, update
+the PBS resource line, `MPI_RANKS` / `MPI_PPN`, and `nproc` in
 `submit_derecho.pbs`.
 
 For a physically developed turbulent wind-farm field, use longer spin-up
@@ -57,13 +57,15 @@ settings or restart from an already developed precursor. The short benchmark
 job is intentionally focused on kernel/module timing and does not claim
 converged wind-farm statistics.
 
-## Public GPU-Porting Build Notes
+## Public CPU Build Notes
 
-This case is meant to exercise the optimized non-LVLSET GPU path. The GPU
-benchmark executable is built through:
+This case is meant to exercise the same wind-farm physics with GPU acceleration
+disabled. The default CPU benchmark executable is built through:
 
 ```bash
--DUSE_LES_GPU=ON
+-DUSE_CPU_BUILD=ON
+-DUSE_LES_GPU=OFF
+-DUSE_ATM=ON
 ```
 
 Use this README and the top-level `README.md` for the current validated CMake

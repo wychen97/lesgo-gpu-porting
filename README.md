@@ -1,7 +1,7 @@
-# LESGO GPU Porting
+# LESGO CPU Baseline Branch
 
-This repository is a GPU-porting branch of LESGO organized to stay close to
-the upstream JHU LESGO layout:
+This branch is the CPU-default counterpart to the LESGO GPU-porting repository.
+It is organized to stay close to the upstream JHU LESGO layout:
 
 - solver source files and the main `CMakeLists.txt` remain at repository root;
 - reusable documentation lives under `docs/`;
@@ -34,29 +34,27 @@ steps are intentionally separate so users can inspect and modify compilation
 settings independently from queue settings.
 
 `lesgo-run-exe` is intentionally ignored by git because it is specific to the
-compiler, GPU architecture, MPI stack, and cluster.
+compiler, MPI stack, and cluster.
 
-## Minimal GPU Build Example
+## Minimal CPU Build Example
 
 Run this from one of the case directories, for example
 `test-cases/channel_flow`:
 
 ```bash
 module reset
-module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10
-export MPICH_GPU_SUPPORT_ENABLED=1
-export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
+module load nvhpc/25.9 cray-mpich/8.1.32 fftw/3.3.10
 
 CASE=$PWD
 SRC=$(cd ../.. && pwd)
-BUILD=$CASE/builds/channel_gpu240
+BUILD=$CASE/builds/channel_cpu240
 
 FC=ftn cmake -S "$SRC" -B "$BUILD" \
   -Dhostname=derecho \
   -DUSE_MPI=ON \
-  -DUSE_CPU_BUILD=OFF \
-  -DUSE_LES_GPU=ON \
-  -DUSE_GPU_AWARE_MPI=AUTO \
+  -DUSE_CPU_BUILD=ON \
+  -DUSE_LES_GPU=OFF \
+  -DUSE_GPU_AWARE_MPI=OFF \
   -DUSE_TURBINES=OFF \
   -DUSE_ATM=OFF \
   -DUSE_CPS=OFF \
@@ -70,19 +68,19 @@ FC=ftn cmake -S "$SRC" -B "$BUILD" \
 cmake --build "$BUILD" -j 8
 ```
 
-`BUILD=$CASE/builds/channel_gpu240` is just a shell variable naming the
+`BUILD=$CASE/builds/channel_cpu240` is just a shell variable naming the
 out-of-source CMake build directory. It was not part of the original LESGO
 CMake design; it is the standard CMake `-B` build-tree location.
 
-## Main GPU CMake Switches
+## Main CPU CMake Switches
 
-- `USE_LES_GPU=ON`: enables the optimized OpenACC explicit-residency LES core.
-- `USE_GPU_AWARE_MPI=AUTO`: enables GPU-aware MPI when the cluster MPI stack
-  exposes the required support.
+- `USE_CPU_BUILD=ON`: uses the CPU-baseline NVHPC flags on Derecho so dormant
+  CUDA syntax still compiles without linking GPU runtime libraries.
+- `USE_LES_GPU=OFF`: disables the OpenACC explicit-residency LES core.
+- `USE_GPU_AWARE_MPI=OFF`: disables GPU-aware MPI paths.
 - `USE_TURBINES=ON`: enables the actuator disk model.
 - `USE_ATM=ON`: enables the actuator line / turbine structural-path model.
-- `USE_SCALARS=ON` and `USE_SCALARS_GPU=ON`: enable scalar transport and the
-  optimized scalar GPU path.
+- `USE_SCALARS=ON`: enables scalar transport in the CPU path.
 - `USE_CPS=ON`: enables concurrent precursor simulation.
 - `USE_LVLSET=ON`: enables level-set physics. This path is kept in source but
   is not part of the current optimized public test suite.
@@ -103,15 +101,12 @@ new cluster, edit only these parts first:
    wrapper.
 
 3. GPU-aware MPI:
-   `USE_GPU_AWARE_MPI=AUTO` works on the tested Cray/NVHPC setup. Use `ON` only
-   if the MPI library is known to support device buffers. Use `OFF` if the MPI
-   stack is not GPU-aware.
+   Keep `USE_GPU_AWARE_MPI=OFF` on this CPU branch.
 
 4. Launch command:
-   Derecho provides `set_gpu_rank`. If another cluster does not, plain
-   `mpiexec` may work for one GPU. On Slurm systems, translate
+   The CPU submit scripts use plain `mpiexec`. On Slurm systems, translate
    `submit_derecho.pbs` to an `sbatch` file and use the site's recommended
-   `srun` command.
+   `srun` or `mpiexec` command.
 
 5. Case physics:
    Do not change `USE_TURBINES` or `USE_ATM` unless you intentionally switch
