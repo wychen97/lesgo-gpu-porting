@@ -66,7 +66,6 @@ The active production modules are:
 These areas remain in the repository but are not proof of production readiness:
 
 - LVLSET and `trees_*` sources;
-- ATM point-owner load balancing as a default path;
 - replicated global pressure tridiagonal solve as a production default;
 - broad source-file splitting without a validation plan.
 

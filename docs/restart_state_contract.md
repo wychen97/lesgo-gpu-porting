@@ -58,6 +58,14 @@ tip-correction setting, and structure setting.
 Intermediate LES checkpoints call the ATM checkpoint writer directly. Finalize
 uses the same path and suppresses duplicate writes at the same step.
 
+When `updateInterval > 1`, the ATM grid-force field is held between aerodynamic
+updates. The historical restart format does not serialize this per-rank held
+field. A restart is therefore accepted only when the checkpoint step is a
+multiple of `updateInterval`, so the first resumed timestep performs a normal
+force update. Non-aligned restarts fail during input initialization rather than
+silently creating a force/power transient. Supporting arbitrary seams requires
+a versioned ATM force-cache sidecar.
+
 ## Optional Sidecars
 
 The following existing modules retain separate checkpoint ownership:

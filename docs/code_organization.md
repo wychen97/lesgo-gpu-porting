@@ -172,6 +172,8 @@ LES arrays.  The practical ownership rules are:
   application use device data, while parts of the blade/structural model still
   run on the host.  Keep phase 1 and phase 2 ordering paired with the comments
   in `main.f90` and `atm_lesgo_interface.f90`.
+- The normal atPoint path stays device-resident. Spalart sampling and nacelle
+  interpolation use an explicit host compatibility bridge only when requested.
 - SGS model dispatch must keep the disabled path and supported runtime values
   `1..5` covered.  Do not optimize only `sgs=5` and leave another runtime value
   on a stale path.
@@ -204,9 +206,8 @@ Available as an opt-in non-production path:
 Deferred:
 
 - LVLSET GPU optimization.
-- ATM reduce-to-operating-ranks load balancing as a default behavior.  The
-  implementation exists but should remain off until a larger multi-rank,
-  multi-turbine case shows robust benefit.
+- Arbitrary-seam ATM restart with `updateInterval > 1`; aligned restart points
+  are enforced until a held-force checkpoint sidecar is implemented.
 
 ## Validation Expectations
 

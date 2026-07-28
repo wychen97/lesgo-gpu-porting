@@ -286,10 +286,10 @@ call turbines_forcing ()
 
 #ifdef PPATM
 #ifdef PPLES_GPU
-! Explicit-residency, fully device-resident ATM: velocity sampling reads device
-! u,v,w_uv (atm_sample_velocity_atpoint_gpu) and the convolution scatters forces
-! straight into the device fxa/fya/fza, so NO host<->device velocity/force
-! transfer is needed here -- just zero the force arrays on the device.
+! The production atPoint ATM path samples resident u/v/w and deposits forces
+! directly into resident fxa/fya/fza. Optional Spalart/nacelle compatibility is
+! bridged inside atm_lesgo_interface without transferring these full force
+! fields. Therefore this driver only clears the device force arrays.
 !$acc parallel loop collapse(3) default(present)
 do jz = lbz, nz
 do jy = 1, ny
@@ -313,8 +313,8 @@ call atm_lesgo_forcing (phase=2)
 #else
 call atm_lesgo_forcing ()
 #endif
-! Under PPLES_GPU, fxa/fya/fza were scattered into on the device by
-! atm_convolute_atpoint_gpu, so no host->device force transfer is needed here.
+! Under PPLES_GPU, atPoint and optional Spalart forces are deposited on the
+! device, so no host-to-device full-field force transfer is needed here.
 #endif
 
 end subroutine forcing_applied

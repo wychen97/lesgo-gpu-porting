@@ -56,7 +56,7 @@ use atm_base, only : rprec, error, interpolate, interpolate_i, vector_add,      
 
 use atm_input_util, only : airfoilType_t, atm_print_initialize,               &
     diagnosticOutputInterval, numberOfTurbines, outputInterval,               &
-    read_input_conf, turbineArray, turbineModel
+    read_input_conf, turbineArray, turbineModel, updateInterval
 use param, only : coord
 
 
@@ -322,6 +322,15 @@ restart_requested = restart_step > 0
 write(*,*) 'Reading Actuator Turbine Model Input...'
 call read_input_conf()  ! Read input data
 write(*,*) 'Done Reading Actuator Turbine Model Input'
+
+! Force fields are held between aerodynamic updates but are not serialized in
+! the historical ATM restart format. A checkpoint is exactly restartable only
+! when the first resumed step is itself a force-update step.
+if (restart_requested .and. updateInterval > 1 .and.                          &
+    mod(restart_step, updateInterval) /= 0) then
+    call error('ATM restart step must be a multiple of updateInterval')
+endif
+
 do i = 1,numberOfTurbines
     inquire(file = "./turbineOutput/"//trim(turbineArray(i) % turbineName)//   &
                    "/actuatorPoints", exist=points_exist)
@@ -1529,8 +1538,10 @@ real(rprec), pointer :: uvShaft(:)
 real(rprec), pointer :: azimuth
 real(rprec) :: disp_ax, disp_tg, theta_tot
 real(rprec) :: vec1_rot(3), vec2_rot(3), origin_zero(3)
+logical :: structure_active
 
 j=turbineArray(i) % turbineTypeID
+structure_active = atm_structure_enabled()
 
 ! Variables which are used by pointers
 rotorApex=> turbineArray(i) % rotorApex
@@ -1555,7 +1566,7 @@ origin_zero = (/ 0._rprec, 0._rprec, 0._rprec /)
 do q=1, turbineArray(i) % numBladePoints
     do n=1, turbineArray(i) % numAnnulusSections
         do m=1, turbineModel(j) % numBl
-            if (atm_structure_enabled()) then
+            if (structure_active) then
                 turbineArray(i) % bladePoints_rigid(m,n,q,:) = rotatePoint(    &
                 turbineArray(i) % bladePoints_rigid(m,n,q,:), rotorApex,       &
                 uvShaft, deltaAzimuthI)
@@ -1857,7 +1868,11 @@ PreCone=>turbineModel(j) %PreCone
 ! projection is only 0.001 its maximum value - this seems to recover 99.9% of
 ! the total forces when integrated
 projectionRadius= turbineArray(i) % epsilon * sqrt(log(1.0/0.001))
-projectionRadiusNacelle= turbineArray(i) % nacelleEpsilon*sqrt(log(1.0/0.001))
+projectionRadiusNacelle = 0._rprec
+if (turbineArray(i) % nacelle) then
+    projectionRadiusNacelle = turbineArray(i) % nacelleEpsilon *              &
+        sqrt(log(1.0_rprec/0.001_rprec))
+endif
 
 sphereRadius=sqrt(((OverHang + UndSling) + TipRad*sin(PreCone))**2 &
 + (TipRad*cos(PreCone))**2) + projectionRadius
@@ -2079,7 +2094,7 @@ integer, save :: structure_feedback_init = 0
 integer, save :: structure_vel_feedback = 1
 integer, save :: structure_alpha_feedback = 1
 character(len=16) :: env_value
-logical :: env_has_value
+logical :: env_has_value, structure_active
 real(rprec) :: twistAng_i, chord_i, windAng_i, db_i, sigma!, base_alpha
 !real(rprec) :: solidity_i
 real(rprec), dimension(3) :: dragVector, liftVector
@@ -2099,6 +2114,7 @@ real(rprec) :: theta_tot_vel, vel_ax, vel_tg
 
 ! Identifier for the turbine type
 j= turbineArray(i) % turbineTypeID
+structure_active = atm_structure_enabled()
 
 ! Pointers to trubineArray (i)
 rotorApex => turbineArray(i) % rotorApex
@@ -2185,7 +2201,7 @@ windVectors(m,n,q,3) = dot_product(bladeAlignedVectors(m,n,q,3,:), U_local)
 twistAng_i = turbineArray(i) % twistAng(m,n,q)
 chord_i = turbineArray(i) % chord(m,n,q)
 
-if (atm_structure_enabled() .and. structure_vel_feedback == 1) then
+if (structure_active .and. structure_vel_feedback == 1) then
     theta_tot_vel = (turbineArray(i)%twistAng(m,n,q) +                         &
         turbineArray(i)%Pitch + turbineArray(i)%PitchControlAngle) * degRad +  &
         turbineArray(i)%elastic_twist(m,1,q)
@@ -2214,7 +2230,7 @@ windAng_i = atan2( windVectors(m,n,q,1), windVectors(m,n,q,2) ) /degRad
 ! Local angle of attack
 alpha(m,n,q) = windAng_i - twistAng_i - turbineArray(i) % Pitch - &
                turbineArray(i) % PitchControlAngle
-if (atm_structure_enabled() .and. structure_alpha_feedback == 1) then
+if (structure_active .and. structure_alpha_feedback == 1) then
     alpha(m,n,q) = alpha(m,n,q) - turbineArray(i) % elastic_twist(m,1,q) / degRad
 endif
 
@@ -2225,7 +2241,7 @@ cl(m,n,q) = atm_blended_airfoil_coeff(j, bladeRadius(m,n,q),                  &
 ! Drag coefficient
 cd(m,n,q) = atm_blended_airfoil_coeff(j, bladeRadius(m,n,q),                  &
                                       alpha(m,n,q), 2)
-if (atm_structure_enabled()) then
+if (structure_active) then
     cm(m,n,q) = atm_blended_airfoil_coeff(j, bladeRadius(m,n,q),              &
                                           alpha(m,n,q), 3)
 else
@@ -2242,7 +2258,7 @@ turbineArray(i) % lift(m,n,q) = 0.5_rprec * cl(m,n,q) * (Vmag(m,n,q)**2) *     &
 ! Drag force
 turbineArray(i) % drag(m,n,q) = 0.5_rprec * cd(m,n,q) * (Vmag(m,n,q)**2) *     &
                                 chord_i * db_i * solidity(m,n,q)
-if (atm_structure_enabled()) then
+if (structure_active) then
     turbineArray(i) % pitchingMoment(m,n,q) = 0.5_rprec * cm(m,n,q) *          &
         (Vmag(m,n,q)**2) * chord_i * chord_i * db_i * solidity(m,n,q)
 else
@@ -2315,7 +2331,7 @@ real(rprec), intent(in), dimension(3) :: U_local ! Velocity input
 integer :: j ! j - turbineModel
 real(rprec) :: V ! Velocity projected
 real(rprec), dimension(3) :: nacelleAlignedVector ! Nacelle vector
-real(rprec) :: area, drag
+real(rprec) :: area, correction_denominator, drag
 
 ! Identifier for the turbine type
 j= turbineArray(i) % turbineTypeID
@@ -2333,8 +2349,12 @@ V = dot_product( nacelleAlignedVector , U_local)
 turbineArray(i) % VelNacelle_sampled = V
 
 ! Apply the velocity correction
-V = V / (1. - .25/ pi * turbineArray(i) % nacelleCd * area /                   &
-                turbineArray(i) % nacelleEpsilon**2 )
+correction_denominator = 1._rprec - 0.25_rprec / pi *                         &
+    turbineArray(i) % nacelleCd * area / turbineArray(i) % nacelleEpsilon**2
+if (abs(correction_denominator) <= sqrt(epsilon(1._rprec))) then
+    call error('ATM nacelle velocity correction denominator is singular')
+endif
+V = V / correction_denominator
 !~ write(*,*) 'Nacelle Velocity after correction is: ', V
 
 ! The velocity (corrected)
@@ -2385,8 +2405,10 @@ integer, intent(in) :: i
 integer :: j
 integer :: m,n,q
 real(rprec) :: origin_zero(3)
+logical :: structure_active
 ! Perform rotation for the turbine.
 j=turbineArray(i) % turbineTypeID
+structure_active = atm_structure_enabled()
 
 ! Rotate the rotor apex first.
 turbineArray(i) % rotorApex = rotatePoint(turbineArray(i) % rotorApex,         &
@@ -2407,7 +2429,7 @@ turbineArray(i) % uvShaft = vector_divide(turbineArray(i) % uvShaft,           &
 do q=1, turbineArray(i) % numBladePoints
     do n=1, turbineArray(i) %  numAnnulusSections
         do m=1, turbineModel(j) % numBl
-            if (atm_structure_enabled()) then
+            if (structure_active) then
                 turbineArray(i) % bladePoints_rigid(m,n,q,:) =                &
                 rotatePoint(turbineArray(i) % bladePoints_rigid(m,n,q,:),     &
                 turbineArray(i) % towerShaftIntersect,                        &
@@ -2471,11 +2493,12 @@ integer :: ClbFile=28
 integer :: uy_LESFile=29
 integer :: uy_optFile=30
 integer :: elasticTwistFile=31, flapDispFile=32, edgeDispFile=33, CmFile=34
-logical :: writeDiagnostics
+logical :: structure_active, writeDiagnostics
 
 ! Output only if the number of intervals is right
 if ( mod(jt_total-1, outputInterval) == 0) then
 
+    structure_active = atm_structure_enabled()
     writeDiagnostics = .false.
     if (diagnosticOutputInterval > 0) then
         writeDiagnostics = mod(jt_total-1, diagnosticOutputInterval) == 0
@@ -2556,7 +2579,7 @@ if ( mod(jt_total-1, outputInterval) == 0) then
         open(unit=uy_optFile,position="append",                                &
         file="./turbineOutput/"//trim(turbineArray(i) % turbineName)//"/uy_opt")
 
-        if (atm_structure_enabled()) then
+        if (structure_active) then
             open(unit=elasticTwistFile,position="append",                     &
             file="./turbineOutput/"//trim(turbineArray(i) % turbineName)//     &
                  "/elastic_twist")
@@ -2613,7 +2636,7 @@ if ( mod(jt_total-1, outputInterval) == 0) then
                                       turbineArray(i) % db(:)
         write(uy_LESFile,*) i, m, turbineArray(i) % uy_LES(m,1,:)
         write(uy_optFile,*) i, m, turbineArray(i) % uy_opt(m,1,:)
-        if (atm_structure_enabled()) then
+        if (structure_active) then
             write(elasticTwistFile,*) i, m,                                   &
                 turbineArray(i) % elastic_twist(m,1,:)
             write(flapDispFile,*) i, m, turbineArray(i) % flap_disp(m,1,:)
@@ -2650,7 +2673,7 @@ if ( mod(jt_total-1, outputInterval) == 0) then
         close(axialForceFile)
         close(uy_LESFile)
         close(uy_optFile)
-        if (atm_structure_enabled()) then
+        if (structure_active) then
             close(elasticTwistFile)
             close(flapDispFile)
             close(edgeDispFile)

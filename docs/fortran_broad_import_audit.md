@@ -51,7 +51,7 @@ Total broad imports: `60`
 
 | File | Line | Scope | Module | Category | Recommended action |
 | --- | ---: | --- | --- | --- | --- |
-| `atm_lesgo_interface.f90` | 69 | `atm_lesgo_interface` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `atm_lesgo_interface.f90` | 66 | `atm_lesgo_interface` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `cfl_util.f90` | 49 | `cfl_util::get_max_cfl` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `cfl_util.f90` | 109 | `cfl_util::get_cfl_dt` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `clocks.f90` | 50 | `clock_m::start` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |

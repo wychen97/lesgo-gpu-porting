@@ -18,11 +18,11 @@ python3 tools/require_gpu_release_objective.py
 
 | Classification | Subprograms | Meaning |
 | --- | ---: | --- |
-| `gpu-marked` | 147 | Contains OpenACC, CUDA, GPU-aware MPI, or GPU preprocessor markers. |
+| `gpu-marked` | 141 | Contains OpenACC, CUDA, GPU-aware MPI, or GPU preprocessor markers. |
 | `gpu-file-unmarked` | 2 | Helper inside a GPU source file but without a local marker. |
 | `host-boundary` | 102 | Setup, I/O, configuration, MPI definitions, or other expected host boundary. |
 | `host-or-diagnostic` | 52 | Diagnostics, initialization, reporting, restart, or low-frequency host work. |
-| `unmarked-runtime-candidate` | 107 | Needs runtime validation or profiling before broad GPU speed claims. |
+| `unmarked-runtime-candidate` | 104 | Needs runtime validation or profiling before broad GPU speed claims. |
 
 ## Validation Evidence Summary
 
@@ -56,7 +56,7 @@ Release-proven parser keys: `133`
 | --- | ---: | --- | --- |
 | `adm-cpu-fallback-profile` | 5 | `adm_disk`=release-proven, `adm_dynamic_controls`=release-proven | ADM/turbine CPU fallback or compatibility routines; profile before treating them as missing GPU work. |
 | `atm-host-model` | 35 | `atm_line`=release-proven, `large_windfarm`=release-proven | ATM blade, controller, structure, and small math helpers that remain host-side in the current hybrid design. |
-| `atm-mirror-lb-control` | 11 | `atm_line`=release-proven, `large_windfarm`=release-proven | ATM mirror, synchronization, cell-search, and load-balance control helpers around the GPU sampling/forcing path. |
+| `atm-mirror-lb-control` | 8 | `atm_line`=release-proven, `large_windfarm`=release-proven | ATM mirror, synchronization, cell-search, and load-balance control helpers around the GPU sampling/forcing path. |
 | `cpu-fallback-compat` | 27 | `les_core_channel`=release-proven, `hit_inflow`=release-proven | CPU fallback or host compatibility routines retained beside GPU production paths. |
 | `diagnostic-profiling` | 8 | `diagnostics_output`=release-proven | Profiling, timing, or audit helpers; not GPU hot-path kernels. |
 | `excluded-lvlset-bridge` | 1 | `lvlset`=excluded | LVLSET bridge code excluded from the current non-LVLSET scope. |

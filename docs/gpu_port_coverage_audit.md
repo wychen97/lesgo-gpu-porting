@@ -46,8 +46,7 @@ total wall-time estimates.  Do not mix the labels.
 | Dynamic timescale update | `USE_DYN_TN=ON` | Source has `PPDYN_TN` branches in Lagrangian SGS code. | Not part of the canonical production validation. | Needs dedicated `USE_DYN_TN=ON` CPU/GPU correctness and timing run. |
 | Wall stress and IWM | `lbc_mom`, `ubc_mom`, IWM settings | `iwmles.f90` and SGS wall branches contain GPU paths and protected `(i,j)` surface indexing. | Source indexing guard passes; small correctness evidence exists. | Needs production-size wall-model benchmark before claiming speedup for IWM-heavy cases. |
 | ADM turbines | `USE_TURBINES=ON`, `USE_ATM=OFF` | `turbines_gpu.f90` and forcing integration support the GPU LES path. | Published ADM disk 240^3 case passed. | For presentations, use cumulative average and late-step timing with correct labels. |
-| ATM / structural coupling | `USE_ATM=ON` | GPU sampling, force application, induced-velocity correction, and structure on/off paths are integrated with host-side structural work. | Published ATM line and large 60-turbine runs passed. | Larger imbalance cases are needed before enabling point-owner load balancing by default. |
-| ATM load balancing | `LESGO_ATM_POINT_OWNER_*`, `LESGO_ATM_LB_AUTO_SELECT` | Implementation exists as an optional path. | Not default; evidence is not yet broad enough. | Keep off by default until a real multi-rank, multi-turbine case shows robust benefit. |
+| ATM / structural coupling | `USE_ATM=ON` | The atPoint sampler and force deposition are device-resident; induced-velocity correction and structure on/off are integrated with the host turbine model. Spalart/nacelle use an explicit compatibility bridge. | Standard structure-off/on A/B and optional atPoint+nacelle, Spalart, and held-force CPU/GPU checks passed in the 2026-07-27 architecture review. | Profile optional host bridges only on representative cases; aligned checkpoints are required when `updateInterval > 1`. |
 | Scalar transport | `USE_SCALARS=ON`, `USE_SCALARS_GPU=ON` | Current `scalars.f90` includes GPU transport, scalar derivatives, halo/update, and stability helper routines. | All-module and scalar smoke evidence exists; not part of the four published presentation cases. | Re-run current public branch scalar CPU/GPU at 128^3 and 240^3, passive and active buoyancy, before broad speedup claims. |
 | Scalar CPU fallback | `USE_SCALARS=ON`, `USE_SCALARS_GPU=OFF` | Intentionally CPU fallback. | Correctness path only, not a GPU speed path. | Do not compare as GPU scalar performance. |
 | CPS / concurrent precursor | `USE_CPS=ON` | CPS velocity exchange and fringe application have device-resident paths; scalar CPS is GPU-resident only with `PPSCALARS_GPU`. | CPS/all-module smoke evidence exists. | Needs production-size CPS timing with and without scalar coupling. |
@@ -113,9 +112,9 @@ Current result:
 | `gpu-file-unmarked` | 2 |
 | `host-boundary` | 102 |
 | `host-or-diagnostic` | 41 |
-| `unmarked-runtime-candidate` | 107 |
+| `unmarked-runtime-candidate` | 104 |
 
-The 107 unmarked runtime candidates now have review buckets from
+The 104 unmarked runtime candidates now have review buckets from
 `tools/report_gpu_static_inventory.py --review`:
 
 For the generated full function-level table, see
@@ -125,7 +124,7 @@ For the generated full function-level table, see
 | --- | ---: | --- |
 | `adm-cpu-fallback-profile` | 5 | ADM/turbine CPU fallback or compatibility routines; profile before treating them as missing GPU work. |
 | `atm-host-model` | 35 | ATM blade, controller, structure, and small math helpers that remain host-side in the current hybrid design. |
-| `atm-mirror-lb-control` | 11 | ATM mirror, synchronization, cell-search, and load-balance control helpers around the GPU sampling/forcing path. |
+| `atm-mirror-lb-control` | 8 | ATM synchronization, cell-search, and active coupling-control helpers around the GPU sampling/forcing path. Historical disabled mirror/load-balance routines were removed. |
 | `cpu-fallback-compat` | 27 | CPU fallback or host compatibility routines retained beside GPU production paths. |
 | `diagnostic-profiling` | 8 | Profiling, timing, or audit helpers; not GPU hot-path kernels. |
 | `excluded-lvlset-bridge` | 1 | LVLSET bridge code excluded from the current non-LVLSET scope. |
@@ -159,7 +158,7 @@ Manual review of the highest-impact candidates:
 | Candidate | Review result |
 | --- | --- |
 | `actuator_turbine_model.f90` blade/controller/structure routines | Host-side by current design. The PPLES path mirrors blade points/forces and applies LES sampling/forcing on the GPU, but turbine model and structural logic still execute on the host. Structure-on performance therefore needs paired CPU/GPU evidence. |
-| `atm_lesgo_interface.f90` mirror/shadow builders | Setup or mirror-management helpers for device-resident ATM arrays. They should not dominate regular steps unless profiling shows repeated rebuilds. |
+| `atm_lesgo_interface.f90` coupling helpers | Active helpers now cover batched atPoint residency, packed gather, and explicit optional Spalart/nacelle bridging. Historical disabled shadow/mirror and point-owner branches were removed. |
 | `scalars.f90::to_big` | CPU FFTW fallback. The GPU scalar path uses separate `PPSCALARS_GPU` routines; scalar speedup still needs production-size validation. |
 | `scalars.f90::ic_scal_*` and `stability.f90` | Scalar initialization and CPU/fallback stability helpers. They are not proof of missing GPU transport work, but active-scalar validation remains required. |
 | `hit_inflow.f90::interpolate3D` | CPU HIT fallback. The per-step GPU-assisted HIT work lives in `hit_inflow_gpu.f90`. |

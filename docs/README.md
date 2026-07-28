@@ -96,13 +96,18 @@ branch.  Read these files before changing solver code.
    - classes of similar mistakes now checked automatically;
    - limits of the source-level checks versus numerical validation.
 
-20. `fortran_broad_import_audit.md`
+20. `architecture_performance_review_20260727.md`
+   - current ATM ownership and optional-path review;
+   - measured baseline/candidate performance;
+   - correctness, build, and restart acceptance results.
+
+21. `fortran_broad_import_audit.md`
    - generated map of broad `use module` imports without `only:` lists;
    - readiness-gated guide for import-boundary cleanup: unclassified broad
      imports must be narrowed or explicitly classified;
    - helps keep readability refactors small and reviewable.
 
-21. `restart_state_contract.md`
+22. `restart_state_contract.md`
    - synchronized LES, SGS, ATM, controller, and structural restart state;
    - CPU/GPU device-ownership requirements at restart;
    - continuous-versus-split validation protocol.

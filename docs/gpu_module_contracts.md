@@ -213,7 +213,7 @@ ATM is intentionally mixed CPU/GPU code.  Keep boundaries explicit.
 - turbine velocity sampling;
 - force-field application;
 - phase 1 / phase 2 split;
-- experimental point-owner load balancing.
+- explicit optional host/device compatibility boundaries.
 
 `actuator_turbine_model.f90` owns:
 
@@ -226,8 +226,10 @@ Rules:
 
 - Keep induced-velocity correction enabled in the canonical branch.
 - Pair structure-off and structure-on tests for changes that touch ATM.
-- Do not make point-owner load balancing default without a real multi-rank,
-  multi-turbine benefit record.
+- Keep the standard atPoint sampler and force deposition device-resident.
+- Spalart and nacelle host bridges must transfer only the state they own.
+- With `updateInterval > 1`, restart checkpoints must be aligned to a multiple
+  of the interval until a versioned held-force sidecar is implemented.
 - Turbine power files remain the authoritative power output; stdout diagnostics
   are secondary.
 

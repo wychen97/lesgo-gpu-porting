@@ -89,7 +89,7 @@ type turbineArray_t
     real(rprec) :: powerRotor = 0._rprec ! Rotor Power
     real(rprec) :: powerGen = 0._rprec ! Generator Power
     logical :: nacelle = .false. ! Includes a nacelle yes or no
-    real(rprec) :: nacelleEpsilon ! Width of the smearing Gaussian function
+    real(rprec) :: nacelleEpsilon = 0._rprec ! Gaussian width; required if enabled
     real(rprec) :: nacelleCd = 0._rprec ! Drag coefficient for the nacelle
     real(rprec) :: VelNacelle_sampled = 0._rprec ! Sampled nacelle Vel
     real(rprec) :: VelNacelle_corrected = 0._rprec ! Corrected nacelle Vel
@@ -522,8 +522,71 @@ endif
 close (lun)
 
 call read_turbine_model_variables ()
+call validate_turbine_inputs()
 
 end subroutine read_input_conf
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine validate_turbine_inputs()
+! Validate values used as divisors or array extents before model allocation.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+implicit none
+
+integer :: i, j
+real(rprec) :: area, correction_denominator
+real(rprec), parameter :: pi = acos(-1._rprec)
+character(256) :: message
+
+if (updateInterval <= 0) call error('ATM updateInterval must be positive')
+if (outputInterval < 0) call error('ATM outputInterval cannot be negative')
+
+do i = 1, numberOfTurbines
+    if (turbineArray(i) % numBladePoints <= 0) then
+        write(message,'(a,i0)') 'ATM numBladePoints must be positive for turbine ', i
+        call error(trim(message))
+    endif
+    if (turbineArray(i) % numAnnulusSections <= 0) then
+        write(message,'(a,i0)')                                                &
+            'ATM numAnnulusSections must be positive for turbine ', i
+        call error(trim(message))
+    endif
+    if (turbineArray(i) % epsilon <= 0._rprec) then
+        write(message,'(a,i0)') 'ATM epsilon must be positive for turbine ', i
+        call error(trim(message))
+    endif
+    select case (trim(turbineArray(i) % sampling))
+    case ('atPoint', 'Spalart')
+        continue
+    case default
+        write(message,'(a,i0,2a)') 'Unsupported ATM sampling mode for turbine ', &
+            i, ': ', trim(turbineArray(i) % sampling)
+        call error(trim(message))
+    end select
+
+    if (.not. turbineArray(i) % nacelle) cycle
+    if (turbineArray(i) % nacelleEpsilon <= 0._rprec) then
+        write(message,'(a,i0)')                                                &
+            'ATM nacelleEpsilon must be positive when nacelleFlag is true; turbine ', i
+        call error(trim(message))
+    endif
+    if (turbineArray(i) % nacelleCd < 0._rprec) then
+        write(message,'(a,i0)') 'ATM nacelleCd cannot be negative for turbine ', i
+        call error(trim(message))
+    endif
+
+    j = turbineArray(i) % turbineTypeID
+    area = pi * turbineModel(j) % hubRad**2
+    correction_denominator = 1._rprec - 0.25_rprec / pi *                     &
+        turbineArray(i) % nacelleCd * area /                                  &
+        turbineArray(i) % nacelleEpsilon**2
+    if (abs(correction_denominator) <= sqrt(epsilon(1._rprec))) then
+        write(message,'(a,i0)')                                                &
+            'ATM nacelle velocity correction is singular for turbine ', i
+        call error(trim(message))
+    endif
+enddo
+
+end subroutine validate_turbine_inputs
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine read_turbine_model_variables ()

@@ -11,7 +11,7 @@ runtime correctness and timing evidence must close each bucket.
 | --- | ---: | --- | --- |
 | `adm-cpu-fallback-profile` | 5 | `adm_disk`, `adm_dynamic_controls` | ADM/turbine CPU fallback or compatibility routines; profile before treating them as missing GPU work. |
 | `atm-host-model` | 35 | `atm_line`, `large_windfarm` | ATM blade, controller, structure, and small math helpers that remain host-side in the current hybrid design. |
-| `atm-mirror-lb-control` | 11 | `atm_line`, `large_windfarm` | ATM mirror, synchronization, cell-search, and load-balance control helpers around the GPU sampling/forcing path. |
+| `atm-mirror-lb-control` | 8 | `atm_line`, `large_windfarm` | ATM mirror, synchronization, cell-search, and load-balance control helpers around the GPU sampling/forcing path. |
 | `cpu-fallback-compat` | 27 | `les_core_channel`, `hit_inflow` | CPU fallback or host compatibility routines retained beside GPU production paths. |
 | `diagnostic-profiling` | 8 | `diagnostics_output` | Profiling, timing, or audit helpers; not GPU hot-path kernels. |
 | `excluded-lvlset-bridge` | 1 | `lvlset` | LVLSET bridge code excluded from the current non-LVLSET scope. |
@@ -22,23 +22,23 @@ runtime correctness and timing evidence must close each bucket.
 
 | File:line | Subprogram | Review bucket | Validation rows |
 | --- | --- | --- | --- |
-| `actuator_turbine_model.f90:1083` | `atm_create_points` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1272` | `atm_update` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1303` | `atm_control_yaw` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1334` | `atm_computeRotorSpeed` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1516` | `atm_rotateBlades` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1621` | `atm_compute_cl_correction` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1782` | `s_fit` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1819` | `atm_calculate_variables` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:1989` | `atm_airfoil_blend_info` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2063` | `atm_computeBladeForce` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2307` | `atm_computeNacelleForce` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2356` | `atm_integrate_u` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2379` | `atm_yawNacelle` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2666` | `atm_compute_power` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:2784` | `atm_solve_structure` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:3077` | `solve_linear_system_banded_dp` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `actuator_turbine_model.f90:3140` | `solve_linear_system_dp` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1092` | `atm_create_points` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1281` | `atm_update` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1312` | `atm_control_yaw` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1343` | `atm_computeRotorSpeed` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1525` | `atm_rotateBlades` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1632` | `atm_compute_cl_correction` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1793` | `s_fit` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:1830` | `atm_calculate_variables` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2004` | `atm_airfoil_blend_info` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2078` | `atm_computeBladeForce` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2323` | `atm_computeNacelleForce` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2376` | `atm_integrate_u` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2399` | `atm_yawNacelle` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2689` | `atm_compute_power` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:2807` | `atm_solve_structure` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:3100` | `solve_linear_system_banded_dp` | `atm-host-model` | `atm_line`, `large_windfarm` |
+| `actuator_turbine_model.f90:3163` | `solve_linear_system_dp` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:40` | `error` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:57` | `interpolate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:122` | `vector_add` | `atm-host-model` | `atm_line`, `large_windfarm` |
@@ -49,17 +49,14 @@ runtime correctness and timing evidence must close each bucket.
 | `atm_base.f90:208` | `matrix_vector` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:222` | `cross_product` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `atm_base.f90:234` | `distance` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `atm_input_util.f90:1118` | `readline` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_input_util.f90:1163` | `eat_whitespace` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:592` | `atm_lesgo_force_gpu_atpoint` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:750` | `atm_lesgo_build_force_shadows` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:847` | `atm_lesgo_build_blade_mirrors` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:902` | `atm_sync_blade_points_to_device` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:920` | `atm_sync_blade_forces_to_device` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:939` | `atm_lesgo_findCells` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:1497` | `atm_lesgo_mpi_gather` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:1679` | `atm_lesgo_mpi_gather_packed` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
-| `atm_lesgo_interface.f90:2092` | `atm_lesgo_compute_Spalart_u` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_input_util.f90:1181` | `readline` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_input_util.f90:1226` | `eat_whitespace` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:200` | `atm_interp_w_to_uv` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:432` | `atm_lesgo_findCells` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:961` | `atm_lesgo_mpi_gather` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:972` | `atm_lesgo_mpi_gather_packed` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:1369` | `atm_lesgo_compute_Spalart_u` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
+| `atm_lesgo_interface.f90:1451` | `atm_lesgo_convolute_force` | `atm-mirror-lb-control` | `atm_line`, `large_windfarm` |
 | `convec.f90:24` | `convec` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `derivatives.f90:49` | `stress_uv_xy_derivs` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `derivatives.f90:70` | `stress_w_xy_derivs` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |

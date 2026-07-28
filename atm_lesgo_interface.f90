@@ -29,11 +29,8 @@ module atm_lesgo_interface
 ! Navigation map for this large interface module:
 !   - declarations and policy flags: module header before `contains`
 !   - diagnostics/timing helpers: atm_diag_*, atm_lesgo_report_timing
-!   - GPU utility kernels: atm_interp_w_to_uv, atm_prepare_direct_w,
-!     atm_lesgo_apply_force_gpu, and the *_atpoint GPU routines
-!   - point-owner and load-balance path: atm_point_owner_* and atm_lb_*
-!   - lifecycle and planning: atm_lesgo_initialize/finalize, diag_load, lb_plan
-!   - turbine geometry residency: force shadows, blade mirrors, findCells
+!   - GPU utility kernels: atm_prepare_direct_w and the batched atPoint routines
+!   - lifecycle and geometry: initialize/finalize, diagnostics, and findCells
 !   - timestep entry point: atm_lesgo_forcing(phase)
 !   - legacy/CPU gather and force paths: atm_lesgo_mpi_gather*,
 !     atm_lesgo_force, atm_lesgo_convolute_force, atm_lesgo_apply_force
@@ -95,29 +92,13 @@ implicit none
 ! PPLES GPU ownership map:
 !   - LES fields u/v/w and fxa/fya/fza are owned by sim_param and are expected
 !     to be device-resident during timestep forcing.
-!   - w_uv and atm_nacelle_tmp are local timestep scratch owned by this module.
-!   - shadow tables and blade mirrors are built from host turbine geometry and
-!     kept on device for sampling/convolution.
-!   - point-owner load-balance tables are experimental and selected only by
-!     the documented LESGO_ATM_* environment controls.
+!   - w_uv is host scratch used only by CPU and legacy ATM sampling.
+!   - batched atPoint tables below own the production sampling/convolution
+!     copies of turbine geometry and forces.
 real(rprec), allocatable, dimension(:,:,:) :: w_uv
-real(rprec), device, allocatable, save, dimension(:) :: atm_nacelle_tmp
 real(rprec), allocatable, save, dimension(:,:) :: atm_wuv_send_down
 real(rprec), allocatable, save, dimension(:,:) :: atm_wuv_recv_up
-!$acc declare create(w_uv, atm_wuv_send_down, atm_wuv_recv_up)
-integer, allocatable, save :: atm_shadow_offsetUV(:), atm_shadow_offsetW(:)
-integer, allocatable, save :: atm_shadow_ijkUV(:,:), atm_shadow_ijkW(:,:)
-real(rprec), allocatable, save :: atm_shadow_locUV(:,:), atm_shadow_locW(:,:)
-real(rprec), allocatable, save :: atm_shadow_forceUV(:,:), atm_shadow_forceW(:,:)
-integer, device, allocatable, save :: atm_shadow_offsetUV_d(:), atm_shadow_offsetW_d(:)
-integer, device, allocatable, save :: atm_shadow_ijkUV_d(:,:), atm_shadow_ijkW_d(:,:)
-real(rprec), device, allocatable, save :: atm_shadow_locUV_d(:,:), atm_shadow_locW_d(:,:)
-real(rprec), device, allocatable, save :: atm_shadow_forceUV_d(:,:), atm_shadow_forceW_d(:,:)
-logical, save :: atm_shadow_ready = .false.
-real(rprec), device, allocatable, save :: atm_bladePoints_d(:,:,:,:,:)
-real(rprec), device, allocatable, save :: atm_bladeForces_d(:,:,:,:,:)
-integer, save :: atm_max_m = 0, atm_max_n = 0, atm_max_q = 0
-logical, save :: atm_blade_mirror_ready = .false.
+!$acc declare create(atm_wuv_send_down, atm_wuv_recv_up)
 #else
 real(rprec), allocatable, dimension(:,:,:) :: w_uv
 #endif
@@ -144,19 +125,29 @@ end type bodyForce_t
 ! constants are re-uploaded; sampling and convolution then run as ONE kernel
 ! over all turbines instead of 60 data-region/kernel/sync rounds.
 integer, parameter :: ATM_NTC = 14   ! per-turbine constant slots
+integer, parameter :: ATM_SAMPLING_ATPOINT = 1
+integer, parameter :: ATM_SAMPLING_SPALART = 2
 logical :: atm_batch_ready   = .false.
 logical :: atm_batch_sampled = .false.
+logical :: atm_atpoint_present = .false.
+logical :: atm_spalart_present = .false.
+logical :: atm_host_velocity_bridge_required = .false.
 integer :: atm_nbp_tot = 0, atm_cUV_tot = 0, atm_cW_tot = 0
 integer,     allocatable :: atm_bp_off(:)                  ! (nTurb+1) blade-point prefix
 real(rprec), allocatable :: atm_bp_all(:,:), atm_bf_all(:,:)   ! (3, nbp_tot)
 real(rprec), allocatable :: atm_velbp_all(:,:)             ! (3, nbp_tot) sampled velocity
 integer,     allocatable :: atm_inr_all(:)                 ! (nbp_tot) in-domain flag
 real(rprec), allocatable :: atm_tconst(:,:)                ! (ATM_NTC, nTurb)
+integer,     allocatable :: atm_sampling_mode(:)           ! static per-turbine mode
 real(rprec), allocatable :: atm_locUV_all(:,:), atm_locW_all(:,:)  ! (3, c_tot) static
 integer,     allocatable :: atm_ijkUV_all(:,:), atm_ijkW_all(:,:)  ! (3, c_tot) static
 integer,     allocatable :: atm_tidUV(:), atm_tidW(:)      ! per-cell turbine id, static
 real(rprec), allocatable :: atm_gx(:), atm_gy(:), atm_gz(:)
 integer,     allocatable :: atm_awi(:), atm_awj(:)
+! Optional compatibility buffers. They are allocated only when a Spalart
+! turbine exists, and scatter its host-computed force into resident LES arrays
+! without transferring or overwriting the complete fxa/fya/fza fields.
+real(rprec), allocatable :: atm_spalart_forceUV(:,:), atm_spalart_forceW(:)
 
 ! ---- Batched Cl/tip correction (round 4) ----
 ! GPU port of atm_compute_cl_correction: the O(N^2) blade-to-blade induced
@@ -188,7 +179,6 @@ real(rprec), parameter :: pi=acos(-1._rprec)
 type(clock_t), save :: atm_clock_interp_w, atm_clock_update, atm_clock_reset
 type(clock_t), save :: atm_clock_sample, atm_clock_force, atm_clock_gather, atm_clock_convolve
 type(clock_t), save :: atm_clock_clcorr, atm_clock_apply, atm_clock_output
-type(clock_t), save :: atm_clock_barrier
 real(rprec), save :: atm_time_interp_w = 0._rprec
 real(rprec), save :: atm_time_update = 0._rprec
 real(rprec), save :: atm_time_reset = 0._rprec
@@ -199,105 +189,17 @@ real(rprec), save :: atm_time_convolve = 0._rprec
 real(rprec), save :: atm_time_clcorr = 0._rprec
 real(rprec), save :: atm_time_apply = 0._rprec
 real(rprec), save :: atm_time_output = 0._rprec
-real(rprec), save :: atm_time_barrier = 0._rprec
 integer, save :: atm_forcing_calls = 0
 integer, save :: atm_last_checkpoint_step = -1
 logical, save :: atm_diag_load_printed = .false.
+logical, save :: atm_force_state_valid = .false.
 
 contains
-
-! Maintained ATM GPU policy gates. Historical routine names still contain
-! `cuda` because these call sites predate the OpenACC explicit-residency cleanup.
-! CPU builds never enter PPLES_GPU call sites, and optional GPU subpaths remain
-! explicit here so they cannot be confused with hidden environment switches.
-logical function atm_wuv_cuda_enabled();          atm_wuv_cuda_enabled=.true.;           end function
-#ifdef PPLES_GPU
-logical function atm_direct_w_enabled();          atm_direct_w_enabled=.true.;           end function
-#else
-logical function atm_direct_w_enabled();          atm_direct_w_enabled=.false.;          end function
-#endif
-logical function atm_apply_cuda_enabled();        atm_apply_cuda_enabled=.false.;        end function
-logical function atm_convolve_cuda_enabled();     atm_convolve_cuda_enabled=.false.;     end function
-logical function atm_force_shadows_enabled();     atm_force_shadows_enabled=.false.;     end function
-logical function atm_bladeforce_cuda_enabled();   atm_bladeforce_cuda_enabled=.false.;   end function
-logical function atm_reset_cuda_enabled();        atm_reset_cuda_enabled=.false.;        end function
-logical function atm_packed_gather_enabled();     atm_packed_gather_enabled=.false.;     end function
-logical function atm_gpu_packed_gather_enabled(); atm_gpu_packed_gather_enabled=.false.; end function
-logical function atm_slim_gather_enabled();       atm_slim_gather_enabled=.false.;       end function
-logical function atm_batch_gather_enabled();      atm_batch_gather_enabled=.false.;      end function
-logical function atm_full_gather_required();      atm_full_gather_required=.false.;      end function
-logical function atm_output_barrier_enabled();    atm_output_barrier_enabled=.false.;    end function
-logical function atm_extra_sync_enabled();        atm_extra_sync_enabled=.false.;        end function
-logical function atm_diag_timing_enabled();       atm_diag_timing_enabled=.false.;       end function
-logical function atm_point_owner_lb_enabled();    atm_point_owner_lb_enabled=.false.;    end function
-logical function atm_point_owner_targeted_enabled();  atm_point_owner_targeted_enabled=.false.;  end function
-logical function atm_lb_auto_select_enabled();    atm_lb_auto_select_enabled=.false.;    end function
-logical function atm_lb_validate_enabled();       atm_lb_validate_enabled=.false.;       end function
-logical function atm_point_owner_lb_supported();  atm_point_owner_lb_supported=.false.;  end function
-logical function atm_point_owner_targeted_supported(); atm_point_owner_targeted_supported=.false.; end function
-logical function atm_lb_plan_only_enabled();      atm_lb_plan_only_enabled=.false.;      end function
-logical function atm_lb_point_detail_enabled();   atm_lb_point_detail_enabled=.false.;   end function
-logical function atm_lb_auto_use_lb_for_call(candidate)
-    logical, intent(in) :: candidate
-    atm_lb_auto_use_lb_for_call = .false.
-end function
-
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine atm_interp_w_to_uv()
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 implicit none
-
-integer :: jx, jy, jz
-#if defined(PPLES_GPU) && defined(PPMPI)
-integer :: status(MPI_STATUS_SIZE)
-#endif
-
-#ifdef PPLES_GPU
-if (atm_wuv_cuda_enabled()) then
-    !$acc parallel loop collapse(3) default(present)
-    do jz = 1, nz - 1
-    do jy = 1, ny
-    do jx = 1, nx
-        w_uv(jx,jy,jz) = 0.5_rprec * (w(jx,jy,jz+1) + w(jx,jy,jz))
-    end do
-    end do
-    end do
-
-    if (coord == nproc - 1) then
-        !$acc parallel loop collapse(2) default(present)
-        do jy = 1, ny
-        do jx = 1, nx
-            w_uv(jx,jy,nz) = w_uv(jx,jy,nz-1)
-        end do
-        end do
-    end if
-
-#ifdef PPMPI
-    if (nproc > 1 .and. .not. atm_direct_w_enabled()) then
-        ! GPU-aware MPI halo for w_uv: exchange device pointers directly (no
-        ! full-field update self/device PCIe). Replicates
-        ! mpi_sync_real_array(w_uv,lbz,DOWNUP): send :,:,1 down / recv :,:,nz from
-        ! up, then (lbz==0) send :,:,nz-1 up / recv :,:,0 from down.
-        !
-        ! NOTE (overlap): no `wait(1)` here. The interpolation kernels above
-        ! are synchronous (no async clause), so w_uv is complete; queue 1 only
-        ! carries the deferred convection/RHS kernels at this point in the
-        ! step, none of which touch w or w_uv. Draining it would serialize the
-        ! ATM phase-1 host work against the convection backlog.
-        !$acc host_data use_device(w_uv)
-        call mpi_sendrecv(w_uv(1,1,1),  nx*ny, mpi_rprec, down, 1,                &
-                          w_uv(1,1,nz), nx*ny, mpi_rprec, up,   1, comm, status, ierr)
-        if (lbz == 0) then
-            call mpi_sendrecv(w_uv(1,1,nz-1), nx*ny, mpi_rprec, up,   2,          &
-                              w_uv(1,1,0),    nx*ny, mpi_rprec, down, 2, comm, status, ierr)
-        endif
-        !$acc end host_data
-    endif
-#endif
-    return
-end if
-#endif
 
 w_uv = interp_to_uv_grid(w(1:nx,1:ny,lbz:nz), lbz)
 
@@ -315,27 +217,25 @@ integer :: jx, jy
 integer :: status(MPI_STATUS_SIZE)
 #endif
 
-if (.not. atm_direct_w_enabled()) return
-
-if (.not. allocated(atm_wuv_send_down)) then
-    allocate(atm_wuv_send_down(nx,ny), atm_wuv_recv_up(nx,ny))
-#ifdef PPLES_GPU
-    !$acc update device(atm_wuv_send_down, atm_wuv_recv_up)
-#endif
-endif
-
-#ifdef PPMPI
 if (nproc <= 1) then
-#ifdef PPLES_GPU
-    !$acc wait
-#else
-    call atm_cuda_check('ATM direct w single rank')
-#endif
+    ! No halo is needed on a single rank. The deferred LES queue only reads
+    ! u/v/w at this point, so synchronizing it would unnecessarily serialize
+    ! ATM phase 1 against convection. Keep one-element device-present buffers
+    ! because the unified sampling kernel contains an unreachable MPI-halo
+    ! branch and OpenACC still resolves its allocatable descriptors.
+    if (.not. allocated(atm_wuv_send_down)) then
+        allocate(atm_wuv_send_down(1,1), atm_wuv_recv_up(1,1))
+    endif
     return
 endif
 
+if (.not. allocated(atm_wuv_send_down)) then
+    allocate(atm_wuv_send_down(nx,ny), atm_wuv_recv_up(nx,ny))
+    !$acc update device(atm_wuv_send_down, atm_wuv_recv_up)
+endif
+
+#ifdef PPMPI
 ! The direct sampler only needs the old w_uv(nz) halo from the rank above.
-#ifdef PPLES_GPU
 !$acc parallel loop collapse(2) default(present)
 do jy = 1, ny
 do jx = 1, nx
@@ -346,259 +246,20 @@ end do
 ! The boundary-pack loop has no async clause, so it is complete before the
 ! following GPU-aware MPI call.  Avoid a global OpenACC wait here because it can
 ! charge unrelated deferred LES work to the ATM direct-w timer.
-#else
-!$cuf kernel do(2) <<<*,*>>>
-do jy = 1, ny
-do jx = 1, nx
-    atm_wuv_send_down(jx,jy) = 0.5_rprec * (w(jx,jy,1) + w(jx,jy,2))
-end do
-end do
-
-call atm_cuda_sync('ATM direct w boundary pack')
-#endif
-
-#ifdef PPLES_GPU
 !$acc host_data use_device(atm_wuv_send_down, atm_wuv_recv_up)
 call mpi_sendrecv(atm_wuv_send_down(1,1), nx*ny, mpi_rprec, down, 991,        &
                   atm_wuv_recv_up(1,1), nx*ny, mpi_rprec, up, 991,            &
                   comm, status, ierr)
 !$acc end host_data
-#else
-call mpi_sendrecv(atm_wuv_send_down(1,1), nx*ny, mpi_rprec, down, 991,        &
-                  atm_wuv_recv_up(1,1), nx*ny, mpi_rprec, up, 991,            &
-                  comm, status, ierr)
-#endif
 if (ierr /= 0) stop 'ATM direct w device halo exchange failed'
 
-#ifdef PPLES_GPU
 ! Blocking GPU-aware MPI sendrecv completes the device receive buffer before the
 ! following ATM sampling kernels are launched. Avoid a global OpenACC wait here:
 ! it can drain unrelated deferred LES work into the direct-w timer.
-#else
-call atm_cuda_check('ATM direct w boundary exchange')
-#endif
-#else
-#ifdef PPLES_GPU
-!$acc wait
-#else
-call atm_cuda_check('ATM direct w no mpi')
-#endif
 #endif
 
 end subroutine atm_prepare_direct_w
 #endif
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_lesgo_apply_force_gpu()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-integer :: c, m
-integer :: i, j, k
-#ifdef PPLES_GPU
-integer :: totalUV, totalW
-#endif
-
-#ifdef PPLES_GPU
-if (atm_force_shadows_enabled() .and. atm_apply_cuda_enabled() .and.          &
-    atm_shadow_ready) then
-    totalUV = atm_shadow_offsetUV(numberOfTurbines+1)
-    totalW = atm_shadow_offsetW(numberOfTurbines+1)
-
-    if (totalUV > 0) then
-        !$cuf kernel do(1) <<<*,*>>>
-        do c = 1, totalUV
-            i = atm_shadow_ijkUV_d(1,c)
-            j = atm_shadow_ijkUV_d(2,c)
-            k = atm_shadow_ijkUV_d(3,c)
-            fxa(i,j,k) = fxa(i,j,k) + atm_shadow_forceUV_d(1,c)
-            fya(i,j,k) = fya(i,j,k) + atm_shadow_forceUV_d(2,c)
-        end do
-    end if
-
-    if (totalW > 0) then
-        !$cuf kernel do(1) <<<*,*>>>
-        do c = 1, totalW
-            i = atm_shadow_ijkW_d(1,c)
-            j = atm_shadow_ijkW_d(2,c)
-            k = atm_shadow_ijkW_d(3,c)
-            fza(i,j,k) = fza(i,j,k) + atm_shadow_forceW_d(3,c)
-        end do
-    end if
-
-    call atm_cuda_check('apply ATM force shadows')
-    return
-end if
-#endif
-
-end subroutine atm_lesgo_apply_force_gpu
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_lesgo_convolute_force_gpu_atpoint(i)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-integer, intent(in) :: i
-
-integer :: j, m, n, q, c, mmend, nnend, qqend, cUV, cW, has_nacelle
-real(rprec) :: projectradius, projectradius_sq, epsilon, epsilon_sq
-real(rprec) :: nacelle1, nacelle2, nacelle3, nacelle_epsilon
-real(rprec) :: nacelle_epsilon_sq, nacelle_kernel_norm
-real(rprec) :: nacelleForce1, nacelleForce2, nacelleForce3
-real(rprec) :: const1, const2, const3
-real(rprec) :: a1, a2, a3, b1, b2, b3, d1, d2, d3, dist_sq, kernel
-real(rprec) :: f1, f2, f3
-#ifdef PPLES_GPU
-integer :: offUV, offW
-#endif
-
-#ifdef PPLES_GPU
-if (atm_force_shadows_enabled() .and. atm_convolve_cuda_enabled() .and.       &
-    atm_shadow_ready .and. atm_blade_mirror_ready) then
-    j = turbineArray(i) % turbineTypeID
-    mmend = turbineModel(j) % numBl
-    nnend = turbineArray(i) % numAnnulusSections
-    qqend = turbineArray(i) % numBladePoints
-    cUV = forceFieldUV(i) % c
-    cW = forceFieldW(i) % c
-    offUV = atm_shadow_offsetUV(i)
-    offW = atm_shadow_offsetW(i)
-
-    projectradius = turbineArray(i) % projectionRadius
-    projectradius_sq = projectradius * projectradius
-    epsilon = turbineArray(i) % epsilon
-    epsilon_sq = epsilon * epsilon
-    const1 = 1._rprec / ((epsilon * epsilon_sq) * (pi * sqrt(pi)))
-    const2 = z_i / (u_star * u_star)
-    const3 = const1 * const2
-    if (turbineArray(i) % nacelle .and. turbineArray(i) % nacelleEpsilon > 0._rprec) then
-        has_nacelle = 1
-    else
-        has_nacelle = 0
-    endif
-    nacelle1 = turbineArray(i) % nacelleLocation(1)
-    nacelle2 = turbineArray(i) % nacelleLocation(2)
-    nacelle3 = turbineArray(i) % nacelleLocation(3)
-    nacelleForce1 = turbineArray(i) % nacelleForce(1)
-    nacelleForce2 = turbineArray(i) % nacelleForce(2)
-    nacelleForce3 = turbineArray(i) % nacelleForce(3)
-    nacelle_epsilon = turbineArray(i) % nacelleEpsilon
-    nacelle_epsilon_sq = nacelle_epsilon * nacelle_epsilon
-    nacelle_kernel_norm = 1._rprec /                                         &
-        ((nacelle_epsilon * nacelle_epsilon_sq) * (pi * sqrt(pi)))
-
-    if (cUV > 0) then
-        !$cuf kernel do(1) <<<*,*>>>
-        do c = 1, cUV
-            a1 = atm_shadow_locUV_d(1,offUV+c)
-            a2 = atm_shadow_locUV_d(2,offUV+c)
-            a3 = atm_shadow_locUV_d(3,offUV+c)
-            f1 = 0._rprec
-            f2 = 0._rprec
-
-            do m = 1, mmend
-            do n = 1, nnend
-            do q = 1, qqend
-                b1 = atm_bladePoints_d(m,n,q,1,i)
-                b2 = atm_bladePoints_d(m,n,q,2,i)
-                b3 = atm_bladePoints_d(m,n,q,3,i)
-                d1 = a1 - b1
-                d2 = a2 - b2
-                d3 = a3 - b3
-                dist_sq = d1*d1 + d2*d2 + d3*d3
-
-                if (dist_sq <= projectradius_sq) then
-                    kernel = exp(-dist_sq / epsilon_sq)
-                    f1 = f1 + atm_bladeForces_d(m,n,q,1,i) * kernel
-                    f2 = f2 + atm_bladeForces_d(m,n,q,2,i) * kernel
-                end if
-            end do
-            end do
-            end do
-
-            f1 = f1 * const3
-            f2 = f2 * const3
-
-            if (has_nacelle == 1) then
-                d1 = a1 - nacelle1
-                d2 = a2 - nacelle2
-                d3 = a3 - nacelle3
-                dist_sq = d1*d1 + d2*d2 + d3*d3
-                kernel = exp(-dist_sq / nacelle_epsilon_sq) * nacelle_kernel_norm
-                f1 = f1 + nacelleForce1 * kernel * const2
-                f2 = f2 + nacelleForce2 * kernel * const2
-            endif
-
-            atm_shadow_forceUV_d(1,offUV+c) = f1
-            atm_shadow_forceUV_d(2,offUV+c) = f2
-            atm_shadow_forceUV_d(3,offUV+c) = 0._rprec
-        end do
-    end if
-
-    if (cW > 0) then
-        !$cuf kernel do(1) <<<*,*>>>
-        do c = 1, cW
-            a1 = atm_shadow_locW_d(1,offW+c)
-            a2 = atm_shadow_locW_d(2,offW+c)
-            a3 = atm_shadow_locW_d(3,offW+c)
-            f3 = 0._rprec
-
-            do m = 1, mmend
-            do n = 1, nnend
-            do q = 1, qqend
-                b1 = atm_bladePoints_d(m,n,q,1,i)
-                b2 = atm_bladePoints_d(m,n,q,2,i)
-                b3 = atm_bladePoints_d(m,n,q,3,i)
-                d1 = a1 - b1
-                d2 = a2 - b2
-                d3 = a3 - b3
-                dist_sq = d1*d1 + d2*d2 + d3*d3
-
-                if (dist_sq <= projectradius_sq) then
-                    kernel = exp(-dist_sq / epsilon_sq)
-                    f3 = f3 + atm_bladeForces_d(m,n,q,3,i) * kernel
-                end if
-            end do
-            end do
-            end do
-
-            f3 = f3 * const3
-
-            if (has_nacelle == 1) then
-                d1 = a1 - nacelle1
-                d2 = a2 - nacelle2
-                d3 = a3 - nacelle3
-                dist_sq = d1*d1 + d2*d2 + d3*d3
-                if (dist_sq <= projectradius_sq) then
-                    kernel = exp(-dist_sq / nacelle_epsilon_sq) * nacelle_kernel_norm
-                    f3 = f3 + nacelleForce3 * kernel * const2
-                endif
-            endif
-
-            atm_shadow_forceW_d(1,offW+c) = 0._rprec
-            atm_shadow_forceW_d(2,offW+c) = 0._rprec
-            atm_shadow_forceW_d(3,offW+c) = f3
-        end do
-    end if
-
-    call atm_cuda_check('ATM force shadow convolution')
-    return
-end if
-#endif
-
-end subroutine atm_lesgo_convolute_force_gpu_atpoint
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_lesgo_force_gpu_atpoint(i)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Batched GPU equivalent of the active atPoint atm_computeBladeForce path.
-implicit none
-
-integer, intent(in) :: i
-
-
-end subroutine atm_lesgo_force_gpu_atpoint
-
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine atm_lesgo_initialize ()
@@ -609,15 +270,48 @@ implicit none
 ! Counter to establish number of points which are influenced by body forces
 integer ::  m
 
-! Allocate space for the w_uv variable
+! CPU sampling always uses host w_uv. The GPU build allocates it later only
+! when Spalart or nacelle compatibility requires host interpolation.
+#ifndef PPLES_GPU
 allocate(w_uv(nx,ny,lbz:nz))
 w_uv = 0._rprec
-#ifdef PPLES_GPU
-!$acc update device(w_uv)
 #endif
 
 atm_last_checkpoint_step = -1
+atm_force_state_valid = .false.
 call atm_initialize(jt_total, total_time) ! Initialize the ATM state
+
+#ifdef PPLES_GPU
+! The optimized atPoint path remains fully device-resident. Spalart sampling
+! and nacelle interpolation are established host algorithms, so GPU builds
+! activate an explicit velocity bridge only when either feature is requested.
+atm_atpoint_present = .false.
+atm_spalart_present = .false.
+atm_host_velocity_bridge_required = .false.
+do m = 1, numberOfTurbines
+    select case (trim(turbineArray(m) % sampling))
+    case ('atPoint')
+        atm_atpoint_present = .true.
+    case ('Spalart')
+        atm_spalart_present = .true.
+        atm_host_velocity_bridge_required = .true.
+    case default
+        if (coord == 0) then
+            write(*,'(1a,i0,2a)') 'Unsupported ATM sampling mode for turbine ', &
+                m, ': ', trim(turbineArray(m) % sampling)
+        endif
+        error stop 'ATM sampling must be atPoint or Spalart'
+    end select
+    if (turbineArray(m) % nacelle) atm_host_velocity_bridge_required = .true.
+enddo
+if (coord == 0 .and. atm_host_velocity_bridge_required) then
+    write(*,'(1a)') 'ATM GPU: enabling legacy host velocity compatibility bridge'
+endif
+if (atm_host_velocity_bridge_required) then
+    allocate(w_uv(nx,ny,lbz:nz))
+    w_uv = 0._rprec
+endif
+#endif
 
 ! Allocate the body force variables. It is an array with one per turbine.
 allocate(forceFieldUV(numberOfTurbines))
@@ -626,11 +320,6 @@ allocate(forceFieldW(numberOfTurbines))
     do m=1, numberOfTurbines
         call atm_lesgo_findCells(m)
     enddo
-
-    #ifdef PPLES_GPU
-    call atm_lesgo_build_force_shadows()
-    call atm_lesgo_build_blade_mirrors()
-    #endif
 
     #ifdef PPMPI
         call mpi_barrier( comm, ierr )
@@ -687,11 +376,6 @@ call atm_structure_timing_report()
 ! callers that bypass the normal output driver; duplicate writes are skipped.
 call atm_lesgo_checkpoint(jt_total, total_time)
 
-#ifdef PPLES_GPU
-call atm_lesgo_destroy_force_shadows()
-call atm_lesgo_destroy_blade_mirrors()
-#endif
-
 ! Write if on main node
 if (coord == 0) then
     write(*,*) 'Finalizing ATM...'
@@ -708,11 +392,11 @@ subroutine atm_lesgo_report_timing()
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 implicit none
 
-real(rprec) :: vals(11), maxvals(11), measured_total
+real(rprec) :: vals(10), maxvals(10), measured_total
 
 vals = (/ atm_time_interp_w, atm_time_update, atm_time_reset, atm_time_sample, &
           atm_time_force, atm_time_gather, atm_time_convolve, atm_time_clcorr, &
-          atm_time_apply, atm_time_output, atm_time_barrier /)
+          atm_time_apply, atm_time_output /)
 
 #ifdef PPMPI
 call mpi_allreduce(vals, maxvals, size(vals), mpi_rprec, mpi_max, comm, ierr)
@@ -736,7 +420,6 @@ if (coord == 0) then
     write(*,'(1a,E15.7)') '  tip correction: ', maxvals(8)
     write(*,'(1a,E15.7)') '  apply force to grid: ', maxvals(9)
     write(*,'(1a,E15.7)') '  ATM output: ', maxvals(10)
-    write(*,'(1a,E15.7)') '  ATM output barrier: ', maxvals(11)
     write(*,'(1a,E15.7)') '  ATM measured subtotal: ', measured_total
     write(*,*) '==================================================='
 end if
@@ -744,196 +427,6 @@ end if
 
 end subroutine atm_lesgo_report_timing
 
-
-#ifdef PPLES_GPU
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_lesgo_build_force_shadows()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Flatten the per-turbine force-field metadata into persistent device-resident
-! arrays. The timestep convolution/apply kernels then avoid dereferencing
-! managed derived-type components for the grid scatter path.
-implicit none
-
-integer :: m, n, off, totalUV, totalW
-
-if (atm_shadow_ready) return
-
-allocate(atm_shadow_offsetUV(numberOfTurbines+1))
-allocate(atm_shadow_offsetW(numberOfTurbines+1))
-atm_shadow_offsetUV(1) = 0
-atm_shadow_offsetW(1) = 0
-
-do m = 1, numberOfTurbines
-    atm_shadow_offsetUV(m+1) = atm_shadow_offsetUV(m) + forceFieldUV(m) % c
-    atm_shadow_offsetW(m+1) = atm_shadow_offsetW(m) + forceFieldW(m) % c
-end do
-
-totalUV = atm_shadow_offsetUV(numberOfTurbines+1)
-totalW = atm_shadow_offsetW(numberOfTurbines+1)
-
-allocate(atm_shadow_ijkUV(3,max(totalUV,1)))
-allocate(atm_shadow_ijkW(3,max(totalW,1)))
-allocate(atm_shadow_locUV(3,max(totalUV,1)))
-allocate(atm_shadow_locW(3,max(totalW,1)))
-allocate(atm_shadow_forceUV(3,max(totalUV,1)))
-allocate(atm_shadow_forceW(3,max(totalW,1)))
-atm_shadow_forceUV = 0._rprec
-atm_shadow_forceW = 0._rprec
-
-do m = 1, numberOfTurbines
-    n = forceFieldUV(m) % c
-    if (n > 0) then
-        off = atm_shadow_offsetUV(m)
-        atm_shadow_ijkUV(:,off+1:off+n) = forceFieldUV(m) % ijk(:,1:n)
-        atm_shadow_locUV(:,off+1:off+n) = forceFieldUV(m) % location(:,1:n)
-    end if
-
-    n = forceFieldW(m) % c
-    if (n > 0) then
-        off = atm_shadow_offsetW(m)
-        atm_shadow_ijkW(:,off+1:off+n) = forceFieldW(m) % ijk(:,1:n)
-        atm_shadow_locW(:,off+1:off+n) = forceFieldW(m) % location(:,1:n)
-    end if
-end do
-
-allocate(atm_shadow_offsetUV_d(size(atm_shadow_offsetUV)))
-allocate(atm_shadow_offsetW_d(size(atm_shadow_offsetW)))
-allocate(atm_shadow_ijkUV_d(3,max(totalUV,1)))
-allocate(atm_shadow_ijkW_d(3,max(totalW,1)))
-allocate(atm_shadow_locUV_d(3,max(totalUV,1)))
-allocate(atm_shadow_locW_d(3,max(totalW,1)))
-allocate(atm_shadow_forceUV_d(3,max(totalUV,1)))
-allocate(atm_shadow_forceW_d(3,max(totalW,1)))
-
-atm_shadow_offsetUV_d = atm_shadow_offsetUV
-atm_shadow_offsetW_d = atm_shadow_offsetW
-atm_shadow_ijkUV_d = atm_shadow_ijkUV
-atm_shadow_ijkW_d = atm_shadow_ijkW
-atm_shadow_locUV_d = atm_shadow_locUV
-atm_shadow_locW_d = atm_shadow_locW
-atm_shadow_forceUV_d = 0._rprec
-atm_shadow_forceW_d = 0._rprec
-
-atm_shadow_ready = .true.
-if (coord == 0) then
-    write(*,'(a,2(a,i0))') 'ATM force shadows active:',                       &
-        ' uv_cells=', totalUV, ' w_cells=', totalW
-    flush(6)
-end if
-
-end subroutine atm_lesgo_build_force_shadows
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_lesgo_destroy_force_shadows()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-if (.not. atm_shadow_ready) return
-
-deallocate(atm_shadow_forceUV_d, atm_shadow_forceW_d)
-deallocate(atm_shadow_locUV_d, atm_shadow_locW_d)
-deallocate(atm_shadow_ijkUV_d, atm_shadow_ijkW_d)
-deallocate(atm_shadow_offsetUV_d, atm_shadow_offsetW_d)
-
-deallocate(atm_shadow_forceUV, atm_shadow_forceW)
-deallocate(atm_shadow_locUV, atm_shadow_locW)
-deallocate(atm_shadow_ijkUV, atm_shadow_ijkW)
-deallocate(atm_shadow_offsetUV, atm_shadow_offsetW)
-atm_shadow_ready = .false.
-
-end subroutine atm_lesgo_destroy_force_shadows
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_lesgo_build_blade_mirrors()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-integer :: i, j
-
-if (atm_blade_mirror_ready) return
-
-atm_max_m = 0
-atm_max_n = 0
-atm_max_q = 0
-do i = 1, numberOfTurbines
-    j = turbineArray(i) % turbineTypeID
-    atm_max_m = max(atm_max_m, turbineModel(j) % numBl)
-    atm_max_n = max(atm_max_n, turbineArray(i) % numAnnulusSections)
-    atm_max_q = max(atm_max_q, turbineArray(i) % numBladePoints)
-end do
-
-allocate(atm_bladePoints_d(max(atm_max_m,1), max(atm_max_n,1),                &
-    max(atm_max_q,1), 3, max(numberOfTurbines,1)))
-allocate(atm_bladeForces_d(max(atm_max_m,1), max(atm_max_n,1),                &
-    max(atm_max_q,1), 3, max(numberOfTurbines,1)))
-atm_bladePoints_d = 0._rprec
-atm_bladeForces_d = 0._rprec
-
-do i = 1, numberOfTurbines
-    call atm_sync_blade_points_to_device(i)
-    call atm_sync_blade_forces_to_device(i)
-end do
-
-atm_blade_mirror_ready = .true.
-if (coord == 0) then
-    write(*,'(a,3(a,i0))') 'ATM blade mirrors active:',                       &
-        ' max_blades=', atm_max_m, ' max_sections=', atm_max_n,                &
-        ' max_points=', atm_max_q
-    flush(6)
-end if
-
-end subroutine atm_lesgo_build_blade_mirrors
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_lesgo_destroy_blade_mirrors()
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-if (.not. atm_blade_mirror_ready) return
-deallocate(atm_bladeForces_d, atm_bladePoints_d)
-atm_blade_mirror_ready = .false.
-atm_max_m = 0
-atm_max_n = 0
-atm_max_q = 0
-
-end subroutine atm_lesgo_destroy_blade_mirrors
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_sync_blade_points_to_device(i)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-integer, intent(in) :: i
-integer :: j, mmend, nnend, qqend
-
-if (.not. allocated(atm_bladePoints_d)) return
-j = turbineArray(i) % turbineTypeID
-mmend = turbineModel(j) % numBl
-nnend = turbineArray(i) % numAnnulusSections
-qqend = turbineArray(i) % numBladePoints
-atm_bladePoints_d(1:mmend,1:nnend,1:qqend,1:3,i) =                           &
-    turbineArray(i) % bladePoints(1:mmend,1:nnend,1:qqend,1:3)
-
-end subroutine atm_sync_blade_points_to_device
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_sync_blade_forces_to_device(i)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-implicit none
-
-integer, intent(in) :: i
-integer :: j, mmend, nnend, qqend
-
-if (.not. allocated(atm_bladeForces_d)) return
-j = turbineArray(i) % turbineTypeID
-mmend = turbineModel(j) % numBl
-nnend = turbineArray(i) % numAnnulusSections
-qqend = turbineArray(i) % numBladePoints
-atm_bladeForces_d(1:mmend,1:nnend,1:qqend,1:3,i) =                            &
-    turbineArray(i) % bladeForces(1:mmend,1:nnend,1:qqend,1:3)
-
-end subroutine atm_sync_blade_forces_to_device
-#endif
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine atm_lesgo_findCells (m)
@@ -1139,19 +632,17 @@ subroutine atm_lesgo_forcing (phase)
 ! This subroutines calls the update function from the ATM Library
 ! and calculates the body forces needed in the domain
 !
-! Optional phase split (explicit-residency overlap): phase=1 runs the w_uv
-! interpolation, blade update, velocity sampling, host blade-force model and
-! MPI gather, then returns; phase=2 skips those and runs the convolution,
-! Cl correction, apply and output. Called without phase, everything runs in
-! order exactly as before. The split lets main.f90 run phase 1's ~30 ms of
-! host work while the SGS/convection kernels are still queued on the GPU.
+! Optional phase split (explicit-residency overlap): phase=1 prepares required
+! velocity data, updates blades, samples velocity, evaluates the host airfoil
+! model, and gathers; phase=2 deposits force, applies correction, and writes
+! output. Called without phase, both portions run in order. The split lets
+! phase 1 host work overlap queued SGS/convection kernels.
 implicit none
 
 integer, intent(in), optional :: phase
 integer :: ph
 integer :: i
-logical :: atm_output_step
-logical :: atm_lb_active = .false.
+logical :: atm_force_update_step, atm_output_step
 
 !~ real(rprec) :: integrateNacelleForce, totForce
 !~ integer :: c
@@ -1160,23 +651,36 @@ logical :: atm_lb_active = .false.
 
 ph = 0
 if (present(phase)) ph = phase
+! A fresh process has no cached grid force, including after a restart. Force
+! one complete update before honoring updateInterval so the first continued
+! timestep cannot apply an uninitialized/zero turbine field.
+atm_force_update_step = mod(jt_total-1, updateInterval) == 0 .or.              &
+                        .not. atm_force_state_valid
 
 if (ph /= 2) then
 
 atm_forcing_calls = atm_forcing_calls + 1
 
-!~ call myClock % start()
-! Get the velocity from w onto the uv grid
-call atm_clock_interp_w%start()
-! atm_prepare_direct_w has PPLES_GPU paths and allocates/fills the direct-w
-! halo used by the sampling kernels, so the runtime gate is sufficient here.
-if (atm_direct_w_enabled()) then
-    call atm_prepare_direct_w()
-else
+if (atm_force_update_step) then
+    ! Prepare velocities only when the turbine force model will consume them.
+    call atm_clock_interp_w%start()
+#ifdef PPLES_GPU
+    ! The GPU sampler reads w directly and only prepares a top-slab halo when
+    ! MPI decomposition requires one. Spalart/nacelle compatibility is the
+    ! only GPU configuration that refreshes host velocities and constructs
+    ! host w_uv.
+    if (atm_atpoint_present) call atm_prepare_direct_w()
+    if (atm_host_velocity_bridge_required) then
+        !$acc wait(1)
+        !$acc update self(u, v, w)
+        call atm_interp_w_to_uv()
+    endif
+#else
     call atm_interp_w_to_uv()
-end if
-call atm_clock_interp_w%stop()
-atm_time_interp_w = atm_time_interp_w + atm_clock_interp_w%time
+#endif
+    call atm_clock_interp_w%stop()
+    atm_time_interp_w = atm_time_interp_w + atm_clock_interp_w%time
+endif
 
 
 ! Update the blade positions based on the time-step
@@ -1192,11 +696,6 @@ do i = 1, numberOfTurbines
         if (turbineArray(i) % operate) then
             ! Time is dimensionalize using velocity and length scale
             call atm_update(i, dt*z_i/u_star, total_time*z_i/u_star)
-            #ifdef PPLES_GPU
-            if (atm_force_shadows_enabled() .and. atm_blade_mirror_ready) then
-                call atm_sync_blade_points_to_device(i)
-            endif
-            #endif
         endif
     enddo
 call atm_clock_update%stop()
@@ -1207,8 +706,8 @@ atm_time_update = atm_time_update + atm_clock_update%time
 
 end if   ! ph /= 2  (head of phase 1)
 
-! Only calculate new forces if interval is correct
-if ( mod(jt_total-1, updateInterval) == 0) then
+! Only calculate new forces if interval is correct.
+if (atm_force_update_step) then
 
     if (ph /= 2) then
 
@@ -1216,11 +715,13 @@ if ( mod(jt_total-1, updateInterval) == 0) then
     ! Batched device sampling for all atPoint turbines: one kernel + one D2H
     ! per force step instead of a data region + kernel + sync per turbine.
     ! Reads only bladePoints (already rotated by atm_update above) and the
-    ! device u/v/w_uv, so it is safe to run before the reset loop.
-    call atm_clock_sample%start()
-    call atm_batch_sample_velocity_gpu()
-    call atm_clock_sample%stop()
-    atm_time_sample = atm_time_sample + atm_clock_sample%time
+    ! device u/v/w, so it is safe to run before the reset loop.
+    if (atm_atpoint_present) then
+        call atm_clock_sample%start()
+        call atm_batch_sample_velocity_gpu()
+        call atm_clock_sample%stop()
+        atm_time_sample = atm_time_sample + atm_clock_sample%time
+    endif
 #endif
 
     ! Establish all turbine properties as zero
@@ -1251,18 +752,12 @@ if ( mod(jt_total-1, updateInterval) == 0) then
         turbineArray(i) % tangentialForce = 0._rprec
         turbineArray(i) % pitchingMoment = 0._rprec
 
-        ! If statement is for running code only if grid points affected are in
-        ! this processor. If not, no code is executed at all.
-!~         if (forceFieldUV(i) % c .gt. 0 .or. forceFieldW(i) % c .gt. 0) then
-        if (turbineArray(i) % operate) then
-            ! The applied components are overwritten by the convolution step.
-            ! Avoid clearing the full force-field arrays here; they are large
-            ! enough that this host-side touch is visible in managed-memory runs.
-        endif
+        ! Applied grid forces are overwritten by convolution below; clearing
+        ! the large per-cell host arrays here would add avoidable memory traffic.
         call atm_clock_reset%stop()
         atm_time_reset = atm_time_reset + atm_clock_reset%time
 
-        if (.not. atm_lb_active .and. turbineArray(i) % operate) then
+        if (turbineArray(i) % operate) then
             ! Calculate forces for all turbines
             call atm_clock_force%start()
             call atm_lesgo_force(i)
@@ -1272,12 +767,6 @@ if ( mod(jt_total-1, updateInterval) == 0) then
         endif
 
     enddo
-    if (atm_lb_active) then
-        call atm_clock_force%start()
-        call atm_point_owner_lb_force()
-        call atm_clock_force%stop()
-        atm_time_force = atm_time_force + atm_clock_force%time
-    endif
 !~     call myClock % stop()
 !~     write(*,*) 'coord ', coord, '  Forces ', myClock % time
 
@@ -1289,15 +778,7 @@ if ( mod(jt_total-1, updateInterval) == 0) then
 !~     call mpi_barrier( MPI_COMM_WORLD, ierr )
     if (nproc > 1) then
         call atm_clock_gather%start()
-        if (atm_lb_active) then
-            if (atm_point_owner_targeted_supported()) then
-                call atm_point_owner_lb_gather_targeted()
-            else
-                call atm_point_owner_lb_gather()
-            endif
-        else
-            call atm_lesgo_mpi_gather()
-        endif
+        call atm_lesgo_mpi_gather()
         call atm_clock_gather%stop()
         atm_time_gather = atm_time_gather + atm_clock_gather%time
     endif
@@ -1322,30 +803,7 @@ if ( mod(jt_total-1, updateInterval) == 0) then
 
     if (ph == 1) return
 
-!~  call myClock % start()
-    #ifdef PPLES_GPU
-    if (atm_force_shadows_enabled() .and. atm_blade_mirror_ready .and.         &
-        (atm_lb_active .or. .not. atm_packed_gather_enabled() .or.             &
-         .not. atm_gpu_packed_gather_enabled() .or.                            &
-         .not. atm_slim_gather_enabled() .or. atm_full_gather_required())) then
-        do i = 1, numberOfTurbines
-            if (turbineArray(i) % operate) then
-                call atm_sync_blade_forces_to_device(i)
-            endif
-        enddo
-    endif
-    #endif
-
 #ifdef PPLES_GPU
-    ! Batched convolution for all atPoint turbines: two kernels (UV + W grid)
-    ! over the concatenated force-field cell lists, scattering straight into
-    ! the device fxa/fya/fza. Replaces 60 per-turbine data regions + kernels.
-    ! Non-atPoint (Spalart) turbines keep the per-turbine path below.
-    call atm_clock_convolve%start()
-    call atm_batch_convolute_force_gpu()
-    call atm_clock_convolve%stop()
-    atm_time_convolve = atm_time_convolve + atm_clock_convolve%time
-
     ! Batched OpenACC Cl/tip correction updates the same induced-velocity
     ! state used by both rigid and structural turbine consumers.
     call atm_clock_clcorr%start()
@@ -1420,6 +878,20 @@ endif
 ! phase 2 so they run exactly once per step).
 if (ph == 1) return
 
+#ifdef PPLES_GPU
+! fxa/fya/fza are reset every timestep. Re-deposit the latest atPoint force
+! field on non-update timesteps as well, matching the CPU path's held-force
+! behavior when updateInterval > 1.
+if (atm_atpoint_present) then
+    call atm_clock_convolve%start()
+    call atm_batch_convolute_force_gpu(atm_force_update_step)
+    call atm_clock_convolve%stop()
+    atm_time_convolve = atm_time_convolve + atm_clock_convolve%time
+endif
+#endif
+
+if (atm_force_update_step) atm_force_state_valid = .true.
+
     ! This will apply body forces onto the flow field if there are forces within
     ! this domain
 !~  call myClock % start()
@@ -1460,7 +932,10 @@ if (ph == 1) return
 
 !enddo
 
-atm_output_step = outputInterval > 0 .and. mod(jt_total-1, outputInterval) == 0
+atm_output_step = .false.
+if (outputInterval > 0) then
+    atm_output_step = mod(jt_total-1, outputInterval) == 0
+endif
 if (atm_output_step) then
     do i=1, numberOfTurbines
         if (coord == turbineArray(i) % master) then
@@ -1476,17 +951,6 @@ if (atm_output_step) then
     enddo
 endif
 
-! Make sure all processors stop wait for the output to be completed
-#ifdef PPMPI
-if (atm_output_step .and. atm_output_barrier_enabled()) then
-    call atm_clock_barrier%start()
-    call mpi_barrier( comm, ierr )
-    call atm_clock_barrier%stop()
-    atm_time_barrier = atm_time_barrier + atm_clock_barrier%time
-endif
-#endif
-
-
 end subroutine atm_lesgo_forcing
 
 
@@ -1496,184 +960,13 @@ end subroutine atm_lesgo_forcing
 
 subroutine atm_lesgo_mpi_gather()
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! This subroutine will gather the necessary outputs from the turbine models
-! so all processors have acces to it. This is done by means of all reduce SUM
+! Gather all host ATM state with one packed reduction per operating turbine.
 implicit none
-integer :: i
-real(rprec) :: torqueRotor, thrust, VelNacelle_sampled, VelNacelle_corrected
-real(rprec), dimension(3) :: nacelleForce
-
-! Pointer for MPI communicator
-integer, pointer :: TURBINE_COMMUNICATOR
 
 if (nproc <= 1) return
-
-! Use the packed gather - one allreduce per turbine instead of many per-array
-! reductions.  Structure-on runs add Cm/pitchingMoment to the packed payload.
+! Structure-on runs add Cm/pitchingMoment to the same packed payload.
 call atm_lesgo_mpi_gather_packed()
-return
 
-do i=1,numberOfTurbines
-
-    ! Only do MPI sums if processors are operating in this turbine
-    if (turbineArray(i) % operate) then
-
-        TURBINE_COMMUNICATOR => turbineArray(i) % TURBINE_COMM_WORLD
-
-        turbineArray(i) % bladeVectorDummy = turbineArray(i) % bladeForces
-        ! Sync all the blade forces
-        call mpi_allreduce(turbineArray(i) % bladeVectorDummy,                 &
-                           turbineArray(i) % bladeForces,                      &
-                           size(turbineArray(i) % bladeVectorDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync bladeAlignedVectors
-        turbineArray(i) % bladeVectorDummy =                                   &
-                              turbineArray(i) % bladeAlignedVectors(:,:,:,1,:)
-        call mpi_allreduce(turbineArray(i) % bladeVectorDummy,                 &
-                           turbineArray(i) % bladeAlignedVectors(:,:,:,1,:),   &
-                           size(turbineArray(i) % bladeVectorDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-        turbineArray(i) % bladeVectorDummy =                                   &
-                              turbineArray(i) % bladeAlignedVectors(:,:,:,2,:)
-        call mpi_allreduce(turbineArray(i) % bladeVectorDummy,                 &
-                           turbineArray(i) % bladeAlignedVectors(:,:,:,2,:),   &
-                           size(turbineArray(i) % bladeVectorDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-        turbineArray(i) % bladeVectorDummy =                                   &
-                              turbineArray(i) % bladeAlignedVectors(:,:,:,3,:)
-        call mpi_allreduce(turbineArray(i) % bladeVectorDummy,                 &
-                           turbineArray(i) % bladeAlignedVectors(:,:,:,3,:),   &
-                           size(turbineArray(i) % bladeVectorDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-
-        ! Sync alpha
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) % alpha
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % alpha,                            &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-        ! Sync lift
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) % lift
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % lift,                             &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-        ! Sync drag
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) % drag
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % drag,                             &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-        ! Sync Cl
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) % Cl
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % Cl,                               &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync Cd
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) % Cd
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % Cd,                               &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        if (atm_structure_enabled()) then
-            ! Sync Cm and pitching moment for the structural torsion solve.
-            turbineArray(i) % bladeScalarDummy = turbineArray(i) % Cm
-            call mpi_allreduce(turbineArray(i) % bladeScalarDummy,             &
-                               turbineArray(i) % Cm,                           &
-                               size(turbineArray(i) % bladeScalarDummy),       &
-                               mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-            turbineArray(i) % bladeScalarDummy =                               &
-                turbineArray(i) % pitchingMoment
-            call mpi_allreduce(turbineArray(i) % bladeScalarDummy,             &
-                               turbineArray(i) % pitchingMoment,               &
-                               size(turbineArray(i) % bladeScalarDummy),       &
-                               mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-        endif
-
-        ! Sync Vmag
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) % Vmag
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % Vmag,                             &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync axialForce
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) % axialForce
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % axialForce,                       &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync tangentialForce
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) % tangentialForce
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % tangentialForce,                                 &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync wind Vectors (Vaxial, Vtangential, Vradial)
-        turbineArray(i) % bladeVectorDummy = turbineArray(i) %                 &
-                                             windVectors(:,:,:,1:3)
-        call mpi_allreduce(turbineArray(i) % bladeVectorDummy,                 &
-                           turbineArray(i) % windVectors(:,:,:,1:3),                                 &
-                           size(turbineArray(i) % bladeVectorDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync induction factor
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) %                 &
-                                             induction_a(:,:,:)
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % induction_a(:,:,:),                                 &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync u infinity
-        turbineArray(i) % bladeScalarDummy = turbineArray(i) %                 &
-                                             u_infinity(:,:,:)
-        call mpi_allreduce(turbineArray(i) % bladeScalarDummy,                 &
-                           turbineArray(i) % u_infinity(:,:,:),                                 &
-                           size(turbineArray(i) % bladeScalarDummy),           &
-                           mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Store the torqueRotor.
-        ! Needs to be a different variable in order to do MPI Sum
-        torqueRotor=turbineArray(i) % torqueRotor
-        thrust=turbineArray(i) % thrust
-        nacelleForce=turbineArray(i) % nacelleForce
-        VelNacelle_sampled=turbineArray(i) % VelNacelle_sampled
-        VelNacelle_corrected=turbineArray(i) % VelNacelle_corrected
-
-        ! Sum all the individual torqueRotor from different blade points
-        call mpi_allreduce( torqueRotor, turbineArray(i) % torqueRotor,        &
-                           1, mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sum all the individual thrust from different blade points
-        call mpi_allreduce( thrust, turbineArray(i) % thrust,                  &
-                           1, mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync the nacelle force
-        call mpi_allreduce( nacelleForce, turbineArray(i) % nacelleForce,      &
-                           size(turbineArray(i) % nacelleForce), mpi_rprec,    &
-                                mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync the nacelle sampled velocity
-        call mpi_allreduce( VelNacelle_sampled,                                &
-                               turbineArray(i) % VelNacelle_sampled,  1,       &
-                                mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-        ! Sync the nacelle corrected velocity
-        call mpi_allreduce( VelNacelle_corrected,                              &
-                               turbineArray(i) % VelNacelle_corrected, 1,      &
-                                mpi_rprec, mpi_sum, TURBINE_COMMUNICATOR, ierr)
-
-    endif
-enddo
 end subroutine atm_lesgo_mpi_gather
 
 subroutine atm_lesgo_mpi_gather_packed()
@@ -1947,8 +1240,6 @@ real(rprec), dimension(3) :: xyz    ! Point onto which to interpolate velocity
 real(rprec), pointer, dimension(:) :: x,y,z,zw
 #ifdef PPLES_GPU
 integer :: mm, nn, qq, p0
-real(rprec), allocatable :: velbp(:,:,:,:)  ! device-sampled velocity (3,m,n,q)
-logical,     allocatable :: inr(:,:,:)      ! in-domain flag per blade point
 #endif
 
 ! The MPI turbine communcator
@@ -2007,36 +1298,22 @@ else if (turbineArray(i) % sampling == 'atPoint') then
     ! This loop goes through all the blade points and calculates the respective
     ! body forces then imposes it onto the force field
 #ifdef PPLES_GPU
-    ! Sample velocity at the blade points on the DEVICE (reads device u,v,w_uv),
-    ! so the host no longer needs update self(u,v,w). The airfoil force model
+    ! Consume velocity sampled from resident u/v/w by the batched GPU kernel.
+    ! The airfoil force model
     ! (atm_computeBladeForce) still runs on the host using the sampled velocity.
     mm = turbineModel(j) % numBl
     nn = turbineArray(i) % numAnnulusSections
     qq = turbineArray(i) % numBladePoints
-    if (atm_batch_sampled) then
-        ! Consume this turbine's slice of the batched sample (same values, same
-        ! call order as the per-turbine path; flatten order is m-outer/q-fastest).
-        do q = 1, qq
-        do n = 1, nn
-        do m = 1, mm
-            p0 = atm_bp_off(i) + ((m-1)*nn + (n-1))*qq + q
-            if (atm_inr_all(p0) == 1)                                          &
-                call atm_computeBladeForce(i, m, n, q, atm_velbp_all(1:3,p0))
-        end do
-        end do
-        end do
-    else
-        allocate(velbp(3,mm,nn,qq), inr(mm,nn,qq))
-        call atm_sample_velocity_atpoint_gpu(i, velbp, inr)
-        do q = 1, qq
-        do n = 1, nn
-        do m = 1, mm
-            if (inr(m,n,q)) call atm_computeBladeForce(i, m, n, q, velbp(1:3,m,n,q))
-        end do
-        end do
-        end do
-        deallocate(velbp, inr)
-    end if
+    if (.not. atm_batch_sampled) stop 'ATM batched velocity sample is missing'
+    do q = 1, qq
+    do n = 1, nn
+    do m = 1, mm
+        p0 = atm_bp_off(i) + ((m-1)*nn + (n-1))*qq + q
+        if (atm_inr_all(p0) == 1)                                              &
+            call atm_computeBladeForce(i, m, n, q, atm_velbp_all(1:3,p0))
+    end do
+    end do
+    end do
 #else
     do q=1, turbineArray(i) % numBladePoints
         do n=1, turbineArray(i) % numAnnulusSections
@@ -2197,15 +1474,6 @@ real(rprec), pointer, dimension(:,:,:,:) :: bladeForces, bladePoints
 
 real(rprec), pointer, dimension(:,:) :: bodyForceUV, bodyForceW
 
-#ifdef PPLES_GPU
-! Explicit-residency: the 'atPoint' Gaussian convolution (the ATM bottleneck,
-! ~72% of ATM time) runs on the GPU. Spalart still uses the host loops below.
-if (turbineArray(i) % sampling == 'atPoint') then
-    call atm_convolute_atpoint_gpu(i)
-    return
-end if
-#endif
-
 nullify(bladeForces)
 nullify(bladePoints)
 nullify(bodyForceUV)
@@ -2229,14 +1497,18 @@ nnend=turbineArray(i) % numAnnulusSections
 qqend=turbineArray(i) % numBladePoints
 projectradius=turbineArray(i) % projectionRadius
 epsilon=turbineArray(i) % epsilon
-nacelleEpsilon = turbineArray(i) % nacelleEpsilon
 epsilon_sq = epsilon * epsilon
-nacelle_epsilon_sq = nacelleEpsilon * nacelleEpsilon
 const1 = 1._rprec / ((epsilon * epsilon_sq) * (pi * sqrt(pi)))
 const2 = z_i / (u_star*u_star)
 const3=const1*const2
-nacelle_kernel_norm = 1._rprec /                                          &
-    ((nacelleEpsilon * nacelle_epsilon_sq) * (pi * sqrt(pi)))
+nacelle_epsilon_sq = 1._rprec
+nacelle_kernel_norm = 0._rprec
+if (turbineArray(i) % nacelle) then
+    nacelleEpsilon = turbineArray(i) % nacelleEpsilon
+    nacelle_epsilon_sq = nacelleEpsilon * nacelleEpsilon
+    nacelle_kernel_norm = 1._rprec /                                        &
+        ((nacelleEpsilon * nacelle_epsilon_sq) * (pi * sqrt(pi)))
+endif
 
 ! Body Force implementation using velocity sampling at the actuator point
 if (turbineArray(i) % sampling == 'atPoint') then
@@ -2459,273 +1731,6 @@ end subroutine atm_lesgo_convolute_force
 
 #ifdef PPLES_GPU
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_convolute_atpoint_gpu(i)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! OpenACC version of the sampling=='atPoint' force convolution. Mirrors the host
-! loops in atm_lesgo_convolute_force EXACTLY (same Gaussian kernel, same const1/2/3,
-! same nacelle treatment: UV adds the nacelle term unconditionally, W gates it on
-! dist<=projectradius). The only numerical difference is the floating-point
-! summation ORDER over blade points (associativity), so results match to round-off.
-! Per-turbine flat scratch is staged to the device for the kernels. The force is
-! ALSO scattered into the device fxa/fya/fza here (the apply), so the host
-! atm_lesgo_apply_force is skipped for atPoint and the full-field update
-! device(fxa,fya,fza) in forcing.f90 is dropped. forceField%force is still
-! written back to the host (a force-integration diagnostic reads it).
-use sim_param, only : fxa, fya, fza
-implicit none
-integer, intent(in) :: i
-integer :: j, m, n, q, c, p, nbp, cUV, cW
-integer :: ii, jj, kk
-real(rprec) :: projectradius, eps, eps_sq, const1, const2, const3
-real(rprec) :: nacEps, nac_eps_sq, nac_norm
-real(rprec) :: dist, fx1, fx2, fx3, kw
-real(rprec) :: nlx, nly, nlz, nf1, nf2, nf3
-logical :: has_nac
-real(rprec), allocatable :: bp(:,:), bf(:,:), locU(:,:), locW(:,:), fU(:,:), fW(:)
-integer,     allocatable :: ijkU(:,:), ijkW(:,:)
-
-j   = turbineArray(i) % turbineTypeID
-nbp = turbineModel(j) % numBl * turbineArray(i) % numAnnulusSections                &
-                              * turbineArray(i) % numBladePoints
-cUV = forceFieldUV(i) % c
-cW  = forceFieldW(i)  % c
-
-projectradius = turbineArray(i) % projectionRadius
-eps           = turbineArray(i) % epsilon
-eps_sq        = eps * eps
-const1        = 1._rprec / ((eps * eps_sq) * (pi * sqrt(pi)))
-const2        = z_i / (u_star * u_star)
-const3        = const1 * const2
-nacEps        = turbineArray(i) % nacelleEpsilon
-nac_eps_sq    = nacEps * nacEps
-nac_norm      = 1._rprec / ((nacEps * nac_eps_sq) * (pi * sqrt(pi)))
-has_nac       = turbineArray(i) % nacelle
-nlx = 0._rprec; nly = 0._rprec; nlz = 0._rprec
-nf1 = 0._rprec; nf2 = 0._rprec; nf3 = 0._rprec
-if (has_nac) then
-    nlx = turbineArray(i) % nacelleLocation(1)
-    nly = turbineArray(i) % nacelleLocation(2)
-    nlz = turbineArray(i) % nacelleLocation(3)
-    nf1 = turbineArray(i) % nacelleForce(1)
-    nf2 = turbineArray(i) % nacelleForce(2)
-    nf3 = turbineArray(i) % nacelleForce(3)
-end if
-
-! Flatten blade points/forces to (3, nbp) on the host (nbp is small)
-allocate(bp(3,nbp), bf(3,nbp))
-p = 0
-do m = 1, turbineModel(j) % numBl
-do n = 1, turbineArray(i) % numAnnulusSections
-do q = 1, turbineArray(i) % numBladePoints
-    p = p + 1
-    bp(1,p) = turbineArray(i) % bladePoints(m,n,q,1)
-    bp(2,p) = turbineArray(i) % bladePoints(m,n,q,2)
-    bp(3,p) = turbineArray(i) % bladePoints(m,n,q,3)
-    bf(1,p) = turbineArray(i) % bladeForces(m,n,q,1)
-    bf(2,p) = turbineArray(i) % bladeForces(m,n,q,2)
-    bf(3,p) = turbineArray(i) % bladeForces(m,n,q,3)
-end do
-end do
-end do
-
-! ---- UV grid (force components 1,2) ----
-if (cUV > 0) then
-    allocate(locU(3,cUV), fU(2,cUV), ijkU(3,cUV))
-    locU(1:3,1:cUV) = forceFieldUV(i) % location(1:3,1:cUV)
-    ijkU(1:3,1:cUV) = forceFieldUV(i) % ijk(1:3,1:cUV)
-    !$acc data copyin(bp, bf, locU, ijkU) copyout(fU) present(fxa, fya)
-    !$acc parallel loop gang vector private(fx1, fx2, dist, kw, ii, jj, kk)
-    do c = 1, cUV
-        fx1 = 0._rprec
-        fx2 = 0._rprec
-        !$acc loop seq
-        do p = 1, nbp
-            dist = sqrt((locU(1,c)-bp(1,p))**2 + (locU(2,c)-bp(2,p))**2          &
-                      + (locU(3,c)-bp(3,p))**2)
-            if (dist <= projectradius) then
-                kw  = exp(-dist*dist/eps_sq)
-                fx1 = fx1 + bf(1,p) * kw
-                fx2 = fx2 + bf(2,p) * kw
-            end if
-        end do
-        fx1 = fx1 * const3
-        fx2 = fx2 * const3
-        if (has_nac) then
-            dist = sqrt((locU(1,c)-nlx)**2 + (locU(2,c)-nly)**2 + (locU(3,c)-nlz)**2)
-            kw   = exp(-dist*dist/nac_eps_sq) * nac_norm
-            fx1  = fx1 + nf1 * kw * const2
-            fx2  = fx2 + nf2 * kw * const2
-        end if
-        fU(1,c) = fx1
-        fU(2,c) = fx2
-        ! Apply on device: scatter into fxa/fya. forceFieldUV cells are distinct
-        ! within a turbine, so no atomics needed; across turbines (sequential
-        ! calls) the adds accumulate, matching the host apply loop.
-        ii = ijkU(1,c); jj = ijkU(2,c); kk = ijkU(3,c)
-        fxa(ii,jj,kk) = fxa(ii,jj,kk) + fx1
-        fya(ii,jj,kk) = fya(ii,jj,kk) + fx2
-    end do
-    !$acc end data
-    forceFieldUV(i) % force(1:2,1:cUV) = fU(1:2,1:cUV)
-    deallocate(locU, fU, ijkU)
-end if
-
-! ---- W grid (force component 3) ----
-if (cW > 0) then
-    allocate(locW(3,cW), fW(cW), ijkW(3,cW))
-    locW(1:3,1:cW) = forceFieldW(i) % location(1:3,1:cW)
-    ijkW(1:3,1:cW) = forceFieldW(i) % ijk(1:3,1:cW)
-    !$acc data copyin(bp, bf, locW, ijkW) copyout(fW) present(fza)
-    !$acc parallel loop gang vector private(fx3, dist, kw, ii, jj, kk)
-    do c = 1, cW
-        fx3 = 0._rprec
-        !$acc loop seq
-        do p = 1, nbp
-            dist = sqrt((locW(1,c)-bp(1,p))**2 + (locW(2,c)-bp(2,p))**2          &
-                      + (locW(3,c)-bp(3,p))**2)
-            if (dist <= projectradius) then
-                fx3 = fx3 + bf(3,p) * exp(-dist*dist/eps_sq)
-            end if
-        end do
-        fx3 = fx3 * const3
-        if (has_nac) then
-            dist = sqrt((locW(1,c)-nlx)**2 + (locW(2,c)-nly)**2 + (locW(3,c)-nlz)**2)
-            if (dist <= projectradius) then
-                kw  = exp(-dist*dist/nac_eps_sq) * nac_norm
-                fx3 = fx3 + nf3 * kw * const2
-            end if
-        end if
-        fW(c) = fx3
-        ! Apply on device: scatter into fza.
-        ii = ijkW(1,c); jj = ijkW(2,c); kk = ijkW(3,c)
-        fza(ii,jj,kk) = fza(ii,jj,kk) + fx3
-    end do
-    !$acc end data
-    forceFieldW(i) % force(3,1:cW) = fW(1:cW)
-    deallocate(locW, fW, ijkW)
-end if
-
-deallocate(bp, bf)
-
-end subroutine atm_convolute_atpoint_gpu
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_sample_velocity_atpoint_gpu(i, velbp, inr)
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! Device velocity sampling at the actuator points for sampling=='atPoint'.
-! Replicates the host atm_lesgo_force path EXACTLY: xyz = bladePoints/z_i, the
-! in-domain test z(1)<=xyz(3)<z(nz), cell_indx (modulo+floor with the same
-! boundary thresholds + autowrap), and the 8-corner trilinear_interp of u, v,
-! w_uv scaled by u_star. Reads the device-resident u,v,w_uv so the host no
-! longer needs update self(u,v,w). Output velbp(1:3,m,n,q) + inr(m,n,q) go to the
-! host; the airfoil model atm_computeBladeForce then runs on the host unchanged.
-use sim_param, only : u, v
-use param,     only : nx, ny, nz, lbz, dx, dy, dz, L_x, L_y, L_z, u_star, z_i
-use grid_m,    only : grid
-implicit none
-integer, intent(in)  :: i
-real(rprec), intent(out) :: velbp(:,:,:,:)   ! (3, numBl, numAnnulusSections, numBladePoints)
-logical,     intent(out) :: inr(:,:,:)       !    (numBl, numAnnulusSections, numBladePoints)
-integer :: m, n, q, mm, nn, qq
-integer :: is, js, ks, is1, js1, ks1
-real(rprec) :: px, py, pz, xd, yd, zd
-real(rprec) :: a1, a2, a3, a4, a5, a6
-real(rprec), parameter :: thr = 1.e-9_rprec
-real(rprec), allocatable :: gx(:), gy(:), gz(:), bpl(:,:,:,:)
-integer,     allocatable :: awi(:), awj(:)
-
-mm = turbineModel(turbineArray(i) % turbineTypeID) % numBl
-nn = turbineArray(i) % numAnnulusSections
-qq = turbineArray(i) % numBladePoints
-
-! Local copies of the (constant) grid + this turbine's blade points for the device
-allocate(gx(nx), gy(ny), gz(lbz:nz), awi(0:nx+1), awj(0:ny+1))
-allocate(bpl(mm,nn,qq,3))
-gx(1:nx)      = grid % x(1:nx)
-gy(1:ny)      = grid % y(1:ny)
-gz(lbz:nz)    = grid % z(lbz:nz)
-awi(0:nx+1)   = grid % autowrap_i(0:nx+1)
-awj(0:ny+1)   = grid % autowrap_j(0:ny+1)
-bpl(1:mm,1:nn,1:qq,1:3) = turbineArray(i) % bladePoints(1:mm,1:nn,1:qq,1:3)
-
-!$acc data copyin(gx, gy, gz, awi, awj, bpl) copyout(velbp, inr)                 &
-!$acc      present(u, v, w_uv)
-!$acc parallel loop collapse(3) gang vector                                      &
-!$acc     private(px,py,pz,is,js,ks,is1,js1,ks1,xd,yd,zd,a1,a2,a3,a4,a5,a6)
-do q = 1, qq
-do n = 1, nn
-do m = 1, mm
-    px = bpl(m,n,q,1) / z_i
-    py = bpl(m,n,q,2) / z_i
-    pz = bpl(m,n,q,3) / z_i
-    if (gz(1) <= pz .and. pz < gz(nz)) then
-        inr(m,n,q) = .true.
-        ! ---- cell_indx 'i' (autowrapped) ----
-        px = modulo(px, L_x)
-        if (abs(px)/L_x < thr) then
-            is = 1
-        else if (abs(px-L_x)/L_x < thr) then
-            is = nx
-        else
-            is = floor(px/dx) + 1
-        end if
-        ! ---- cell_indx 'j' (autowrapped) ----
-        py = modulo(py, L_y)
-        if (abs(py)/L_y < thr) then
-            js = 1
-        else if (abs(py-L_y)/L_y < thr) then
-            js = ny
-        else
-            js = floor(py/dy) + 1
-        end if
-        ! ---- cell_indx 'k' (no wrap) ----
-        if (abs(pz - gz(nz))/L_z < thr) then
-            ks = nz - 1
-        else
-            ks = floor((pz - gz(1))/dz) + 1
-        end if
-        is1 = awi(is+1); js1 = awj(js+1); ks1 = ks + 1
-        xd  = px - gx(is); yd = py - gy(js); zd = pz - gz(ks)
-        ! 8-corner trilinear of u
-        a1 = u(is,js,ks)   + xd*(u(is1,js,ks)   - u(is,js,ks))  /dx
-        a2 = u(is,js1,ks)  + xd*(u(is1,js1,ks)  - u(is,js1,ks)) /dx
-        a3 = u(is,js,ks1)  + xd*(u(is1,js,ks1)  - u(is,js,ks1)) /dx
-        a4 = u(is,js1,ks1) + xd*(u(is1,js1,ks1) - u(is,js1,ks1))/dx
-        a5 = a1 + yd*(a2-a1)/dy
-        a6 = a3 + yd*(a4-a3)/dy
-        velbp(1,m,n,q) = (a5 + zd*(a6-a5)/dz) * u_star
-        ! v
-        a1 = v(is,js,ks)   + xd*(v(is1,js,ks)   - v(is,js,ks))  /dx
-        a2 = v(is,js1,ks)  + xd*(v(is1,js1,ks)  - v(is,js1,ks)) /dx
-        a3 = v(is,js,ks1)  + xd*(v(is1,js,ks1)  - v(is,js,ks1)) /dx
-        a4 = v(is,js1,ks1) + xd*(v(is1,js1,ks1) - v(is,js1,ks1))/dx
-        a5 = a1 + yd*(a2-a1)/dy
-        a6 = a3 + yd*(a4-a3)/dy
-        velbp(2,m,n,q) = (a5 + zd*(a6-a5)/dz) * u_star
-        ! w_uv
-        a1 = w_uv(is,js,ks)   + xd*(w_uv(is1,js,ks)   - w_uv(is,js,ks))  /dx
-        a2 = w_uv(is,js1,ks)  + xd*(w_uv(is1,js1,ks)  - w_uv(is,js1,ks)) /dx
-        a3 = w_uv(is,js,ks1)  + xd*(w_uv(is1,js,ks1)  - w_uv(is,js,ks1)) /dx
-        a4 = w_uv(is,js1,ks1) + xd*(w_uv(is1,js1,ks1) - w_uv(is,js1,ks1))/dx
-        a5 = a1 + yd*(a2-a1)/dy
-        a6 = a3 + yd*(a4-a3)/dy
-        velbp(3,m,n,q) = (a5 + zd*(a6-a5)/dz) * u_star
-    else
-        inr(m,n,q)     = .false.
-        velbp(1,m,n,q) = 0._rprec
-        velbp(2,m,n,q) = 0._rprec
-        velbp(3,m,n,q) = 0._rprec
-    end if
-end do
-end do
-end do
-!$acc end data
-
-deallocate(gx, gy, gz, awi, awj, bpl)
-
-end subroutine atm_sample_velocity_atpoint_gpu
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine atm_batch_atpoint_init()
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Build the static device tables for the batched atPoint path: prefix offsets,
@@ -2759,8 +1764,16 @@ end do
 allocate(atm_bp_all(3, max(atm_nbp_tot,1)), atm_bf_all(3, max(atm_nbp_tot,1)))
 allocate(atm_velbp_all(3, max(atm_nbp_tot,1)), atm_inr_all(max(atm_nbp_tot,1)))
 allocate(atm_tconst(ATM_NTC, numberOfTurbines))
+allocate(atm_sampling_mode(numberOfTurbines))
 atm_bp_all = 0._rprec; atm_bf_all = 0._rprec
 atm_velbp_all = 0._rprec; atm_inr_all = 0; atm_tconst = 0._rprec
+do i = 1, numberOfTurbines
+    if (turbineArray(i) % sampling == 'atPoint') then
+        atm_sampling_mode(i) = ATM_SAMPLING_ATPOINT
+    else
+        atm_sampling_mode(i) = ATM_SAMPLING_SPALART
+    endif
+enddo
 
 allocate(atm_locUV_all(3, max(atm_cUV_tot,1)),                                 &
          atm_ijkUV_all(3, max(atm_cUV_tot,1)), atm_tidUV(max(atm_cUV_tot,1)))
@@ -2796,9 +1809,18 @@ atm_awj(0:ny+1) = grid % autowrap_j(0:ny+1)
 
 !$acc enter data copyin(atm_bp_off, atm_bp_all, atm_bf_all,                    &
 !$acc                   atm_velbp_all, atm_inr_all, atm_tconst,                &
+!$acc                   atm_sampling_mode,                                     &
 !$acc                   atm_locUV_all, atm_ijkUV_all, atm_tidUV,               &
 !$acc                   atm_locW_all, atm_ijkW_all, atm_tidW,                  &
 !$acc                   atm_gx, atm_gy, atm_gz, atm_awi, atm_awj)
+
+if (atm_spalart_present) then
+    allocate(atm_spalart_forceUV(2, max(atm_cUV_tot,1)))
+    allocate(atm_spalart_forceW(max(atm_cW_tot,1)))
+    atm_spalart_forceUV = 0._rprec
+    atm_spalart_forceW = 0._rprec
+    !$acc enter data create(atm_spalart_forceUV, atm_spalart_forceW)
+endif
 
 atm_batch_ready = .true.
 end subroutine atm_batch_atpoint_init
@@ -2842,11 +1864,10 @@ do i = 1, numberOfTurbines
 end do
 !$acc update device(atm_bp_all)
 
-if (atm_direct_w_enabled()) then
-    !$acc parallel loop gang vector default(present)                           &
-    !$acc     private(px,py,pz,is,js,ks,is1,js1,ks1,xd,yd,zd,                 &
-    !$acc             a1,a2,a3,a4,a5,a6,a7,a8)
-    do p = 1, atm_nbp_tot
+!$acc parallel loop gang vector default(present)                              &
+!$acc     private(px,py,pz,is,js,ks,is1,js1,ks1,xd,yd,zd,                    &
+!$acc             a1,a2,a3,a4,a5,a6,a7,a8)
+do p = 1, atm_nbp_tot
         px = atm_bp_all(1,p) / z_i
         py = atm_bp_all(2,p) / z_i
         pz = atm_bp_all(3,p) / z_i
@@ -2922,69 +1943,7 @@ if (atm_direct_w_enabled()) then
             atm_velbp_all(2,p) = 0._rprec
             atm_velbp_all(3,p) = 0._rprec
         end if
-    end do
-else
-    !$acc parallel loop gang vector default(present)                           &
-    !$acc     private(px,py,pz,is,js,ks,is1,js1,ks1,xd,yd,zd,                 &
-    !$acc             a1,a2,a3,a4,a5,a6,a7,a8)
-    do p = 1, atm_nbp_tot
-        px = atm_bp_all(1,p) / z_i
-        py = atm_bp_all(2,p) / z_i
-        pz = atm_bp_all(3,p) / z_i
-        if (atm_gz(1) <= pz .and. pz < atm_gz(nz)) then
-            atm_inr_all(p) = 1
-            px = modulo(px, L_x)
-            if (abs(px)/L_x < thr) then
-                is = 1
-            else if (abs(px-L_x)/L_x < thr) then
-                is = nx
-            else
-                is = floor(px/dx) + 1
-            end if
-            py = modulo(py, L_y)
-            if (abs(py)/L_y < thr) then
-                js = 1
-            else if (abs(py-L_y)/L_y < thr) then
-                js = ny
-            else
-                js = floor(py/dy) + 1
-            end if
-            if (abs(pz - atm_gz(nz))/L_z < thr) then
-                ks = nz - 1
-            else
-                ks = floor((pz - atm_gz(1))/dz) + 1
-            end if
-            is1 = atm_awi(is+1); js1 = atm_awj(js+1); ks1 = ks + 1
-            xd  = px - atm_gx(is); yd = py - atm_gy(js); zd = pz - atm_gz(ks)
-            a1 = u(is,js,ks)   + xd*(u(is1,js,ks)   - u(is,js,ks))  /dx
-            a2 = u(is,js1,ks)  + xd*(u(is1,js1,ks)  - u(is,js1,ks)) /dx
-            a3 = u(is,js,ks1)  + xd*(u(is1,js,ks1)  - u(is,js,ks1)) /dx
-            a4 = u(is,js1,ks1) + xd*(u(is1,js1,ks1) - u(is,js1,ks1))/dx
-            a5 = a1 + yd*(a2-a1)/dy
-            a6 = a3 + yd*(a4-a3)/dy
-            atm_velbp_all(1,p) = (a5 + zd*(a6-a5)/dz) * u_star
-            a1 = v(is,js,ks)   + xd*(v(is1,js,ks)   - v(is,js,ks))  /dx
-            a2 = v(is,js1,ks)  + xd*(v(is1,js1,ks)  - v(is,js1,ks)) /dx
-            a3 = v(is,js,ks1)  + xd*(v(is1,js,ks1)  - v(is,js,ks1)) /dx
-            a4 = v(is,js1,ks1) + xd*(v(is1,js1,ks1) - v(is,js1,ks1))/dx
-            a5 = a1 + yd*(a2-a1)/dy
-            a6 = a3 + yd*(a4-a3)/dy
-            atm_velbp_all(2,p) = (a5 + zd*(a6-a5)/dz) * u_star
-            a1 = w_uv(is,js,ks)   + xd*(w_uv(is1,js,ks)   - w_uv(is,js,ks))  /dx
-            a2 = w_uv(is,js1,ks)  + xd*(w_uv(is1,js1,ks)  - w_uv(is,js1,ks)) /dx
-            a3 = w_uv(is,js,ks1)  + xd*(w_uv(is1,js,ks1)  - w_uv(is,js,ks1)) /dx
-            a4 = w_uv(is,js1,ks1) + xd*(w_uv(is1,js1,ks1) - w_uv(is,js1,ks1))/dx
-            a5 = a1 + yd*(a2-a1)/dy
-            a6 = a3 + yd*(a4-a3)/dy
-            atm_velbp_all(3,p) = (a5 + zd*(a6-a5)/dz) * u_star
-        else
-            atm_inr_all(p)     = 0
-            atm_velbp_all(1,p) = 0._rprec
-            atm_velbp_all(2,p) = 0._rprec
-            atm_velbp_all(3,p) = 0._rprec
-        end if
-    end do
-end if
+end do
 
 !$acc update self(atm_velbp_all, atm_inr_all)
 atm_batch_sampled = .true.
@@ -2992,7 +1951,7 @@ atm_batch_sampled = .true.
 end subroutine atm_batch_sample_velocity_gpu
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-subroutine atm_batch_convolute_force_gpu()
+subroutine atm_batch_convolute_force_gpu(refresh_state)
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! Batched atPoint Gaussian force convolution + apply for ALL turbines: one
 ! kernel per grid (UV, W) over the concatenated force-field cell lists,
@@ -3001,11 +1960,12 @@ subroutine atm_batch_convolute_force_gpu()
 ! before the Gaussian radius test and exponent. The scatter uses atomics
 ! because cells of DIFFERENT turbines may coincide where
 ! projection regions overlap (within a turbine each cell is unique).
-! The forceField%force host write-back of the per-turbine path is dropped:
-! its only readers in this build are the (disabled) load-balancer validators.
+! The forceField%force host write-back of the per-turbine path is unnecessary:
+! production convolution scatters directly into the resident LES force arrays.
 use sim_param, only : fxa, fya, fza
 use param,     only : z_i, u_star
 implicit none
+logical, intent(in) :: refresh_state
 integer :: i, j, c, p, m, n, q
 integer :: ii, jj, kk
 real(rprec) :: eps, dist_sq, kw, fx1, fx2, fx3
@@ -3013,51 +1973,56 @@ real(rprec) :: pr, prsq, epsq, cc2, cc3
 
 call atm_batch_atpoint_init()
 
-! Per-turbine constants + flattened blade forces (post-gather values).
-do i = 1, numberOfTurbines
-    if (turbineArray(i) % operate .and.                                        &
-        turbineArray(i) % sampling == 'atPoint') then
-        atm_tconst(14,i) = 1._rprec
-    else
-        atm_tconst(14,i) = 0._rprec
-    end if
-    ! Keep the same const1*const2 operation order as the per-turbine path.
-    ! The convolution kernels below use squared distance directly, so final
-    ! fields are roundoff-equivalent rather than byte-identical.
-    eps = turbineArray(i) % epsilon
-    atm_tconst(1,i) = turbineArray(i) % projectionRadius
-    atm_tconst(2,i) = eps * eps
-    atm_tconst(4,i) = z_i / (u_star * u_star)
-    atm_tconst(3,i) = (1._rprec / ((eps * atm_tconst(2,i)) * (pi * sqrt(pi))))  &
-                      * atm_tconst(4,i)
-    if (turbineArray(i) % nacelle) then
-        atm_tconst(13,i) = 1._rprec
-        eps = turbineArray(i) % nacelleEpsilon
-        atm_tconst(5,i)    = eps * eps
-        atm_tconst(6,i)    = 1._rprec / ((eps * eps * eps) * (pi * sqrt(pi)))
-        atm_tconst(7:9,i)  = turbineArray(i) % nacelleLocation(1:3)
-        atm_tconst(10:12,i) = turbineArray(i) % nacelleForce(1:3)
-    else
-        atm_tconst(13,i)   = 0._rprec
-        atm_tconst(5,i)    = 1._rprec
-        atm_tconst(6,i)    = 0._rprec
-        atm_tconst(7:12,i) = 0._rprec
-    end if
+if (refresh_state) then
+    ! Cache per-turbine constants + flattened blade forces after the gather.
+    ! On intervening updateInterval timesteps, reuse this state exactly as the
+    ! CPU path reuses its previously convolved forceField.
+    do i = 1, numberOfTurbines
+        if (turbineArray(i) % operate .and.                                    &
+            turbineArray(i) % sampling == 'atPoint') then
+            atm_tconst(14,i) = 1._rprec
+        else
+            atm_tconst(14,i) = 0._rprec
+        end if
+        ! Keep the same const1*const2 operation order as the per-turbine path.
+        ! The convolution kernels below use squared distance directly, so final
+        ! fields are roundoff-equivalent rather than byte-identical.
+        eps = turbineArray(i) % epsilon
+        atm_tconst(1,i) = turbineArray(i) % projectionRadius
+        atm_tconst(2,i) = eps * eps
+        atm_tconst(4,i) = z_i / (u_star * u_star)
+        atm_tconst(3,i) = (1._rprec /                                          &
+            ((eps * atm_tconst(2,i)) * (pi * sqrt(pi)))) * atm_tconst(4,i)
+        if (turbineArray(i) % nacelle) then
+            atm_tconst(13,i) = 1._rprec
+            eps = turbineArray(i) % nacelleEpsilon
+            atm_tconst(5,i) = eps * eps
+            atm_tconst(6,i) = 1._rprec /                                      &
+                ((eps * eps * eps) * (pi * sqrt(pi)))
+            atm_tconst(7:9,i) = turbineArray(i) % nacelleLocation(1:3)
+            atm_tconst(10:12,i) = turbineArray(i) % nacelleForce(1:3)
+        else
+            atm_tconst(13,i) = 0._rprec
+            atm_tconst(5,i) = 1._rprec
+            atm_tconst(6,i) = 0._rprec
+            atm_tconst(7:12,i) = 0._rprec
+        end if
 
-    j = turbineArray(i) % turbineTypeID
-    p = atm_bp_off(i)
-    do m = 1, turbineModel(j) % numBl
-    do n = 1, turbineArray(i) % numAnnulusSections
-    do q = 1, turbineArray(i) % numBladePoints
-        p = p + 1
-        atm_bf_all(1,p) = turbineArray(i) % bladeForces(m,n,q,1)
-        atm_bf_all(2,p) = turbineArray(i) % bladeForces(m,n,q,2)
-        atm_bf_all(3,p) = turbineArray(i) % bladeForces(m,n,q,3)
+        j = turbineArray(i) % turbineTypeID
+        p = atm_bp_off(i)
+        do m = 1, turbineModel(j) % numBl
+        do n = 1, turbineArray(i) % numAnnulusSections
+        do q = 1, turbineArray(i) % numBladePoints
+            p = p + 1
+            atm_bf_all(1,p) = turbineArray(i) % bladeForces(m,n,q,1)
+            atm_bf_all(2,p) = turbineArray(i) % bladeForces(m,n,q,2)
+            atm_bf_all(3,p) = turbineArray(i) % bladeForces(m,n,q,3)
+        end do
+        end do
+        end do
     end do
-    end do
-    end do
-end do
-!$acc update device(atm_bf_all, atm_tconst)
+    !$acc update device(atm_bf_all, atm_tconst)
+endif
 
 ! ---- UV grid (force components 1,2) ----
 if (atm_cUV_tot > 0) then
@@ -3143,6 +2108,82 @@ if (atm_cW_tot > 0) then
 end if
 
 end subroutine atm_batch_convolute_force_gpu
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine atm_apply_spalart_force_gpu()
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! Spalart sampling and convolution remain host algorithms. Pack only their
+! completed per-cell forces and add them to the resident LES force arrays.
+! This preserves mixed atPoint/Spalart farms without a full-domain force-field
+! transfer that would be both expensive and capable of overwriting atPoint
+! contributions already deposited on the device.
+use sim_param, only : fxa, fya, fza
+implicit none
+
+integer :: i, c, p, ii, jj, kk
+
+if (.not. atm_spalart_present) return
+call atm_batch_atpoint_init()
+
+p = 0
+do i = 1, numberOfTurbines
+    do c = 1, forceFieldUV(i) % c
+        p = p + 1
+        if (turbineArray(i) % operate .and.                                    &
+            turbineArray(i) % sampling == 'Spalart') then
+            atm_spalart_forceUV(1:2,p) = forceFieldUV(i) % force(1:2,c)
+        else
+            atm_spalart_forceUV(1:2,p) = 0._rprec
+        endif
+    enddo
+enddo
+
+p = 0
+do i = 1, numberOfTurbines
+    do c = 1, forceFieldW(i) % c
+        p = p + 1
+        if (turbineArray(i) % operate .and.                                    &
+            turbineArray(i) % sampling == 'Spalart') then
+            atm_spalart_forceW(p) = forceFieldW(i) % force(3,c)
+        else
+            atm_spalart_forceW(p) = 0._rprec
+        endif
+    enddo
+enddo
+
+!$acc update device(atm_spalart_forceUV, atm_spalart_forceW)
+
+if (atm_cUV_tot > 0) then
+    !$acc parallel loop gang vector default(present) private(i,ii,jj,kk)
+    do c = 1, atm_cUV_tot
+        i = atm_tidUV(c)
+        if (atm_sampling_mode(i) == ATM_SAMPLING_SPALART) then
+            ii = atm_ijkUV_all(1,c)
+            jj = atm_ijkUV_all(2,c)
+            kk = atm_ijkUV_all(3,c)
+            !$acc atomic update
+            fxa(ii,jj,kk) = fxa(ii,jj,kk) + atm_spalart_forceUV(1,c)
+            !$acc atomic update
+            fya(ii,jj,kk) = fya(ii,jj,kk) + atm_spalart_forceUV(2,c)
+        endif
+    enddo
+endif
+
+if (atm_cW_tot > 0) then
+    !$acc parallel loop gang vector default(present) private(i,ii,jj,kk)
+    do c = 1, atm_cW_tot
+        i = atm_tidW(c)
+        if (atm_sampling_mode(i) == ATM_SAMPLING_SPALART) then
+            ii = atm_ijkW_all(1,c)
+            jj = atm_ijkW_all(2,c)
+            kk = atm_ijkW_all(3,c)
+            !$acc atomic update
+            fza(ii,jj,kk) = fza(ii,jj,kk) + atm_spalart_forceW(c)
+        endif
+    enddo
+endif
+
+end subroutine atm_apply_spalart_force_gpu
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine atm_batch_clc_init()
@@ -3478,15 +2519,16 @@ implicit none
 integer :: c,m
 integer :: i,j,k
 
+#ifdef PPLES_GPU
+! atPoint forces were deposited by atm_batch_convolute_force_gpu. Optional
+! Spalart forces are selectively packed and deposited without copying the
+! complete LES force fields through the host.
+call atm_apply_spalart_force_gpu()
+return
+#endif
 
 do m=1, numberOfTurbines
 
-#ifdef PPLES_GPU
-    ! Explicit-residency: atPoint turbines were already applied on the device
-    ! inside atm_convolute_atpoint_gpu (scatter into fxa/fya/fza). Skip them here
-    ! to avoid double-application; Spalart still applies on the host below.
-    if (turbineArray(m) % sampling == 'atPoint') cycle
-#endif
     if (turbineArray(m) % operate) then
         ! Impose force field onto the flow field variables
         ! The forces are non-dimensionalized here as well
