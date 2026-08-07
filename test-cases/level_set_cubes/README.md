@@ -44,6 +44,20 @@ The CPU reference keeps `USE_LVLSET=ON` but sets `USE_LES_GPU=OFF` and
 Generated `phi.out.c*`, `norm.dat.c*`, checkpoints, output, binaries, and logs
 are runtime artifacts and are not source files.
 
+For the full CPU/host-bridge/GPU matrix, prepare isolated cases with:
+
+```bash
+python3 tools/prepare_level_set_validation.py \
+  --out /path/to/lvlset-matrix
+```
+
+The generated manifest fixes `DYN_init=1` and `cs_count=2`, covers SGS off and
+models 1-5, optional Level Set modes, model-4 beta/lower-wall variants,
+MPI/non-MPI builds, and sphere/tilted geometries crossing a rank boundary.
+`tools/run_level_set_validation.py` runs tasks inside an existing scheduler
+allocation. `LESGO_LVLSET_VALIDATION_SNAPSHOT=ON` writes the additional fields
+consumed by `tools/compare_level_set_checkpoints.py`.
+
 ## MPI And GPU Counts
 
 The default input has `nproc=1`. For multiple GPUs, change all of the following

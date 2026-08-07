@@ -101,8 +101,12 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/parse_lesgo_timing.py` | Parses LESGO stdout/stderr timing blocks into JSON for validation evidence import. |
 | `tools/compare_scalar_checkpoint.py` | Compares CPU/GPU `scal.out.c*` scalar checkpoints and reports scalar-field differences. |
 | `tools/compare_atm_restart_runs.py` | Compares uninterrupted and split channel, ADM, or ATM runs, including model-owned sidecars and streamed LES checkpoint fields. |
+| `tools/compare_level_set_checkpoints.py` | Compares complete Level Set LES, pressure-gradient, force, stress-divergence, and beta snapshots rank by rank. |
+| `tools/compare_level_set_restart.py` | Compares continuous and split Level Set model-4/5 runs, including the versioned SGS sidecar. |
+| `tools/collect_level_set_evidence.py` | Collects prepared Level Set CPU/bridge/GPU pairs into a cluster- and commit-stamped evidence JSON file. |
 | `tools/prepare_sgs_matrix_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for `sgs=false`, `sgs_model=1..5`, and optional `USE_DYN_TN=ON` validation. |
 | `tools/prepare_scalar_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for passive and active scalar validation. |
+| `tools/prepare_level_set_validation.py` | Creates the Level Set SGS, optional-mode, geometry, MPI/non-MPI, bridge, and GPU-aware validation matrix. |
 | `tools/readiness_manifest.py` | Shared parser for the readiness wrapper's `PYTHON_CHECKS` manifest. |
 | `tools/repo_paths.py` | Shared repository-root path helpers for tools that must work outside the caller's current directory. |
 | `tools/report_lesgo_conf_key_validation.py` | Generates the key-level `lesgo.conf` validation coverage report from source parser keys and evidence state. |
@@ -113,6 +117,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/report_fortran_broad_imports.py` | Generates the broad Fortran import audit for future import-boundary cleanup. |
 | `tools/run_derecho_compile_matrix.sh` | Stages the current clean `HEAD` to Derecho and compiles selected CPU/GPU case profiles with the Derecho NVHPC scripts. |
 | `tools/run_derecho_optional_compile_matrix.sh` | Stages the current clean `HEAD` to Derecho and compiles optional non-LVLSET feature profiles that are outside the four public cases. |
+| `tools/run_level_set_validation.py` | Runs selected prepared Level Set tasks inside an existing CPU/GPU allocation and records machine-readable status. |
 | `tools/script_inventory.py` | Shared tracked-script discovery helpers for readiness checks. |
 | `tools/report_gpu_static_inventory.py` | Reports static non-LVLSET Fortran subprogram GPU-marker coverage and review buckets for audits. |
 | `tools/report_gpu_validation_gaps.py` | Reports open GPU validation and paired-speedup evidence gaps by runbook batch. |
