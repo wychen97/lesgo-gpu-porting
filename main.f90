@@ -69,7 +69,7 @@ use cuda_mpi_debug, only : mpi_dbg_sendrecv_r
 
 #ifdef PPLVLSET
 use level_set, only : level_set_global_CA
-use level_set_base, only : global_CA_calc
+use level_set_base, only : global_CA_calc, use_modify_dutdn
 #if defined(PPLES_GPU)
 use sim_param, only : fx, fy, fz
 #endif
@@ -401,6 +401,13 @@ time_loop: do jt_step = nstart, nsteps
     !$acc update self(F_ee2, F_deedt2, ee_past)
 #endif
     call sgs_stag()
+    ! CPU Level Set boundary treatment can update the velocity field and, when
+    ! requested, its resolved gradients. Restore device ownership explicitly.
+    !$acc update device(u, v, w)
+    if (use_modify_dutdn) then
+        !$acc update device(dudx, dudy, dudz, dvdx, dvdy, dvdz,               &
+        !$acc               dwdx, dwdy, dwdz)
+    end if
     !$acc update device(txx, txy, txz, tyy, tyz, tzz,                         &
     !$acc               S11, S12, S13, S22, S23, S33, Nu_t, Cs_opt2,          &
     !$acc               F_LM, F_MM, F_QN, F_NN, Beta, Tn_all)
