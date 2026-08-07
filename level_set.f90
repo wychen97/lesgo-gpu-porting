@@ -114,6 +114,8 @@ type :: level_set_patch_descriptor_t
   integer :: ghost_hi(3) = -1
   real(rp), pointer :: phi_ref(:,:,:) => null()
   real(rp), pointer :: normal_ref(:,:,:,:) => null()
+  real(rp), pointer :: cell_weight_ref(:,:,:) => null()
+  logical, pointer :: coverage_mask_ref(:,:,:) => null()
 end type level_set_patch_descriptor_t
 
 type(level_set_patch_descriptor_t), save :: level_set_uniform_patch
@@ -324,6 +326,8 @@ level_set_uniform_patch%ghost_lo=(/1,1,lbz/)
 level_set_uniform_patch%ghost_hi=(/ld,ny,nz/)
 level_set_uniform_patch%phi_ref=>phi
 level_set_uniform_patch%normal_ref=>norm
+nullify(level_set_uniform_patch%cell_weight_ref)
+nullify(level_set_uniform_patch%coverage_mask_ref)
 phi_cutoff_is_set=.false.
 phi_0_is_set=.false.
 level_set_cs_initialized=.false.
@@ -367,6 +371,8 @@ call level_set_gpu_data_finalize()
 #endif
 nullify(level_set_uniform_patch%phi_ref)
 nullify(level_set_uniform_patch%normal_ref)
+nullify(level_set_uniform_patch%cell_weight_ref)
+nullify(level_set_uniform_patch%coverage_mask_ref)
 if (allocated(norm)) deallocate(norm)
 if (allocated(udes)) deallocate(udes)
 if (allocated(vdes)) deallocate(vdes)
@@ -591,6 +597,7 @@ integer :: uv_err_navg, w_err_navg
 real(rprec) :: u_err, v_err, w_err
 #ifdef PPMPI
 real(rprec) :: u_err_global, v_err_global, w_err_global
+integer :: uv_err_navg_global,w_err_navg_global
 #endif
 integer :: fid
 
@@ -647,31 +654,30 @@ do k=2, nz-1
   enddo
 enddo
 
-if( uv_err_navg == 0 ) then
-  u_err = 0._rprec
-  v_err = 0._rprec
-else
-  u_err = u_err / uv_err_navg
-  v_err = v_err / uv_err_navg
-endif
-
-if( w_err_navg == 0 ) then
-  w_err = 0._rprec
-else
-  w_err = w_err / w_err_navg
-endif
-
 #ifdef PPMPI
 
 call mpi_reduce (u_err, u_err_global, 1, MPI_RPREC, MPI_SUM, 0, comm, ierr)
 call mpi_reduce (v_err, v_err_global, 1, MPI_RPREC, MPI_SUM, 0, comm, ierr)
 call mpi_reduce (w_err, w_err_global, 1, MPI_RPREC, MPI_SUM, 0, comm, ierr)
+call mpi_reduce (uv_err_navg, uv_err_navg_global, 1, MPI_INTEGER, MPI_SUM,  &
+                 0, comm, ierr)
+call mpi_reduce (w_err_navg, w_err_navg_global, 1, MPI_INTEGER, MPI_SUM,   &
+                 0, comm, ierr)
 
 if( rank == 0 ) then
 
-    u_err = u_err_global / nproc
-    v_err = v_err_global / nproc
-    w_err = w_err_global / nproc
+    if (uv_err_navg_global > 0) then
+      u_err=u_err_global/real(uv_err_navg_global,rprec)
+      v_err=v_err_global/real(uv_err_navg_global,rprec)
+    else
+      u_err=0._rprec
+      v_err=0._rprec
+    end if
+    if (w_err_navg_global > 0) then
+      w_err=w_err_global/real(w_err_navg_global,rprec)
+    else
+      w_err=0._rprec
+    end if
 
     open(newunit=fid, file=fname_write, status='unknown', form='formatted',    &
         position='append')
@@ -681,6 +687,19 @@ if( rank == 0 ) then
 endif
 
 #else
+
+if (uv_err_navg > 0) then
+  u_err=u_err/real(uv_err_navg,rprec)
+  v_err=v_err/real(uv_err_navg,rprec)
+else
+  u_err=0._rprec
+  v_err=0._rprec
+end if
+if (w_err_navg > 0) then
+  w_err=w_err/real(w_err_navg,rprec)
+else
+  w_err=0._rprec
+end if
 
 open(newunit=fid, file=fname_write, status='unknown', form='formatted',        &
     position='append')
@@ -3424,10 +3443,12 @@ logical, save :: file_init = .false.
 logical :: opn, exst
 integer :: fid
 
-real (rp) :: Uinf   !--velocity scale used in calculation of CA
+real (rp) :: Uinf_sum !--inflow sum used to form the global velocity scale
 real (rp) :: CxA, CyA, CzA ! Normalized for coefficients times frontal area
 real (rp) :: f_Cx, f_Cy, f_Cz      !--drag and lift forces
-real (rp) :: f_Cx_global, f_Cy_global, f_Cz_global, Uinf_global
+real (rp) :: f_Cx_global, f_Cy_global, f_Cz_global
+real (rp) :: Uinf_sum_global,Uinf_global
+integer :: Uinf_count,Uinf_count_global
 integer :: i, j, k
 
 !---------------------------------------------------------------------
@@ -3439,7 +3460,7 @@ fCA_out = path // 'output/global_CA.dat'
 f_Cx = 0._rp
 f_Cy = 0._rp
 f_Cz = 0._rp
-Uinf = 0._rp
+Uinf_sum = 0._rp
 !$acc parallel loop collapse(3) default(present) reduction(+:f_Cx,f_Cy,f_Cz)
 do k = 1, nz - 1
   do j = 1, ny
@@ -3450,13 +3471,12 @@ do k = 1, nz - 1
     end do
   end do
 end do
-!$acc parallel loop collapse(2) default(present) reduction(+:Uinf)
+!$acc parallel loop collapse(2) default(present) reduction(+:Uinf_sum)
 do k = 1, nz - 1
   do j = 1, ny
-    Uinf = Uinf + u(1, j, k)
+    Uinf_sum = Uinf_sum + u(1, j, k)
   end do
 end do
-Uinf = Uinf / real(ny * (nz - 1), rp)
 #else
 f_Cx = -sum (fx(1:nx, :, 1:nz-1)) * dx * dy * dz
      !--(-) since want force ON object
@@ -3467,8 +3487,9 @@ f_Cy = -sum (fy(1:nx, :, 1:nz-1)) * dx * dy * dz
 ! entire domain storage locations shouldn't matter
 f_Cz = -sum (fz(1:nx, :, 1:nz-1)) * dx * dy * dz
 
-Uinf = sum (u(1, :, 1:nz-1)) / (ny * (nz - 1))  !--measure at inflow plane
+Uinf_sum = sum (u(1, :, 1:nz-1)) !--measure at inflow plane
 #endif
+Uinf_count=ny*(nz-1)
 
 #ifdef PPMPI
 
@@ -3479,17 +3500,25 @@ Uinf = sum (u(1, :, 1:nz-1)) / (ny * (nz - 1))  !--measure at inflow plane
                    rank_of_coord(0), comm, ierr)
   call mpi_reduce (f_Cz, f_Cz_global, 1, MPI_RPREC, MPI_SUM,  &
                    rank_of_coord(0), comm, ierr)
-  call mpi_reduce (Uinf, Uinf_global, 1, MPI_RPREC, MPI_SUM,  &
+  call mpi_reduce (Uinf_sum, Uinf_sum_global, 1, MPI_RPREC, MPI_SUM,  &
+                   rank_of_coord(0), comm, ierr)
+  call mpi_reduce (Uinf_count, Uinf_count_global, 1, MPI_INTEGER, MPI_SUM, &
                    rank_of_coord(0), comm, ierr)
 
-  if (coord == 0) Uinf_global = Uinf_global / nproc
+  if (coord == 0) then
+    if (Uinf_count_global <= 0) call error(sub_name,                       &
+        'global inflow sample count must be positive')
+    Uinf_global=Uinf_sum_global/real(Uinf_count_global,rp)
+  end if
 
 #else
 
   f_Cx_global = f_Cx
   f_Cy_global = f_Cy
   f_Cz_global = f_Cz
-  Uinf_global = Uinf
+  if (Uinf_count <= 0) call error(sub_name,                               &
+      'inflow sample count must be positive')
+  Uinf_global = Uinf_sum/real(Uinf_count,rp)
 
 #endif
 

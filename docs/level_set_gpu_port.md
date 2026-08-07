@@ -42,6 +42,14 @@ generation, invalidates halo and coefficient caches, refreshes the device copy,
 and checks the bound extents. `level_set_finalize()` releases device mappings
 and host allocations before MPI finalization.
 
+The descriptor reserves cell-weight and coverage-mask references for composite
+diagnostics. They remain unbound in the uniform backend. An AMR backend must
+bind level-volume weights and mask coarse cells covered by finer levels before
+using `global_CA`; summing each patch independently would double-count force
+and area. The velocity-error and inflow diagnostics reduce raw sums and sample
+counts before normalization, so unequal patch/rank populations do not receive
+equal-rank weighting.
+
 Persistent optional storage follows active runtime physics:
 
 - `udes`, `vdes`, and `wdes` exist only when `vel_BC` is enabled;
