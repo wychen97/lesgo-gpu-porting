@@ -523,8 +523,6 @@ real (rp) :: S11(ld, ny, nz), S12(ld, ny, nz), S13(ld, ny, nz),  &
 
 character (*), parameter :: sub_name = mod_name // '.level_set_lag_dyn'
 
-logical, parameter :: lag_dyn_modify_beta = .true.
-
 real (rp) :: phi_c
 
 !---------------------------------------------------------------------
@@ -571,7 +569,8 @@ real(rp), intent(inout) :: S11(ld,ny,nz), S12(ld,ny,nz), S13(ld,ny,nz),    &
 #ifdef PPMPI
 if (nproc > 1) call mpi_sync_lag_dyn_gpu(.true.)
 #endif
-call level_set_lag_dyn_gpu_core(S11,S12,S13,S22,S23,S33,norm)
+call level_set_lag_dyn_gpu_core(S11,S12,S13,S22,S23,S33,norm,             &
+                                lag_dyn_modify_beta)
 #ifdef PPMPI
 if (nproc > 1) call mpi_sync_lag_dyn_gpu(.false.)
 #endif

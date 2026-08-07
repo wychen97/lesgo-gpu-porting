@@ -1436,7 +1436,8 @@ end do
 end subroutine smooth_field_gpu
 
 !*******************************************************************************
-subroutine level_set_lag_dyn_gpu_core(S11,S12,S13,S22,S23,S33,normal)
+subroutine level_set_lag_dyn_gpu_core(S11,S12,S13,S22,S23,S33,normal,      &
+                                      modify_beta_enabled)
 !*******************************************************************************
 ! Device implementation of level_set_lag_dyn. This is the Level Set
 ! preconditioning required by the Lagrangian similarity model (sgs_model=4),
@@ -1447,6 +1448,7 @@ use test_filtermodule, only : filter_size
 real(rprec), intent(inout) :: S11(ld,ny,nz), S12(ld,ny,nz), S13(ld,ny,nz), &
                               S22(ld,ny,nz), S23(ld,ny,nz), S33(ld,ny,nz)
 real(rprec), intent(in) :: normal(3,ld,ny,lbz:nz)
+logical, intent(in) :: modify_beta_enabled
 integer :: i,j,k,s
 real(rprec), parameter :: c1=0.65_rprec, c2=0.7_rprec
 real(rprec) :: phix,phi1,dphi,x,y,z,xp,yp,zp,nxv,nyv,nzv
@@ -1523,29 +1525,31 @@ do k=1,nz-1
   end do
 end do
 
-! Match modify_beta(): retain beta outside the solid and account for the
-! physical lower wall when it is active.
-delta_filter=filter_size*(dx*dy*dz)**(1._rprec/3._rprec)
-!$acc parallel loop collapse(3) default(present) async(1)                    &
-!$acc private(s,phix,zglobal,dmin)
-do k=1,nz
-  do j=1,ny
-    do i=1,nx
-      s=1
-      if (coord == 0 .and. k == 1) s=0
-      phix=0.5_rprec*(phi(i,j,k)+phi(i,j,k-s))
-      if (phix > 0._rprec) then
-        if (lbc_mom == 0) then
-          dmin=phix
-        else
-          zglobal=real(coord*(nz-1)+k-1,rprec)*dz
-          dmin=min(zglobal,phix)
+if (modify_beta_enabled) then
+  ! Match modify_beta(): retain beta outside the solid and account for the
+  ! physical lower wall when it is active.
+  delta_filter=filter_size*(dx*dy*dz)**(1._rprec/3._rprec)
+  !$acc parallel loop collapse(3) default(present) async(1)                  &
+  !$acc private(s,phix,zglobal,dmin)
+  do k=1,nz
+    do j=1,ny
+      do i=1,nx
+        s=1
+        if (coord == 0 .and. k == 1) s=0
+        phix=0.5_rprec*(phi(i,j,k)+phi(i,j,k-s))
+        if (phix > 0._rprec) then
+          if (lbc_mom == 0) then
+            dmin=phix
+          else
+            zglobal=real(coord*(nz-1)+k-1,rprec)*dz
+            dmin=min(zglobal,phix)
+          end if
+          beta(i,j,k)=1._rprec-c1*exp(-c2*dmin/delta_filter)
         end if
-        beta(i,j,k)=1._rprec-c1*exp(-c2*dmin/delta_filter)
-      end if
+      end do
     end do
   end do
-end do
+end if
 end subroutine level_set_lag_dyn_gpu_core
 
 end module level_set_gpu_m
