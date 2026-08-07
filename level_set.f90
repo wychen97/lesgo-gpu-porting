@@ -19,7 +19,8 @@
 
 module level_set
 use types, rp => rprec
-use param, only : ld, nx, ny, nz, dx, dy, dz, iBOGUS, BOGUS, path, L_x, L_y,   &
+use param, only : ld, nx, ny, nz, lbz, dx, dy, dz, iBOGUS, BOGUS, path,       &
+    L_x, L_y,                                                                  &
     vonK, lbc_mom, coord, nproc, up, down, ierr, comm, MPI_RPREC, rank,        &
     total_time, rank_of_coord
 #ifdef PPMPI
