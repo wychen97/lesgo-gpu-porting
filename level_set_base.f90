@@ -98,7 +98,7 @@ logical :: phi_0_is_set = .false.
 
 
 !real (rp) :: phi(ld, ny, lbz:nz)
-real(rp), allocatable, dimension(:,:,:) :: phi
+real(rp), allocatable, target, dimension(:,:,:) :: phi
 
 !--Extended vertical overlap fields used by immersed-surface interpolation.
 !--They live with the Level Set data model so both the CPU implementation and

@@ -37,10 +37,17 @@ use turbines, only : turbines_finalize
 use atm_lesgo_interface, only : atm_lesgo_finalize
 #endif
 use coriolis, only : coriolis_finalize
+#ifdef PPLVLSET
+use level_set, only : level_set_finalize
+#endif
 
 implicit none
 
 call coriolis_finalize()
+
+#ifdef PPLVLSET
+call level_set_finalize()
+#endif
 
 ! Turbines.  If ATM is compiled in, it owns turbine finalization for
 ! this executable; build USE_TURBINES=ON, USE_ATM=OFF to run the legacy model.

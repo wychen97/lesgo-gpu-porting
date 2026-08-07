@@ -33,6 +33,24 @@ copies of geometry, normals, desired-velocity arrays, compact MPI overlap
 arrays, and interpolation workspaces. During normal timesteps, velocity,
 stress, forcing, SGS history, and Level Set data remain on the device.
 
+The current backend exposes a `level_set_patch_descriptor_t` with level,
+generation, spacing, origin, valid/ghost extents, and references to `phi` and
+the normal field. Its backend is explicitly `uniform-grid`; it is an ownership
+contract for a future AMR adapter, not an AMR implementation. A host geometry
+change must call `level_set_geometry_refresh()`, which increments the
+generation, invalidates halo and coefficient caches, refreshes the device copy,
+and checks the bound extents. `level_set_finalize()` releases device mappings
+and host allocations before MPI finalization.
+
+Persistent optional storage follows active runtime physics:
+
+- `udes`, `vdes`, and `wdes` exist only when `vel_BC` is enabled;
+- the stress snapshot exists only for simple stress extrapolation;
+- the `F_MM` snapshot exists only for Lagrangian SGS model 4 or 5.
+
+Startup prints the persistent Level Set GPU allocation, split into geometry,
+desired velocity, halo/pack buffers, and workspace memory.
+
 The existing public calls remain the interface:
 
 - `level_set_BC()` selects CPU or GPU stress treatment;

@@ -40,6 +40,8 @@ public :: level_set_global_CA
 public :: level_set_smooth_vel, level_set_lag_dyn
 public :: level_set_Cs_lag_dyn
 public :: level_set_vel_err
+public :: level_set_finalize, level_set_geometry_refresh
+public :: level_set_patch_descriptor_t, level_set_get_patch_descriptor
 #ifdef PPLVLSET_GPU
 public :: level_set_gpu_data_init
 #endif
@@ -92,14 +94,40 @@ real (rp) :: phi_cutoff
 real (rp) :: phi_0
 
 
-real (rp), allocatable, dimension(:,:,:,:) :: norm !--normal vector
+real (rp), allocatable, target, dimension(:,:,:,:) :: norm !--normal vector
                                                  !--may want to change so only normals
                                                  !  near 0-set are stored
 !--experimental: desired velocities for IB method
 real (rp), allocatable, dimension(:,:,:) :: udes, vdes, wdes
 
+! Uniform-grid patch metadata is kept explicit so a future AMR adapter can
+! refresh geometry without relying on hidden module allocation state.
+type :: level_set_patch_descriptor_t
+  character(16) :: backend = 'uniform-grid'
+  integer :: level = 0
+  integer :: generation = 0
+  real(rp) :: spacing(3) = 0._rp
+  real(rp) :: origin(3) = 0._rp
+  integer :: valid_lo(3) = 0
+  integer :: valid_hi(3) = -1
+  integer :: ghost_lo(3) = 0
+  integer :: ghost_hi(3) = -1
+  real(rp), pointer :: phi_ref(:,:,:) => null()
+  real(rp), pointer :: normal_ref(:,:,:,:) => null()
+end type level_set_patch_descriptor_t
+
+type(level_set_patch_descriptor_t), save :: level_set_uniform_patch
+integer, save :: level_set_geometry_generation = 0
+integer, save :: level_set_device_generation = -1
+logical, save :: level_set_cs_initialized = .false.
+#ifdef PPMPI
+logical, save :: phi_cpu_synced = .false.
+#endif
+
 #ifdef PPLVLSET_GPU
 logical :: level_set_gpu_data_ready = .false.
+integer :: level_set_gpu_bound_ld=0, level_set_gpu_bound_ny=0
+integer :: level_set_gpu_bound_nz=0, level_set_gpu_bound_lbz=0
 #ifdef PPMPI
 real(rp), allocatable :: vel_send_top(:,:,:,:), vel_recv_top(:,:,:,:)
 real(rp), allocatable :: vel_send_bot(:,:,:,:), vel_recv_bot(:,:,:,:)
@@ -208,19 +236,9 @@ allocate( norm(nd, ld, ny, lbz:nz) )!--normal vector
 !                                   !--may want to change so only normals
 !                                   !  near 0-set are stored
 ! !--experimental: desired velocities for IB method
-#ifdef PPLVLSET_GPU
-! Keep valid device descriptors even when the optional velocity boundary
-! condition is disabled; the dense GPU forcing kernel contains a uniform
-! vel_BC branch.
-allocate( udes(ld, ny, lbz:nz), vdes(ld, ny, lbz:nz), wdes(ld, ny, lbz:nz) )
-udes = huge(1._rp)
-vdes = huge(1._rp)
-wdes = huge(1._rp)
-#else
 if( vel_BC ) allocate( udes(ld, ny, lbz:nz), &
                        vdes(ld, ny, lbz:nz), &
                        wdes(ld, ny, lbz:nz) )
-#endif
 
 inquire (unit=lun, exist=exst, opened=opn)
 
@@ -250,6 +268,7 @@ call mesg (sub_name, 'level set function initialized')
 !--calculate the normal
 !--provides 0:nz-1, except at coord = 0 it provides 1:nz-1
 call fill_norm ()
+call level_set_register_geometry()
 
 if (do_write_norm) then
 
@@ -291,6 +310,114 @@ if (do_write_norm) then
 end if
 end subroutine level_set_init
 
+!**********************************************************************
+subroutine level_set_register_geometry()
+!**********************************************************************
+level_set_geometry_generation=level_set_geometry_generation+1
+level_set_uniform_patch%generation=level_set_geometry_generation
+level_set_uniform_patch%spacing=(/dx,dy,dz/)
+level_set_uniform_patch%origin=(/0._rp,0._rp,                         &
+    real(coord*(nz-1),rp)*dz/)
+level_set_uniform_patch%valid_lo=(/1,1,1/)
+level_set_uniform_patch%valid_hi=(/nx,ny,nz-1/)
+level_set_uniform_patch%ghost_lo=(/1,1,lbz/)
+level_set_uniform_patch%ghost_hi=(/ld,ny,nz/)
+level_set_uniform_patch%phi_ref=>phi
+level_set_uniform_patch%normal_ref=>norm
+phi_cutoff_is_set=.false.
+phi_0_is_set=.false.
+level_set_cs_initialized=.false.
+#ifdef PPMPI
+phi_cpu_synced=.false.
+#endif
+#if defined(PPMPI) && defined(PPLVLSET_GPU)
+phi_gpu_synced=.false.
+#endif
+end subroutine level_set_register_geometry
+
+!**********************************************************************
+subroutine level_set_geometry_refresh(recompute_norm)
+!**********************************************************************
+! Refresh the current uniform patch after host geometry changes. Extent-changing
+! regrids must call this before returning to the timestep loop.
+logical, intent(in), optional :: recompute_norm
+logical :: update_norm
+
+update_norm=.true.
+if (present(recompute_norm)) update_norm=recompute_norm
+if (update_norm) call fill_norm()
+call level_set_register_geometry()
+#ifdef PPLVLSET_GPU
+if (level_set_gpu_data_ready) call level_set_gpu_data_init()
+#endif
+end subroutine level_set_geometry_refresh
+
+!**********************************************************************
+subroutine level_set_get_patch_descriptor(descriptor)
+!**********************************************************************
+type(level_set_patch_descriptor_t), intent(out) :: descriptor
+descriptor=level_set_uniform_patch
+end subroutine level_set_get_patch_descriptor
+
+!**********************************************************************
+subroutine level_set_finalize()
+!**********************************************************************
+#ifdef PPLVLSET_GPU
+call level_set_gpu_data_finalize()
+#endif
+nullify(level_set_uniform_patch%phi_ref)
+nullify(level_set_uniform_patch%normal_ref)
+if (allocated(norm)) deallocate(norm)
+if (allocated(udes)) deallocate(udes)
+if (allocated(vdes)) deallocate(vdes)
+if (allocated(wdes)) deallocate(wdes)
+if (allocated(phi)) deallocate(phi)
+if (allocated(phitop)) deallocate(phitop)
+if (allocated(phibot)) deallocate(phibot)
+if (allocated(utop)) deallocate(utop)
+if (allocated(vtop)) deallocate(vtop)
+if (allocated(wtop)) deallocate(wtop)
+if (allocated(ubot)) deallocate(ubot)
+if (allocated(vbot)) deallocate(vbot)
+if (allocated(wbot)) deallocate(wbot)
+if (allocated(txxtop)) deallocate(txxtop)
+if (allocated(txytop)) deallocate(txytop)
+if (allocated(txztop)) deallocate(txztop)
+if (allocated(tyytop)) deallocate(tyytop)
+if (allocated(tyztop)) deallocate(tyztop)
+if (allocated(tzztop)) deallocate(tzztop)
+if (allocated(txxbot)) deallocate(txxbot)
+if (allocated(txybot)) deallocate(txybot)
+if (allocated(txzbot)) deallocate(txzbot)
+if (allocated(tyybot)) deallocate(tyybot)
+if (allocated(tyzbot)) deallocate(tyzbot)
+if (allocated(tzzbot)) deallocate(tzzbot)
+if (allocated(FMMbot)) deallocate(FMMbot)
+if (allocated(FMMtop)) deallocate(FMMtop)
+#if defined(PPLVLSET_GPU) && defined(PPMPI)
+if (allocated(vel_send_top)) deallocate(vel_send_top)
+if (allocated(vel_recv_top)) deallocate(vel_recv_top)
+if (allocated(vel_send_bot)) deallocate(vel_send_bot)
+if (allocated(vel_recv_bot)) deallocate(vel_recv_bot)
+if (allocated(tau_send_top)) deallocate(tau_send_top)
+if (allocated(tau_recv_top)) deallocate(tau_recv_top)
+if (allocated(tau_send_bot)) deallocate(tau_send_bot)
+if (allocated(tau_recv_bot)) deallocate(tau_recv_bot)
+if (allocated(tau_face_send)) deallocate(tau_face_send)
+if (allocated(tau_face_recv)) deallocate(tau_face_recv)
+if (allocated(lag_face_send)) deallocate(lag_face_send)
+if (allocated(lag_face_recv)) deallocate(lag_face_recv)
+#endif
+level_set_geometry_generation=0
+level_set_device_generation=-1
+level_set_cs_initialized=.false.
+phi_cutoff_is_set=.false.
+phi_0_is_set=.false.
+#ifdef PPMPI
+phi_cpu_synced=.false.
+#endif
+end subroutine level_set_finalize
+
 #ifdef PPLVLSET_GPU
 !**********************************************************************
 subroutine level_set_gpu_data_init()
@@ -299,13 +426,38 @@ subroutine level_set_gpu_data_init()
 ! buffers. Geometry is generated/read on the host once during startup and is
 ! immutable during the time loop.
 use level_set_gpu_m, only : level_set_gpu_interp_selftest,                   &
-                            level_set_gpu_workspace_init
+                            level_set_gpu_workspace_init,                    &
+                            level_set_gpu_workspace_bytes
+use param, only : sgs,sgs_model
+use sgs_param, only : SGS_MODEL_LAGRANGE_SIMILARITY,                         &
+                      SGS_MODEL_LAGRANGE_SCALE_DEP
+use, intrinsic :: iso_fortran_env, only : int64
 implicit none
 real(rp) :: interp_error
 integer :: interp_invalid_count
 logical :: interp_failed
+logical :: extents_match
+logical :: need_tau_source,need_fmm_source
+integer(int64) :: geometry_bytes,desired_bytes,halo_bytes,workspace_bytes
+integer(int64) :: bytes_per_real,total_bytes
 
-if (level_set_gpu_data_ready) return
+if (level_set_gpu_data_ready) then
+  extents_match=level_set_gpu_bound_ld == ld .and.                         &
+      level_set_gpu_bound_ny == ny .and. level_set_gpu_bound_nz == nz .and.&
+      level_set_gpu_bound_lbz == lbz
+  if (.not. extents_match) then
+    call level_set_gpu_data_finalize()
+  else
+    if (level_set_device_generation /= level_set_geometry_generation) then
+      !$acc update device(phi,norm)
+      level_set_device_generation=level_set_geometry_generation
+#if defined(PPMPI)
+      phi_gpu_synced=.false.
+#endif
+    end if
+    return
+  end if
+end if
 
 !$acc enter data copyin(phi, norm)
 #ifdef PPMPI
@@ -318,8 +470,14 @@ if (level_set_gpu_data_ready) return
 !$acc enter data create(tau_face_send, tau_face_recv)
 !$acc enter data create(lag_face_send, lag_face_recv)
 #endif
-!$acc enter data copyin(udes, vdes, wdes)
-call level_set_gpu_workspace_init()
+if (allocated(udes)) then
+  !$acc enter data copyin(udes,vdes,wdes)
+end if
+need_tau_source=.not. use_log_profile .and. .not. use_extrap_tau_log .and.  &
+                use_extrap_tau_simple
+need_fmm_source=sgs .and. (sgs_model == SGS_MODEL_LAGRANGE_SIMILARITY .or. &
+    sgs_model == SGS_MODEL_LAGRANGE_SCALE_DEP)
+call level_set_gpu_workspace_init(need_tau_source,need_fmm_source)
 
 call level_set_gpu_interp_selftest(interp_error,interp_invalid_count,       &
                                    interp_failed)
@@ -331,8 +489,81 @@ if (interp_failed) then
              'GPU interpolation layout self-test failed', interp_error)
 end if
 
+bytes_per_real=int(storage_size(0._rp)/8,kind=int64)
+geometry_bytes=(size(phi,kind=int64)+size(norm,kind=int64))*bytes_per_real
+desired_bytes=0_int64
+if (allocated(udes)) desired_bytes=(size(udes,kind=int64)+                  &
+    size(vdes,kind=int64)+size(wdes,kind=int64))*bytes_per_real
+halo_bytes=(size(phitop,kind=int64)+size(phibot,kind=int64)+               &
+    size(utop,kind=int64)+size(vtop,kind=int64)+size(wtop,kind=int64)+     &
+    size(ubot,kind=int64)+size(vbot,kind=int64)+size(wbot,kind=int64)+     &
+    size(txxtop,kind=int64)+size(txytop,kind=int64)+                      &
+    size(txztop,kind=int64)+size(tyytop,kind=int64)+                      &
+    size(tyztop,kind=int64)+size(tzztop,kind=int64)+                      &
+    size(txxbot,kind=int64)+size(txybot,kind=int64)+                      &
+    size(txzbot,kind=int64)+size(tyybot,kind=int64)+                      &
+    size(tyzbot,kind=int64)+size(tzzbot,kind=int64)+                      &
+    size(FMMbot,kind=int64)+size(FMMtop,kind=int64))*bytes_per_real
+#ifdef PPMPI
+halo_bytes=halo_bytes+(size(vel_send_top,kind=int64)+                      &
+    size(vel_recv_top,kind=int64)+size(vel_send_bot,kind=int64)+          &
+    size(vel_recv_bot,kind=int64)+size(tau_send_top,kind=int64)+          &
+    size(tau_recv_top,kind=int64)+size(tau_send_bot,kind=int64)+          &
+    size(tau_recv_bot,kind=int64)+size(tau_face_send,kind=int64)+         &
+    size(tau_face_recv,kind=int64)+size(lag_face_send,kind=int64)+        &
+    size(lag_face_recv,kind=int64))*bytes_per_real
+#endif
+workspace_bytes=level_set_gpu_workspace_bytes()
+total_bytes=geometry_bytes+desired_bytes+halo_bytes+workspace_bytes
+if (coord == 0) write(*,'(a,f10.2,a,4(a,f10.2))')                         &
+    'Level Set GPU persistent memory: ',real(total_bytes,rp)/1048576._rp,  &
+    ' MiB; ', 'geometry=',real(geometry_bytes,rp)/1048576._rp,             &
+    ' desired=',real(desired_bytes,rp)/1048576._rp,                        &
+    ' halos=',real(halo_bytes,rp)/1048576._rp,                             &
+    ' workspace=',real(workspace_bytes,rp)/1048576._rp
+
 level_set_gpu_data_ready = .true.
+level_set_device_generation=level_set_geometry_generation
+level_set_gpu_bound_ld=ld
+level_set_gpu_bound_ny=ny
+level_set_gpu_bound_nz=nz
+level_set_gpu_bound_lbz=lbz
 end subroutine level_set_gpu_data_init
+
+!**********************************************************************
+subroutine level_set_gpu_data_finalize()
+!**********************************************************************
+use level_set_gpu_m, only : level_set_gpu_workspace_finalize
+implicit none
+
+if (level_set_gpu_data_ready) then
+  !$acc wait
+  !$acc exit data delete(phi,norm)
+#ifdef PPMPI
+  !$acc exit data delete(phitop,phibot,utop,vtop,wtop,ubot,vbot,wbot)
+  !$acc exit data delete(txxtop,txytop,txztop,tyytop,tyztop,tzztop)
+  !$acc exit data delete(txxbot,txybot,txzbot,tyybot,tyzbot,tzzbot)
+  !$acc exit data delete(FMMbot,FMMtop)
+  !$acc exit data delete(vel_send_top,vel_recv_top,vel_send_bot,vel_recv_bot)
+  !$acc exit data delete(tau_send_top,tau_recv_top,tau_send_bot,tau_recv_bot)
+  !$acc exit data delete(tau_face_send,tau_face_recv)
+  !$acc exit data delete(lag_face_send,lag_face_recv)
+#endif
+  if (allocated(udes)) then
+    !$acc exit data delete(udes,vdes,wdes)
+  end if
+end if
+call level_set_gpu_workspace_finalize()
+level_set_gpu_data_ready=.false.
+level_set_device_generation=-1
+level_set_gpu_bound_ld=0
+level_set_gpu_bound_ny=0
+level_set_gpu_bound_nz=0
+level_set_gpu_bound_lbz=0
+#ifdef PPMPI
+phi_gpu_synced=.false.
+#endif
+end subroutine level_set_gpu_data_finalize
 #endif
 
 !**********************************************************************
@@ -3313,15 +3544,13 @@ integer :: jx, jy, jz
 integer :: jz_min
 integer :: node
 
-logical, save :: initialized = .false.
-
 real (rp) :: dmin, z
 real (rp) :: phi_tmp
 
 !----------------------------------------------------------------------
 
 
-if (.not. initialized) then
+if (.not. level_set_cs_initialized) then
 
   if (coord == 0) then
 
@@ -3398,7 +3627,7 @@ if (.not. initialized) then
     end do
   end do
 
-  initialized = .true.
+  level_set_cs_initialized = .true.
 
 end if
 
@@ -3425,8 +3654,6 @@ integer, parameter :: tag = 1000
 
 integer :: datasize
 integer :: kstart
-
-logical, save :: phi_synced = .false.
 
 !---------------------------------------------------------------------
 
@@ -3479,7 +3706,7 @@ if (.not. use_log_profile) then
       !--extrap_tau_simple: needs sync of tij, and phi too (I think)
       !--phi only needs to be "sync"ed once at first call
 
-      if (.not. phi_synced) then
+      if (.not. phi_cpu_synced) then
 
         !--this assumes phi is valid 0:nz
         !--make sure this is consistent with level_set_init
@@ -3497,6 +3724,8 @@ if (.not. use_log_profile) then
                            tag+8,                                       &
                            phibot(1, 1, 1), datasize, MPI_RPREC, down,  &
                            tag+8, comm, status, ierr)
+
+        phi_cpu_synced=.true.
 
       end if
 
@@ -4828,23 +5057,12 @@ do k = 1, nz
           Ry = -tadv1 * dpdy(i, j, k)
           fx(i, j, k) = -u(i, j, k) / dt - Rx
           fy(i, j, k) = -v(i, j, k) / dt - Ry
-        else if (vel_BC) then
-          Rx = -tadv1 * dpdx(i, j, k)
-          Ry = -tadv1 * dpdy(i, j, k)
-          if (udes(i, j, k) < huge(1._rp) / 2._rp)                           &
-            fx(i, j, k) = (udes(i, j, k) - u(i, j, k)) / dt - Rx
-          if (vdes(i, j, k) < huge(1._rp) / 2._rp)                           &
-            fy(i, j, k) = (vdes(i, j, k) - v(i, j, k)) / dt - Ry
         end if
 
         if (.not. (coord == 0 .and. k == 1)) then
           if (phi(i, j, k) + phi(i, j, k - 1) <= 0._rp) then
             Rz = -tadv1 * dpdz(i, j, k)
             fz(i, j, k) = -w(i, j, k) / dt - Rz
-          else if (vel_BC) then
-            Rz = -tadv1 * dpdz(i, j, k)
-            if (wdes(i, j, k) < huge(1._rp) / 2._rp)                         &
-              fz(i, j, k) = (wdes(i, j, k) - w(i, j, k)) / dt - Rz
           end if
         end if
       end if
@@ -4857,6 +5075,33 @@ do k = 1, nz
     end do
   end do
 end do
+if (vel_BC) then
+  ! Keep optional target arrays out of the default kernel so they need not be
+  ! allocated or mapped when velocity boundary forcing is disabled.
+  !$acc parallel loop collapse(3) default(present) async(1)                  &
+  !$acc          private(Rx,Ry,Rz)
+  do k=1,nz-1
+    do j=1,ny
+      do i=1,nx
+        if (phi(i,j,k) > 0._rp) then
+          Rx=-tadv1*dpdx(i,j,k)
+          Ry=-tadv1*dpdy(i,j,k)
+          if (udes(i,j,k) < huge(1._rp)/2._rp)                             &
+            fx(i,j,k)=(udes(i,j,k)-u(i,j,k))/dt-Rx
+          if (vdes(i,j,k) < huge(1._rp)/2._rp)                             &
+            fy(i,j,k)=(vdes(i,j,k)-v(i,j,k))/dt-Ry
+        end if
+        if (.not. (coord == 0 .and. k == 1)) then
+          if (phi(i,j,k)+phi(i,j,k-1) > 0._rp) then
+            Rz=-tadv1*dpdz(i,j,k)
+            if (wdes(i,j,k) < huge(1._rp)/2._rp)                           &
+              fz(i,j,k)=(wdes(i,j,k)-w(i,j,k))/dt-Rz
+          end if
+        end if
+      end do
+    end do
+  end do
+end if
 return
 #endif
 

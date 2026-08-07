@@ -15,9 +15,9 @@ structure, but they should be split only when a clean ownership boundary exists.
 | 3 | `lagrange_Sdep_gpu.f90` | 94,070 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
 | 4 | `scalars.f90` | 63,405 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
 | 5 | `io.f90` | 61,928 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
-| 6 | `atm_input_util.f90` | 57,365 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |
-| 7 | `sgs_gpu.f90` | 56,080 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
-| 8 | `level_set_gpu.f90` | 54,155 bytes | Keep workspace ownership, stress treatment, smoothing, SGS, and packed-halo sections navigable; split only with the dedicated Level Set matrix in place. |
+| 6 | `level_set_gpu.f90` | 61,382 bytes | Keep workspace ownership, stress treatment, smoothing, SGS, and packed-halo sections navigable; split only with the dedicated Level Set matrix in place. |
+| 7 | `atm_input_util.f90` | 57,365 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |
+| 8 | `sgs_gpu.f90` | 56,080 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
 
 `level_set.f90`, `level_set_gpu.f90`, and `trees_*_ls.f90` use a separate
 validated optional profile. Further file splitting is lower priority than

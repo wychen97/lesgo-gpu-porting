@@ -14,6 +14,7 @@ module level_set_gpu_m
 !   6. Packed MPI halo helpers for geometry, velocity, stress, and SGS state
 use types, only : rprec
 use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
+use, intrinsic :: iso_fortran_env, only : int64
 use param, only : ld, nx, ny, nz, lbz, dx, dy, dz, L_x, L_y, coord, nproc, &
                   BOGUS
 use messages, only : error
@@ -30,9 +31,13 @@ implicit none
 private
 real(rprec), allocatable, save :: tau_source(:,:,:)
 real(rprec), allocatable, save :: fmm_source(:,:,:)
+integer, save :: workspace_ld=0, workspace_ny=0, workspace_nz=0
+integer, save :: workspace_lbz=0
 
 public :: level_set_bc_gpu_core, level_set_gpu_interp_selftest,             &
           level_set_gpu_workspace_init,                                     &
+          level_set_gpu_workspace_finalize,                                 &
+          level_set_gpu_workspace_bytes,                                    &
           interp_tau_gpu, extrap_tau_simple_gpu, smooth_field_gpu,           &
           smooth_tau_gpu, level_set_lag_dyn_gpu_core,                        &
           level_set_desired_velocity_gpu
@@ -40,15 +45,73 @@ public :: level_set_bc_gpu_core, level_set_gpu_interp_selftest,             &
 contains
 
 !*******************************************************************************
-subroutine level_set_gpu_workspace_init()
+subroutine level_set_gpu_workspace_init(need_tau_source,need_fmm_source)
 !*******************************************************************************
-! A single immutable stress snapshot is reused by each extrapolated component.
-! This avoids six full-domain work arrays while preventing in-place GPU races.
-if (allocated(tau_source)) return
-allocate(tau_source(ld,ny,lbz:nz))
-allocate(fmm_source(ld,ny,1:nz))
-!$acc enter data create(tau_source, fmm_source)
+! Immutable source snapshots are allocated only for active algorithms.
+logical, intent(in) :: need_tau_source,need_fmm_source
+
+if (allocated(tau_source) .or. allocated(fmm_source)) then
+  if (workspace_ld == ld .and. workspace_ny == ny .and.                  &
+      workspace_nz == nz .and. workspace_lbz == lbz) then
+    if (need_tau_source .and. .not. allocated(tau_source)) then
+      allocate(tau_source(ld,ny,lbz:nz))
+      !$acc enter data create(tau_source)
+    else if (.not. need_tau_source .and. allocated(tau_source)) then
+      !$acc exit data delete(tau_source)
+      deallocate(tau_source)
+    end if
+    if (need_fmm_source .and. .not. allocated(fmm_source)) then
+      allocate(fmm_source(ld,ny,1:nz))
+      !$acc enter data create(fmm_source)
+    else if (.not. need_fmm_source .and. allocated(fmm_source)) then
+      !$acc exit data delete(fmm_source)
+      deallocate(fmm_source)
+    end if
+    return
+  else
+    call level_set_gpu_workspace_finalize()
+  end if
+end if
+if (need_tau_source) then
+  allocate(tau_source(ld,ny,lbz:nz))
+  !$acc enter data create(tau_source)
+end if
+if (need_fmm_source) then
+  allocate(fmm_source(ld,ny,1:nz))
+  !$acc enter data create(fmm_source)
+end if
+workspace_ld=ld
+workspace_ny=ny
+workspace_nz=nz
+workspace_lbz=lbz
 end subroutine level_set_gpu_workspace_init
+
+!*******************************************************************************
+subroutine level_set_gpu_workspace_finalize()
+!*******************************************************************************
+if (allocated(tau_source)) then
+  !$acc exit data delete(tau_source)
+  deallocate(tau_source)
+end if
+if (allocated(fmm_source)) then
+  !$acc exit data delete(fmm_source)
+  deallocate(fmm_source)
+end if
+workspace_ld=0
+workspace_ny=0
+workspace_nz=0
+workspace_lbz=0
+end subroutine level_set_gpu_workspace_finalize
+
+!*******************************************************************************
+integer(int64) function level_set_gpu_workspace_bytes() result(bytes)
+!*******************************************************************************
+bytes=0_int64
+if (allocated(tau_source)) bytes=bytes+size(tau_source,kind=int64)*         &
+    int(storage_size(0._rprec)/8,kind=int64)
+if (allocated(fmm_source)) bytes=bytes+size(fmm_source,kind=int64)*         &
+    int(storage_size(0._rprec)/8,kind=int64)
+end function level_set_gpu_workspace_bytes
 
 !*******************************************************************************
 subroutine level_set_gpu_interp_selftest(max_error, invalid_count, failed)
