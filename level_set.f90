@@ -593,7 +593,7 @@ integer :: s
 real (rp) :: delta
 real (rp) :: phix
 real (rp) :: dmin
-real (rp) :: z
+real (rp) :: zglobal
 
 !---------------------------------------------------------------------
 
@@ -610,7 +610,7 @@ do k = 1, nz
 
 #ifdef PPLVLSET_GPU
   !$acc parallel loop collapse(2) default(present) async(1)                  &
-  !$acc          private(phix, dmin, z)
+  !$acc          private(phix, dmin, zglobal)
 #endif
   do j = 1, ny
     do i = 1, nx
@@ -623,8 +623,8 @@ do k = 1, nz
            ! Stress free
            dmin = phix
         else
-           z = (k - 1) * dz
-           dmin = min (z, phix)
+           zglobal = real(coord * (nz - 1) + k - 1, rp) * dz
+           dmin = min (zglobal, phix)
         end if
 
         beta(i, j, k) = 1._rp - c1 * exp (-c2 * dmin / delta)

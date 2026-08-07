@@ -43,6 +43,23 @@ The existing public calls remain the interface:
 GPU callers therefore do not depend on implementation-specific public entry
 points.
 
+## Numerical Compatibility Notes
+
+The Level Set hardening branch contains two explicit model-4/5 corrections
+that must be included in CPU-reference comparisons:
+
+- `lag_dyn_modify_beta` is now a real runtime option on both CPU and GPU. The
+  previous CPU routine shadowed it with a local `.true.` constant, while the
+  GPU routine always modified `beta`.
+- With a physical lower wall, CPU `modify_beta` now measures wall distance
+  from the global vertical coordinate
+  `((coord * (nz - 1)) + k - 1) * dz`, matching the GPU implementation. The
+  previous CPU expression restarted the height at zero on every MPI rank.
+
+The coordinate correction leaves single-rank output unchanged. It
+intentionally changes multi-rank CPU `beta` above rank zero and therefore
+requires old-CPU/new-CPU and new-CPU/GPU comparisons before release.
+
 ## GPU Work
 
 The GPU implementation covers:
