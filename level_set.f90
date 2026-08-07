@@ -302,6 +302,8 @@ use level_set_gpu_m, only : level_set_gpu_interp_selftest,                   &
                             level_set_gpu_workspace_init
 implicit none
 real(rp) :: interp_error
+integer :: interp_invalid_count
+logical :: interp_failed
 
 if (level_set_gpu_data_ready) return
 
@@ -319,11 +321,12 @@ if (level_set_gpu_data_ready) return
 !$acc enter data copyin(udes, vdes, wdes)
 call level_set_gpu_workspace_init()
 
-call level_set_gpu_interp_selftest(interp_error)
-if (coord == 0) write(*,'(a,es12.5)')                                  &
-    'Level Set GPU interpolation self-test max error: ', interp_error
-if (interp_error > 1000._rp * epsilon(1._rp) *                         &
-    max(1._rp, maxval(abs(phi)))) then
+call level_set_gpu_interp_selftest(interp_error,interp_invalid_count,       &
+                                   interp_failed)
+if (coord == 0) write(*,'(a,es12.5,a,i0)')                                &
+    'Level Set GPU interpolation self-test max error: ',interp_error,      &
+    ', invalid values: ',interp_invalid_count
+if (interp_failed) then
   call error(mod_name // '.level_set_gpu_data_init',                   &
              'GPU interpolation layout self-test failed', interp_error)
 end if

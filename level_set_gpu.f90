@@ -13,7 +13,9 @@ module level_set_gpu_m
 !   5. Scale-dependent Lagrangian SGS model 4/5 kernels
 !   6. Packed MPI halo helpers for geometry, velocity, stress, and SGS state
 use types, only : rprec
-use param, only : ld, nx, ny, nz, lbz, dx, dy, dz, L_x, L_y, coord, nproc
+use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
+use param, only : ld, nx, ny, nz, lbz, dx, dy, dz, L_x, L_y, coord, nproc, &
+                  BOGUS
 use messages, only : error
 use level_set_base, only : phi, physBC, use_smooth_tau, smooth_mode,           &
     use_log_profile, use_extrap_tau_log, use_extrap_tau_simple,               &
@@ -49,29 +51,131 @@ allocate(fmm_source(ld,ny,1:nz))
 end subroutine level_set_gpu_workspace_init
 
 !*******************************************************************************
-subroutine level_set_gpu_interp_selftest(max_error)
+subroutine level_set_gpu_interp_selftest(max_error, invalid_count, failed)
 !*******************************************************************************
-! Verify the flattened device indexing used by ls_interp_field against the
-! native Fortran phi layout. This inexpensive startup check catches compiler
-! or lower-bound assumptions before they can corrupt the stress treatment.
+! Exercise device interpolation independently of the production geometry.
+! The cases cover affine off-grid points, periodic x/y seams, both z halos,
+! and field lower bounds of zero and one.
 real(rprec), intent(out) :: max_error
-integer :: i, j, k
-real(rprec) :: x, y, z, interpolated
+integer, intent(out) :: invalid_count
+logical, intent(out) :: failed
+integer, parameter :: tnx=4, tny=3, tnz=4, tld=tnx+1, nhalo=2, nsample=10
+real(rprec), parameter :: tdx=0.75_rprec, tdy=1.25_rprec, tdz=0.5_rprec
+real(rprec), parameter :: tlx=real(tnx,rprec)*tdx
+real(rprec), parameter :: tly=real(tny,rprec)*tdy
+real(rprec), parameter :: c0=1.25_rprec, cx=0.5_rprec
+real(rprec), parameter :: cy=-0.75_rprec, cz=1.1_rprec
+real(rprec), allocatable :: a0(:,:,:), a1(:,:,:)
+real(rprec), allocatable :: bot0(:,:,:), top0(:,:,:)
+real(rprec), allocatable :: bot1(:,:,:), top1(:,:,:)
+real(rprec) :: observed(nsample), expected(nsample), reference_scale
+integer :: i, j, k, kb, n
 
-max_error = 0._rprec
-!$acc parallel loop collapse(3) default(present) reduction(max:max_error)   &
-!$acc private(x,y,z,interpolated)
-do k = 1, nz - 1
-  do j = 1, ny
-    do i = 1, nx
-      x = real(i - 1, rprec) * dx
-      y = real(j - 1, rprec) * dy
-      z = (real(k, rprec) - 0.5_rprec) * dz
-      interpolated = ls_interp_field(phi, x, y, z, .false., LS_GRID_ARGS)
-      max_error = max(max_error, abs(interpolated - phi(i,j,k)))
+allocate(a0(tld,tny,0:tnz), a1(tld,tny,1:tnz))
+allocate(bot0(tld,tny,nhalo), top0(tld,tny,nhalo))
+allocate(bot1(tld,tny,nhalo), top1(tld,tny,nhalo))
+
+do k=0,tnz
+  do j=1,tny
+    do i=1,tld
+      a0(i,j,k)=affine_value(real(i-1,rprec)*tdx,                         &
+          real(j-1,rprec)*tdy,(real(k,rprec)-0.5_rprec)*tdz)
     end do
   end do
 end do
+do k=1,tnz
+  do j=1,tny
+    do i=1,tld
+      a1(i,j,k)=affine_value(real(i-1,rprec)*tdx,                         &
+          real(j-1,rprec)*tdy,real(k-1,rprec)*tdz)
+    end do
+  end do
+end do
+do kb=1,nhalo
+  do j=1,tny
+    do i=1,tld
+      k=kb-nhalo-1
+      bot0(i,j,kb)=affine_value(real(i-1,rprec)*tdx,                      &
+          real(j-1,rprec)*tdy,(real(k,rprec)-0.5_rprec)*tdz)
+      k=tnz+kb
+      top0(i,j,kb)=affine_value(real(i-1,rprec)*tdx,                      &
+          real(j-1,rprec)*tdy,(real(k,rprec)-0.5_rprec)*tdz)
+      k=kb-nhalo
+      bot1(i,j,kb)=affine_value(real(i-1,rprec)*tdx,                      &
+          real(j-1,rprec)*tdy,real(k-1,rprec)*tdz)
+      k=tnz+kb
+      top1(i,j,kb)=affine_value(real(i-1,rprec)*tdx,                      &
+          real(j-1,rprec)*tdy,real(k-1,rprec)*tdz)
+    end do
+  end do
+end do
+
+expected(1)=affine_value(0.37_rprec*tdx,0.42_rprec*tdy,1.15_rprec*tdz)
+expected(2)=expected(1)
+expected(3)=affine_value(1.2_rprec*tdx,0.33_rprec*tdy,1.4_rprec*tdz)
+expected(4)=expected(3)
+expected(5)=affine_value(0.8_rprec*tdx,0.6_rprec*tdy,-0.75_rprec*tdz)
+expected(6)=affine_value(1.3_rprec*tdx,0.2_rprec*tdy,                       &
+                         (real(tnz,rprec)-0.25_rprec)*tdz)
+expected(7)=affine_value(0.6_rprec*tdx,0.7_rprec*tdy,-0.25_rprec*tdz)
+expected(8)=affine_value(1.1_rprec*tdx,0.4_rprec*tdy,                       &
+                         (real(tnz,rprec)-0.5_rprec)*tdz)
+expected(9)=affine_value(0.75_rprec*tdx,0.4_rprec*tdy,1.2_rprec*tdz)
+expected(10)=expected(9)
+
+!$acc data copyin(a0,a1,bot0,top0,bot1,top1) copyout(observed)
+!$acc serial default(present)
+observed(1)=ls_interp_field(a0,0.37_rprec*tdx,0.42_rprec*tdy,              &
+    1.15_rprec*tdz,.false.,tld,tnx,tny,tnz,0,tdx,tdy,tdz,tlx,tly)
+observed(2)=ls_interp_field(a0,0.37_rprec*tdx+tlx,0.42_rprec*tdy-2._rprec*tly,&
+    1.15_rprec*tdz,.false.,tld,tnx,tny,tnz,0,tdx,tdy,tdz,tlx,tly)
+observed(3)=ls_interp_field(a1,1.2_rprec*tdx,0.33_rprec*tdy,1.4_rprec*tdz, &
+    .true.,tld,tnx,tny,tnz,1,tdx,tdy,tdz,tlx,tly)
+observed(4)=ls_interp_field(a1,1.2_rprec*tdx-2._rprec*tlx,                &
+    0.33_rprec*tdy+tly,1.4_rprec*tdz,.true.,tld,tnx,tny,tnz,1,           &
+    tdx,tdy,tdz,tlx,tly)
+observed(5)=ls_interp_field_halo(a0,bot0,top0,nhalo,nhalo,0,              &
+    0.8_rprec*tdx,0.6_rprec*tdy,-0.75_rprec*tdz,.false.,tld,tnx,tny,tnz,&
+    tdx,tdy,tdz,tlx,tly)
+observed(6)=ls_interp_field_halo(a0,bot0,top0,nhalo,nhalo,0,              &
+    1.3_rprec*tdx,0.2_rprec*tdy,(real(tnz,rprec)-0.25_rprec)*tdz,.false.,&
+    tld,tnx,tny,tnz,tdx,tdy,tdz,tlx,tly)
+observed(7)=ls_interp_field_halo(a1,bot1,top1,nhalo,nhalo,1,              &
+    0.6_rprec*tdx,0.7_rprec*tdy,-0.25_rprec*tdz,.true.,tld,tnx,tny,tnz, &
+    tdx,tdy,tdz,tlx,tly)
+observed(8)=ls_interp_field_halo(a1,bot1,top1,nhalo,nhalo,1,              &
+    1.1_rprec*tdx,0.4_rprec*tdy,(real(tnz,rprec)-0.5_rprec)*tdz,.true.,  &
+    tld,tnx,tny,tnz,tdx,tdy,tdz,tlx,tly)
+observed(9)=ls_interp_field(a0,-0.25_rprec*tdx,-0.2_rprec*tdy,            &
+    1.2_rprec*tdz,.false.,tld,tnx,tny,tnz,0,tdx,tdy,tdz,tlx,tly)
+observed(10)=ls_interp_field(a0,tlx-0.25_rprec*tdx,                       &
+    tly-0.2_rprec*tdy,1.2_rprec*tdz,.false.,tld,tnx,tny,tnz,0,           &
+    tdx,tdy,tdz,tlx,tly)
+!$acc end serial
+!$acc end data
+
+max_error=0._rprec
+invalid_count=0
+do n=1,nsample
+  if (.not. ieee_is_finite(observed(n)) .or.                              &
+      abs(observed(n)) >= 0.5_rprec*abs(BOGUS)) then
+    invalid_count=invalid_count+1
+  else
+    max_error=max(max_error,abs(observed(n)-expected(n)))
+  end if
+end do
+reference_scale=max(1._rprec,maxval(abs(expected)))
+failed=invalid_count > 0 .or.                                               &
+       max_error > 5000._rprec*epsilon(1._rprec)*reference_scale
+
+deallocate(a0,a1,bot0,top0,bot1,top1)
+
+contains
+
+pure real(rprec) function affine_value(x,y,z) result(value)
+real(rprec), intent(in) :: x,y,z
+value=c0+cx*x+cy*y+cz*z
+end function affine_value
 end subroutine level_set_gpu_interp_selftest
 
 !*******************************************************************************
