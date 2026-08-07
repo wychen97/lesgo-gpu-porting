@@ -51,7 +51,7 @@ use sim_param, only : sim_param_init
 use sim_param, only : u, v, w, RHSx, RHSy, RHSz
 #endif
 #ifdef PPSGS_GPU
-use sgs_param, only : Cs_opt2, F_LM, F_MM, F_QN, F_NN
+use sgs_param, only : Cs_opt2,F_LM,F_MM,F_QN,F_NN,Beta,Tn_all
 #ifdef PPDYN_TN
 use sgs_param, only : F_ee2, F_deedt2, ee_past
 #endif
@@ -233,6 +233,9 @@ call initial()
 ! state once and allocate GPU Lagrangian scratch buffers.
 !$acc update device(Cs_opt2)
 !$acc update device(F_LM, F_MM, F_QN, F_NN)
+if (allocated(Beta)) then
+    !$acc update device(Beta,Tn_all)
+end if
 #ifdef PPDYN_TN
 ! initial() sets DYN_TN defaults or reads dyn_tn.out on the host.
 ! Mirror those values before the explicit-residency SGS path reads them.

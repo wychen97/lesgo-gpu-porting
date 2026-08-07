@@ -29,6 +29,27 @@ device before the first resumed timestep. Omitting the RHS transfer changes the
 flow during the first resumed integration step even when turbine output at that
 step still appears continuous.
 
+## Level Set Lagrangian SGS State
+
+Level Set runs with SGS model 4 or 5 write
+`lvlset_sgs_restart.out.c*`. Version 1 contains:
+
+- a format marker and local grid/decomposition dimensions;
+- per-rank `phi` sum, absolute sum, minimum, and maximum signatures;
+- `Beta` and `Tn_all` on physical planes `1:nz`.
+
+The main LES checkpoint already owns `Cs_opt2`, `F_LM`, `F_MM`, `F_QN`, and
+`F_NN`. The Level Set sidecar completes the model-4/5 state needed at a restart
+seam between dynamic updates. A requested model-4/5 restart without this
+sidecar is rejected; silently replacing the missing arrays with initialization
+values can create a force/coefficient transient. Grid, decomposition, or
+geometry-signature mismatches are also rejected.
+
+The current contract is for the uniform-grid backend. An AMR restart format
+must additionally serialize level hierarchy, patch extents/generations,
+coverage masks, and level-specific `phi`/normal ownership. A uniform sidecar
+must not be reused for an AMR hierarchy.
+
 ## ATM State
 
 Each `turbineOutput/TURBINE_*/restart` file retains the historical controller
@@ -82,6 +103,12 @@ The following existing modules retain separate checkpoint ownership:
 Changes to any stateful optional module must add a continuous-versus-split test
 for its own sidecar. File existence alone is not sufficient evidence that a
 restart is physically continuous.
+
+For Level Set, run continuous and split cases with models 4 and 5, using
+`DYN_init=1` and `cs_count=2`. Include one seam immediately before and one seam
+immediately after a dynamic update. Compare `vel.out`, the validation snapshot,
+`lvlset_sgs_restart.out`, divergence, kinetic energy, and integrated immersed
+force for CPU, host-bridge, and full-GPU paths.
 
 ## Validation Protocol
 

@@ -191,11 +191,11 @@ claims.
 | `inflow.f90:134` | `inflow_uniform` | `gpu-marked` |  |  |
 | `init_random_seed.f90:21` | `init_random_seed` | `host-boundary` |  |  |
 | `initial.f90:21` | `initial` | `host-boundary` |  |  |
-| `initial.f90:218` | `check_for_interp` | `host-boundary` |  |  |
-| `initial.f90:243` | `ic_file` | `host-boundary` |  |  |
-| `initial.f90:259` | `ic_interp` | `host-boundary` |  |  |
-| `initial.f90:400` | `ic_dns` | `host-boundary` |  |  |
-| `initial.f90:491` | `ic_les` | `host-boundary` |  |  |
+| `initial.f90:261` | `check_for_interp` | `host-boundary` |  |  |
+| `initial.f90:286` | `ic_file` | `host-boundary` |  |  |
+| `initial.f90:302` | `ic_interp` | `host-boundary` |  |  |
+| `initial.f90:443` | `ic_dns` | `host-boundary` |  |  |
+| `initial.f90:534` | `ic_les` | `host-boundary` |  |  |
 | `initialize.f90:21` | `initialize` | `gpu-marked` |  |  |
 | `input_util.f90:63` | `read_input_conf` | `host-boundary` |  |  |
 | `input_util.f90:269` | `model_block` | `host-boundary` |  |  |
@@ -221,8 +221,8 @@ claims.
 | `io.f90:586` | `output_loop` | `host-boundary` |  |  |
 | `io.f90:733` | `inst_write` | `gpu-marked` |  |  |
 | `io.f90:1557` | `checkpoint` | `gpu-marked` |  |  |
-| `io.f90:1673` | `output_final` | `host-boundary` |  |  |
-| `io.f90:1687` | `output_init` | `host-boundary` |  |  |
+| `io.f90:1746` | `output_final` | `host-boundary` |  |  |
+| `io.f90:1760` | `output_init` | `host-boundary` |  |  |
 | `iwmles.f90:115` | `iwm_wallstress` | `gpu-marked` |  |  |
 | `iwmles.f90:174` | `iwm_init` | `gpu-marked` |  |  |
 | `iwmles.f90:297` | `iwm_finalize` | `gpu-marked` |  |  |

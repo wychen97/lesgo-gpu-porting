@@ -35,6 +35,9 @@ use sim_param, only : fxa, fya, fza
 #endif
 #ifdef PPLVLSET
 use sim_param, only : fx, fy, fz
+use sgs_param, only : Beta,Tn_all
+use level_set_base, only : phi
+use messages, only : error
 #endif
 use string_util, only : string_concat
 #ifdef PPMPI
@@ -59,6 +62,15 @@ integer::jz
 logical :: file_flag
 logical :: interp_flag
 logical :: iwm_file_flag ! integral-wall-model restart file flag
+#ifdef PPLVLSET
+integer, parameter :: lvlset_restart_magic=20260807
+integer, parameter :: lvlset_restart_version=1
+character(64) :: fname_lvlset_restart
+integer :: restart_magic,restart_version,restart_nx,restart_ny,restart_nz
+integer :: restart_nproc
+real(rprec) :: restart_phi_signature(4),current_phi_signature(4)
+logical :: lvlset_restart_exists
+#endif
 
 #if defined(PPTURBINES) && !defined(PPATM)
 fxa = 0._rprec
@@ -129,6 +141,37 @@ else
     'field with LES BCs'
     call ic_les()
 end if
+
+#ifdef PPLVLSET
+if (initu .and. allocated(Beta)) then
+    fname_lvlset_restart=path//'lvlset_sgs_restart.out'
+#ifdef PPMPI
+    call string_concat(fname_lvlset_restart,'.c',coord)
+#endif
+    inquire(file=fname_lvlset_restart,exist=lvlset_restart_exists)
+    if (.not. lvlset_restart_exists) call error('initial',                   &
+        'missing Level Set model-4/5 restart state: '//trim(fname_lvlset_restart))
+    open(14,file=fname_lvlset_restart,form='unformatted',convert=read_endian,&
+        status='old',action='read')
+    read(14) restart_magic,restart_version,restart_nx,restart_ny,restart_nz,&
+        restart_nproc,restart_phi_signature
+    if (restart_magic /= lvlset_restart_magic .or.                         &
+        restart_version /= lvlset_restart_version) call error('initial',   &
+        'unsupported Level Set SGS restart format')
+    if (restart_nx /= nx .or. restart_ny /= ny .or. restart_nz /= nz .or. &
+        restart_nproc /= nproc) call error('initial',                      &
+        'Level Set SGS restart grid/decomposition mismatch')
+    current_phi_signature=(/sum(phi(1:nx,:,1:nz-1)),                       &
+        sum(abs(phi(1:nx,:,1:nz-1))),minval(phi(1:nx,:,1:nz-1)),          &
+        maxval(phi(1:nx,:,1:nz-1))/)
+    if (any(abs(current_phi_signature-restart_phi_signature) >             &
+        1000._rprec*epsilon(1._rprec)*                                    &
+        max(1._rprec,abs(restart_phi_signature)))) call error('initial',   &
+        'Level Set SGS restart geometry signature mismatch')
+    read(14) Beta(:,:,1:nz),Tn_all(:,:,1:nz)
+    close(14)
+end if
+#endif
 
 #ifdef PPDYN_TN
 ! Read dynamic timescale running averages from file

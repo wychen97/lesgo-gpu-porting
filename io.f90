@@ -1557,16 +1557,22 @@ end subroutine inst_write
 subroutine checkpoint ()
 !*******************************************************************************
 use iwmles, only : iwm_checkPoint
-use param, only : nz, checkpoint_file, tavg_calc, lbc_mom, L_x, L_y, L_z, path
+use param, only : nx,ny,nz,nproc,checkpoint_file,tavg_calc,lbc_mom,          &
+    L_x,L_y,L_z,path
 #ifdef PPMPI
 use param, only : comm, ierr
 #endif
 use sim_param, only : u, v, w, RHSx, RHSy, RHSz
 use sgs_param, only : Cs_opt2, F_LM, F_MM, F_QN, F_NN, lagran_dt
+#ifdef PPLVLSET
+use sim_param, only : dpdx,dpdy,dpdz,fx,fy,fz,divtx,divty,divtz
+use sgs_param, only : Beta,Tn_all
+use level_set_base, only : phi
+#endif
 use param, only : jt_total, total_time, total_time_dim, dt,                    &
     use_cfl_dt, cfl, write_endian, inflow_type
 use cfl_util, only : get_max_cfl
-use string_util, only : string_concat
+use string_util, only : string_concat,uppercase
 #ifdef PPTURBINES
 use turbines, only : turbines_checkpoint
 #endif
@@ -1586,6 +1592,14 @@ use hit_inflow, only : hit_write_restart
 implicit none
 character(64) :: fname
 real(rprec) :: cfl_w
+#ifdef PPLVLSET
+character(32) :: lvlset_snapshot_env
+integer :: lvlset_snapshot_status
+logical :: write_lvlset_snapshot
+integer, parameter :: lvlset_restart_magic=20260807
+integer, parameter :: lvlset_restart_version=1
+real(rprec) :: lvlset_phi_signature(4)
+#endif
 
 #if defined(PPLES_GPU)
 ! GPU build: the restart state (u/v/w, AB2 RHS history, Lagrangian SGS
@@ -1609,6 +1623,65 @@ write (11) u(:, :, 1:nz), v(:, :, 1:nz), w(:, :, 1:nz),                        &
     Cs_opt2(:,:,1:nz), F_LM(:,:,1:nz), F_MM(:,:,1:nz),                         &
     F_QN(:,:,1:nz), F_NN(:,:,1:nz)
 close(11)
+
+#ifdef PPLVLSET
+if (allocated(Beta)) then
+#ifdef PPLES_GPU
+  !$acc wait(1)
+  !$acc update self(Beta,Tn_all)
+#endif
+  lvlset_phi_signature=(/sum(phi(1:nx,:,1:nz-1)),                         &
+      sum(abs(phi(1:nx,:,1:nz-1))),minval(phi(1:nx,:,1:nz-1)),            &
+      maxval(phi(1:nx,:,1:nz-1))/)
+  fname=path//'lvlset_sgs_restart.out'
+#ifdef PPMPI
+  call string_concat(fname,'.c',coord)
+#endif
+  open(12,file=fname,form='unformatted',convert=write_endian,              &
+      status='unknown',position='rewind')
+  write(12) lvlset_restart_magic,lvlset_restart_version,nx,ny,nz,nproc,    &
+      lvlset_phi_signature
+  write(12) Beta(:,:,1:nz),Tn_all(:,:,1:nz)
+  close(12)
+end if
+
+lvlset_snapshot_env=''
+call get_environment_variable('LESGO_LVLSET_VALIDATION_SNAPSHOT',           &
+    lvlset_snapshot_env,status=lvlset_snapshot_status)
+write_lvlset_snapshot=lvlset_snapshot_status == 0 .and.                     &
+    (trim(uppercase(lvlset_snapshot_env)) == 'ON' .or.                      &
+     trim(uppercase(lvlset_snapshot_env)) == 'TRUE' .or.                    &
+     trim(lvlset_snapshot_env) == '1')
+if (write_lvlset_snapshot) then
+#ifdef PPLES_GPU
+  !$acc wait(1)
+  !$acc update self(dpdx,dpdy,dpdz,fx,fy,fz,divtx,divty,divtz)
+  if (allocated(Beta)) then
+    !$acc update self(Beta)
+  end if
+#endif
+  fname=path//'lvlset_validation.out'
+#ifdef PPMPI
+  call string_concat(fname,'.c',coord)
+#endif
+  open(12,file=fname,form='unformatted',convert=write_endian,               &
+      status='unknown',position='rewind')
+  write(12) dpdx(:,:,1:nz),dpdy(:,:,1:nz),dpdz(:,:,1:nz),                  &
+      fx(:,:,1:nz),fy(:,:,1:nz),fz(:,:,1:nz),                              &
+      divtx(:,:,1:nz),divty(:,:,1:nz),divtz(:,:,1:nz)
+  close(12)
+  if (allocated(Beta)) then
+    fname=path//'lvlset_beta.out'
+#ifdef PPMPI
+    call string_concat(fname,'.c',coord)
+#endif
+    open(12,file=fname,form='unformatted',convert=write_endian,             &
+        status='unknown',position='rewind')
+    write(12) Beta(:,:,1:nz),Tn_all(:,:,1:nz)
+    close(12)
+  end if
+end if
+#endif
 
 ! Open grid.out for final output
 if (coord == 0) then
