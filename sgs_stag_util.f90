@@ -789,9 +789,18 @@ do j = 1, jmax
     f = A(0)+rtnewt*(A(1)+rtnewt*(A(2)+rtnewt*(A(3)+rtnewt*(A(4)+rtnewt*A(5)))))
     df = A(1) + rtnewt*(2._rprec*A(2) + rtnewt*(3._rprec*A(3) +                &
         rtnewt*(4._rprec*A(4) + rtnewt*(5._rprec*A(5)))))
+    if (abs(df) <= tiny(df)) exit
     dx = f/df
+    if (dx /= dx) exit
     rtnewt = rtnewt - dx
-    if (abs(dx) < xacc) return
+    if (abs(dx) < xacc) then
+        ! beta is a squared-coefficient scale ratio.  The historical solver
+        ! declared this admissible interval but accidentally accepted roots
+        ! outside it, making nearly identical reductions select different
+        ! branches.  Reject those roots and use the neutral fallback below.
+        if (rtnewt >= x1 .and. rtnewt <= x2) return
+        exit
+    end if
 end do
 rtnewt = 1._rprec  ! if don't converge fast enough
 write(6,*) 'using beta=1 at jz= ', jz

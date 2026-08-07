@@ -112,13 +112,14 @@ Root `CMakeLists.txt` groups common and optional source files with matching
 
 ## LVLSET Files
 
-LVLSET files are tracked for completeness, but LVLSET is outside the optimized
-production path for this branch.
+Level Set is an optional profile with a GPU timestep path. Geometry generation
+and tree preprocessing remain host-side startup work.
 
 | File | Build path | Primary role |
 | --- | --- | --- |
 | `level_set.f90` | `USE_LVLSET` | Level-set model implementation. |
 | `level_set_base.f90` | `USE_LVLSET` | Level-set base data structures and helpers. |
+| `level_set_gpu.f90` | `USE_LVLSET_GPU` | OpenACC Level Set interpolation, stress, forcing, smoothing, and SGS coupling. |
 | `trees_base_ls.f90` | `USE_LVLSET` | Tree data structures for LVLSET. |
 | `trees_global_fmask_ls.f90` | `USE_LVLSET` | Global fluid-mask tree support. |
 | `trees_io_ls.f90` | `USE_LVLSET` | LVLSET tree I/O. |

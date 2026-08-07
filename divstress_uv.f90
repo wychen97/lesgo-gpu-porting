@@ -1,4 +1,4 @@
-#if !defined(PPSGS_GPU) || (defined(PPLVLSET) && defined(PPLES_GPU))
+#if !defined(PPSGS_GPU) || (defined(PPLVLSET) && defined(PPLES_GPU) && !defined(PPLVLSET_GPU))
 !!
 !!  Copyright (C) 2009-2017  Johns Hopkins University
 !!

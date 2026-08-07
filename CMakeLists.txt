@@ -36,6 +36,9 @@ option(USE_MPI "Enable parallelization support." ON)
 option(USE_CPS "Enable concurrent precursor simulations." OFF)
 option(USE_HIT "Enable homogeneous isotropic turbulence input." OFF)
 option(USE_LVLSET "Enable level set." OFF)
+option(USE_LVLSET_GPU
+    "Enable the OpenACC Level Set path. Requires USE_LVLSET and USE_LES_GPU."
+    OFF)
 option(USE_TURBINES "Enable actuator disk model without rotation." OFF)
 option(USE_ATM "Enable actuator line/section model" OFF)
 option(USE_LES_GPU "Enable optimized OpenACC explicit-residency LES core." OFF)
@@ -60,6 +63,12 @@ if (USE_SCALARS_GPU AND NOT USE_SCALARS)
 endif ()
 if (USE_SCALARS_GPU AND NOT USE_LES_GPU)
     message(FATAL_ERROR "USE_SCALARS_GPU requires USE_LES_GPU=ON.")
+endif ()
+if (USE_LVLSET_GPU AND NOT USE_LVLSET)
+    message(FATAL_ERROR "USE_LVLSET_GPU requires USE_LVLSET=ON.")
+endif ()
+if (USE_LVLSET_GPU AND NOT USE_LES_GPU)
+    message(FATAL_ERROR "USE_LVLSET_GPU requires USE_LES_GPU=ON.")
 endif ()
 if (USE_GPU_AWARE_MPI STREQUAL "ON" AND NOT USE_MPI)
     message(FATAL_ERROR "USE_GPU_AWARE_MPI=ON requires USE_MPI=ON.")
@@ -306,6 +315,9 @@ set(LVLSET_SOURCES
     trees_base_ls.f90 trees_setup_ls.f90 trees_io_ls.f90
     trees_global_fmask_ls.f90)
 
+set(LVLSET_GPU_SOURCES
+    level_set_gpu.f90)
+
 set(TURBINE_SOURCES
     turbines_gpu.f90 turbines.f90 turbine_indicator.f90)
 
@@ -361,6 +373,11 @@ if (USE_LVLSET)
     add_definitions(-DPPLVLSET)
     list(APPEND Sources ${LVLSET_SOURCES})
     set(exec_name "${exec_name}-ls")
+    if (USE_LVLSET_GPU)
+        add_definitions(-DPPLVLSET_GPU)
+        list(APPEND Sources ${LVLSET_GPU_SOURCES})
+        set(exec_name "${exec_name}-lsgpu")
+    endif ()
 endif (USE_LVLSET)
 
 if (USE_TURBINES)
@@ -454,31 +471,6 @@ if (${hostname} STREQUAL "derecho" OR ${hostname} STREQUAL "delta")
     set (CMAKE_Fortran_FLAGS "-Mpreprocess -cuda -O3 -gpu=mem:separate,cc80,lineinfo -cudalib=cufft,cusolver,cublas -fast")
     if (USE_LES_GPU)
         set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -acc=gpu -Minfo=accel")
-        # GPU-aware MPI: defines PPGPU_AWARE_MPI so per-step halos and the
-        # chunk-pipelined tridag pass device pointers (host_data use_device).
-        # Without it the host-staged fallbacks compile - correct but the
-        # pressure pipeline is lost (~6x slower pressure solve).
-        #   AUTO: enable iff Cray's CUDA GTL exists (cray-mpich needs it linked)
-        #   ON:   force-enable; USE_MPI must be ON and MPI must be CUDA-aware
-        #         (OpenMPI+UCX needs no extra lib; Cray GTL is still linked
-        #         when present)
-        #   OFF:  host-staged paths only
-        if (USE_MPI AND NOT USE_GPU_AWARE_MPI STREQUAL "OFF" AND
-            (USE_GPU_AWARE_MPI STREQUAL "ON" OR EXISTS "/opt/cray/pe/lib64/libmpi_gtl_cuda.so"))
-            if (EXISTS "/opt/cray/pe/lib64/libmpi_gtl_cuda.so")
-                link_directories("/opt/cray/pe/lib64")
-                link_libraries(mpi_gtl_cuda)
-                set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Wl,-rpath=/opt/cray/pe/lib64")
-                message(STATUS "USE_LES_GPU: GPU-aware MPI ON (Cray libmpi_gtl_cuda linked)")
-            else ()
-                message(STATUS "USE_LES_GPU: GPU-aware MPI ON (forced; MPI must be CUDA-aware, e.g. OpenMPI+UCX)")
-            endif ()
-            add_definitions(-DPPGPU_AWARE_MPI)
-        elseif (NOT USE_MPI)
-            message(STATUS "GPU-aware MPI OFF (USE_MPI=OFF)")
-        else ()
-            message(WARNING "GPU-aware MPI OFF (USE_GPU_AWARE_MPI=${USE_GPU_AWARE_MPI}, no Cray GTL found) - host-staged halos + monolithic tridag; pressure ~6x slower")
-        endif ()
     endif ()
   endif ()
 elseif (CMAKE_Fortran_COMPILER MATCHES "nvfortran" OR CMAKE_Fortran_COMPILER MATCHES "pgf90" OR CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC" OR CMAKE_Fortran_COMPILER_ID MATCHES "PGI")
@@ -498,6 +490,35 @@ else ()
     set (CMAKE_Fortran_FLAGS "-Mpreprocess -cuda -O3 -fast")
 endif ()
 # ===================================================================
+
+# GPU-aware MPI policy is independent of the hostname-specific compiler
+# profile. AUTO detects Cray's CUDA GTL; ON supports CUDA-aware MPI stacks
+# that require no extra library (for example OpenMPI+UCX); OFF always builds
+# the host-staged fallback. Keep this before add_executable so the definition
+# applies uniformly to all GPU source files.
+if (USE_LES_GPU)
+    if (USE_MPI AND NOT USE_GPU_AWARE_MPI STREQUAL "OFF" AND
+        (USE_GPU_AWARE_MPI STREQUAL "ON" OR
+         EXISTS "/opt/cray/pe/lib64/libmpi_gtl_cuda.so"))
+        if (EXISTS "/opt/cray/pe/lib64/libmpi_gtl_cuda.so")
+            link_directories("/opt/cray/pe/lib64")
+            link_libraries(mpi_gtl_cuda)
+            set(CMAKE_Fortran_FLAGS
+                "${CMAKE_Fortran_FLAGS} -Wl,-rpath=/opt/cray/pe/lib64")
+            message(STATUS
+                "USE_LES_GPU: GPU-aware MPI ON (Cray libmpi_gtl_cuda linked)")
+        else ()
+            message(STATUS
+                "USE_LES_GPU: GPU-aware MPI ON (forced; MPI must be CUDA-aware)")
+        endif ()
+        add_definitions(-DPPGPU_AWARE_MPI)
+    elseif (NOT USE_MPI)
+        message(STATUS "GPU-aware MPI OFF (USE_MPI=OFF)")
+    else ()
+        message(WARNING
+            "GPU-aware MPI OFF (USE_GPU_AWARE_MPI=${USE_GPU_AWARE_MPI}, no Cray GTL found) - using host-staged communication")
+    endif ()
+endif ()
 
 # main lesgo executable
 add_executable(${exec_name} ${Sources})

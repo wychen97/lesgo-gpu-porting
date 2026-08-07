@@ -1,9 +1,8 @@
 # LESGO Build Profiles
 
-This file gives collaborator-facing CMake entry points for the published
-optimized non-LVLSET branch.  The source still supports older host blocks, but
-the validated handoff path is the Derecho NVHPC/A100 GPU build with LVLSET
-disabled.
+This file gives collaborator-facing CMake entry points for the optimized GPU
+branch. The standard turbine handoff profile keeps Level Set disabled; a
+separate validated profile enables the Level Set GPU implementation.
 
 ## User-Facing Cache Variables
 
@@ -39,6 +38,7 @@ cmake -S . -B build-gpu-production \
   -DUSE_SCALARS=ON \
   -DUSE_SCALARS_GPU=ON \
   -DUSE_LVLSET=OFF \
+  -DUSE_LVLSET_GPU=OFF \
   -DUSE_HIT=OFF \
   -DUSE_DYN_TN=OFF \
   -DUSE_CGNS=OFF
@@ -126,9 +126,31 @@ keys in the `FLOW_COND` block: `UP_IN`, `TI_OUT`, `LX_HIT`, `LY_HIT`,
 The three HIT velocity files are currently read as ASCII scalar lists, and
 `restartHIT.dat` stores the swept HIT plane location.
 
-CGNS output and LVLSET are optional branches.  LVLSET remains outside the
-optimized production path and should not be used as evidence that a GPU
-hot-path change is validated.
+Level Set GPU support requires both the physics module and LES GPU core:
+
+```bash
+cmake -S . -B build-level-set-gpu \
+  -Dhostname=derecho \
+  -DUSE_MPI=ON \
+  -DUSE_LES_GPU=ON \
+  -DUSE_GPU_AWARE_MPI=AUTO \
+  -DUSE_LVLSET=ON \
+  -DUSE_LVLSET_GPU=ON \
+  -DUSE_TURBINES=OFF \
+  -DUSE_ATM=OFF \
+  -DUSE_CPS=OFF \
+  -DUSE_SCALARS=OFF \
+  -DUSE_HIT=OFF
+```
+
+For a CPU reference, use `USE_LES_GPU=OFF`, `USE_LVLSET_GPU=OFF`, and
+`USE_CPU_BUILD=ON`. `USE_LVLSET=ON`, `USE_LES_GPU=ON`, and
+`USE_LVLSET_GPU=OFF` retains the slower host-bridge path for regression and
+bisecting; it is not the recommended GPU configuration.
+
+CGNS output remains an optional host-I/O branch. Level Set correctness and
+performance evidence must come from the dedicated Level Set case rather than
+the turbine validation cases.
 
 ## Validation Rule
 

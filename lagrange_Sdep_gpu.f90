@@ -227,6 +227,9 @@ use sgs_param, only : F_LM, F_MM, Beta, Cs_opt2, opftime, lagran_dt,            
 use sgs_param, only : F_ee2, F_deedt2, ee_past
 #endif
 use test_filtermodule, only : test_filter_b_gpu
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+use level_set, only : level_set_Cs_lag_dyn, level_set_lag_dyn
+#endif
 implicit none
 
 integer :: jx, jy, jz, istart, iend, iend_mod
@@ -239,7 +242,10 @@ real(rprec), parameter :: eps = 1.e-32_rprec
 opftdelta = opftime*delta
 const = 2._rprec*delta*delta
 
-! Model 4 uses beta=1 in the Mij term.
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+call level_set_lag_dyn(S11,S12,S13,S22,S23,S33)
+#else
+! Model 4 uses beta=1 in the Mij term when no immersed surface is present.
 !$acc parallel loop collapse(3) default(present) async(1)
 do jz = 1, nz
 do jy = 1, ny
@@ -248,6 +254,7 @@ do jx = 1, ld
 end do
 end do
 end do
+#endif
 
 call interpolag_Ssim_gpu()
 
@@ -481,6 +488,12 @@ call sync_downup_F(ee_past)
 #endif
 #endif
 
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+! Match the CPU Level Set contract: dynamic coefficients are not active inside
+! the immersed solid.
+call level_set_Cs_lag_dyn()
+#endif
+
 if (use_cfl_dt) lagran_dt = 0._rprec
 
 end subroutine lagrange_Ssim_gpu
@@ -500,6 +513,9 @@ use sgs_param, only : F_ee2, F_deedt2, ee_past
 #endif
 use test_filtermodule, only : test_filter_b_gpu, test_test_filter_b_gpu
 use nvtx, only : nvtxStartRange, nvtxEndRange
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+use level_set, only : level_set_Cs_lag_dyn
+#endif
 implicit none
 
 integer :: jx, jy, jz
@@ -1068,6 +1084,12 @@ call sync_downup_F(F_deedt2)
 call sync_downup_F(ee_past)
 #endif
 call nvtxEndRange()
+#endif
+
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+! Match lagrange_Sdep(): clip the dynamic coefficient in the immersed solid
+! after all F-history and beta updates are complete.
+call level_set_Cs_lag_dyn()
 #endif
 
 ! Reset variable for use during next set of cs_count timesteps
@@ -1900,7 +1922,7 @@ subroutine sync_downup_F(F)
 ! (k=nz for sync_down, k=0 for sync_up).
 !*******************************************************************************
 use mpi
-use param, only : ld, ny, nz, MPI_RPREC, down, up, comm, status, ierr
+use param, only : ld, ny, nz, nproc, coord, MPI_RPREC, down, up, comm, status, ierr
 implicit none
 real(rprec), dimension(ld,ny,0:nz), intent(inout) :: F
 
@@ -1917,15 +1939,19 @@ call mpi_sendrecv(F(:,:,nz-1), ld*ny, MPI_RPREC, up,   2,                       
 !$acc update self(F(:,:,1))
 call mpi_sendrecv(F(:,:,1),  ld*ny, MPI_RPREC, down, 1,                         &
                   F(:,:,nz), ld*ny, MPI_RPREC, up,   1, comm, status, ierr)
-!$acc wait(1)
-!$acc update device(F(:,:,nz))
+if (coord /= nproc-1) then
+    !$acc wait(1)
+    !$acc update device(F(:,:,nz))
+end if
 
 !$acc wait(1)
 !$acc update self(F(:,:,nz-1))
 call mpi_sendrecv(F(:,:,nz-1), ld*ny, MPI_RPREC, up,   2,                       &
                   F(:,:,0),    ld*ny, MPI_RPREC, down, 2, comm, status, ierr)
-!$acc wait(1)
-!$acc update device(F(:,:,0))
+if (coord /= 0) then
+    !$acc wait(1)
+    !$acc update device(F(:,:,0))
+end if
 #endif
 
 end subroutine sync_downup_F

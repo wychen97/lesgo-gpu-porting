@@ -1,8 +1,7 @@
 # Test Cases
 
 This directory follows the upstream LESGO convention of keeping runnable cases
-under `test-cases/`. Only the four cases used in the current GPU-porting
-validation suite are included:
+under `test-cases/`. The five maintained validation cases are:
 
 | Case | Purpose | Main CMake switches |
 | --- | --- | --- |
@@ -10,6 +9,7 @@ validation suite are included:
 | `adm_disk` | Actuator disk model increment | `USE_LES_GPU=ON`, `USE_TURBINES=ON`, `USE_ATM=OFF` |
 | `atm_line` | Actuator line / 5 MW turbine path | `USE_LES_GPU=ON`, `USE_TURBINES=OFF`, `USE_ATM=ON` |
 | `large_windfarm_3072x384x400_60turbines` | Large 60-turbine benchmark setup | `USE_LES_GPU=ON`, `USE_ATM=ON` |
+| `level_set_cubes` | Immersed-surface Level Set CPU/GPU parity | `USE_LES_GPU=ON`, `USE_LVLSET=ON`, `USE_LVLSET_GPU=ON` |
 
 Each case contains:
 

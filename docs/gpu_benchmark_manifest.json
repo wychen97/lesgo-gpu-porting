@@ -186,12 +186,12 @@
     {
       "id": "lvlset",
       "status": "excluded",
-      "public_case": null,
-      "base_grid": null,
-      "gpu_cmake": ["USE_LVLSET=ON"],
+      "public_case": "test-cases/level_set_cubes",
+      "base_grid": "64x64x32",
+      "gpu_cmake": ["USE_LVLSET=ON", "USE_LVLSET_GPU=ON", "USE_LES_GPU=ON"],
       "cpu_cmake": [],
-      "runtime": ["excluded from this non-LVLSET audit"],
-      "required_evidence": []
+      "runtime": ["tracked by the separate Level Set validation record"],
+      "required_evidence": ["docs/level_set_gpu_port.md"]
     }
   ]
 }

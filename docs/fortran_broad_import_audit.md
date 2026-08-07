@@ -10,7 +10,7 @@ rewriting large solver files in one pass.
 
 The `category` and `recommended action` columns distinguish safe
 cleanup candidates from intentionally broad imports that depend on
-external compiler interfaces or deferred optional modules.
+external compiler interfaces or separately validated optional modules.
 
 Total broad imports: `60`
 
@@ -19,7 +19,7 @@ Total broad imports: `60`
 | Category | Broad imports |
 | --- | ---: |
 | MPI compiler interface | 36 |
-| LVLSET deferred | 21 |
+| Level Set optional profile | 21 |
 | optional CGNS interface | 3 |
 
 ## Highest-Count Files
@@ -62,29 +62,29 @@ Total broad imports: `60`
 | `finalize.f90` | 30 | `finalize` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `forcing.f90` | 103 | `forcing::lvlset_bridge_time` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `forcing.f90` | 124 | `forcing::lvlset_bridge_report` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
-| `forcing.f90` | 393 | `forcing::project` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `forcing.f90` | 399 | `forcing::project` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `initialize.f90` | 35 | `initialize` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
-| `input_util.f90` | 687 | `input_util::read_input_conf::level_set_block` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `input_util.f90` | 687 | `input_util::read_input_conf::level_set_block` | `level_set_base` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
 | `io.f90` | 42 | `io` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `io.f90` | 46 | `io` | `cgns` | optional CGNS interface | Keep broad unless the PPCGNS build profile is validated. |
-| `lagrange_Sdep_gpu.f90` | 1902 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `lagrange_Sdep_gpu.f90` | 1924 | `lagrange_sdep_gpu_m::sync_downup_f` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `level_set.f90` | 27 | `level_set` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
-| `level_set.f90` | 30 | `level_set` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 32 | `level_set` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 280 | `level_set::level_set_vel_err` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
-| `level_set.f90` | 1784 | `level_set::interp_scal` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 1786 | `level_set::interp_scal` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 1975 | `level_set::interp_tij_u` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 1976 | `level_set::interp_tij_u` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 2184 | `level_set::interp_tij_w` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 2185 | `level_set::interp_tij_w` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 2376 | `level_set::interp_phi` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 2377 | `level_set::interp_phi` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 2552 | `level_set::interp_vel` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 2553 | `level_set::interp_vel` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 2915 | `level_set::smooth` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 4257 | `level_set::level_set_forcing` | `sim_param` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `level_set.f90` | 4397 | `level_set::safe_cd` | `grid_m` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `level_set.f90` | 30 | `level_set` | `messages` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 32 | `level_set` | `level_set_base` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 343 | `level_set::level_set_vel_err` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `level_set.f90` | 1910 | `level_set::interp_scal` | `grid_m` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 1912 | `level_set::interp_scal` | `messages` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 2101 | `level_set::interp_tij_u` | `grid_m` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 2102 | `level_set::interp_tij_u` | `messages` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 2310 | `level_set::interp_tij_w` | `grid_m` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 2311 | `level_set::interp_tij_w` | `messages` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 2502 | `level_set::interp_phi` | `grid_m` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 2503 | `level_set::interp_phi` | `messages` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 2678 | `level_set::interp_vel` | `grid_m` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 2679 | `level_set::interp_vel` | `messages` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 3050 | `level_set::smooth` | `grid_m` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 4777 | `level_set::level_set_forcing` | `sim_param` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `level_set.f90` | 4975 | `level_set::safe_cd` | `grid_m` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
 | `main.f90` | 64 | `(file scope)` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `mpi_defs.f90` | 23 | `mpi_defs` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `mpi_defs.f90` | 59 | `mpi_defs::initialize_mpi` | `cgns` | optional CGNS interface | Keep broad unless the PPCGNS build profile is validated. |
@@ -92,19 +92,19 @@ Total broad imports: `60`
 | `mpi_defs.f90` | 272 | `mpi_defs::mpi_sync_real_array` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `mpi_transpose_mod.f90` | 25 | `mpi_transpose_mod` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `param.f90` | 28 | `param` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
-| `param_output.f90` | 38 | `param_output` | `level_set_base` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `param_output.f90` | 38 | `param_output` | `level_set_base` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
 | `press_gpu.f90` | 58 | `press_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `press_stag_array.f90` | 58 | `press_stag_array` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `rmsdiv.f90` | 31 | `rmsdiv` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `scalars.f90` | 1051 | `scalars::scalars_deriv` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `scalars.f90` | 1379 | `scalars::scalars_transport` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
-| `sgs_gpu.f90` | 86 | `sgs_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
+| `sgs_gpu.f90` | 90 | `sgs_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `sgs_stag_util.f90` | 678 | `sgs_stag_util::sgs_stage_report` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `time_average.f90` | 36 | `time_average` | `cgns` | optional CGNS interface | Keep broad unless the PPCGNS build profile is validated. |
-| `trees_global_fmask_ls.f90` | 23 | `trees_global_fmask_ls` | `trees_base_ls` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
-| `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` | LVLSET deferred | Leave for a separate LVLSET cleanup/validation pass. |
+| `trees_global_fmask_ls.f90` | 23 | `trees_global_fmask_ls` | `trees_base_ls` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `trees_io_ls.f90` | 21 | `trees_io_ls` | `trees_base_ls` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `trees_setup_ls.f90` | 21 | `trees_setup_ls` | `trees_base_ls` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
+| `trees_setup_ls.f90` | 958 | `trees_setup_ls::read_trees_conf` | `messages` | Level Set optional profile | Keep broad unless narrowed under the dedicated Level Set validation matrix. |
 | `tridag_array.f90` | 49 | `tridag_array` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `tridag_gpu.f90` | 50 | `tridag_gpu_m` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |
 | `turbines.f90` | 329 | `turbines::turbines_nodes` | `mpi` | MPI compiler interface | Keep broad unless a guarded `only:` list is validated on Derecho. |

@@ -337,14 +337,14 @@ use sim_param, only : u, v, w, dpdx, dpdy, dpdz, fx, fy, fz
 #endif
 implicit none
 
-#if defined(PPLVLSET) && defined(PPLES_GPU)
+#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(PPLVLSET_GPU)
 logical :: lvlset_timing
 real(rprec) :: lvlset_t0, lvlset_t1, lvlset_t2, lvlset_t3, lvlset_t4
 integer, save :: lvlset_bridge_count = 0
 #endif
 
 #ifdef PPLVLSET
-#if defined(PPLES_GPU)
+#if defined(PPLES_GPU) && !defined(PPLVLSET_GPU)
 lvlset_timing = lvlset_bridge_timing_enabled()
 if (lvlset_timing) then
     lvlset_bridge_count = lvlset_bridge_count + 1
@@ -357,13 +357,19 @@ if (lvlset_timing) call lvlset_bridge_time(lvlset_t1)
 !$acc update self(u, v, w, dpdx, dpdy, dpdz)
 if (lvlset_timing) call lvlset_bridge_time(lvlset_t2)
 #endif
+#if defined(PPLVLSET_GPU)
+! The GPU Level Set entry point initializes fx/fy/fz in the same dense kernel
+! that computes the induced force, avoiding three host assignments and a
+! full-field transfer.
+#else
 ! Initialize
 fx = 0._rprec
 fy = 0._rprec
 fz = 0._rprec
+#endif
 !  Compute the level set IBM forces
 call level_set_forcing ()
-#if defined(PPLES_GPU)
+#if defined(PPLES_GPU) && !defined(PPLVLSET_GPU)
 if (lvlset_timing) call lvlset_bridge_time(lvlset_t3)
 !$acc update device(u, v, w, fx, fy, fz)
 if (lvlset_timing) then
@@ -405,6 +411,11 @@ tconst = tadv1 * dt
 ! Experimental explicit-residency projection path.  Keep this separate from the
 ! legacy CUDA Fortran path so PPLES_GPU arrays stay OpenACC-present instead of
 ! relying on CUDA managed dummy arguments.
+#ifdef PPLVLSET_GPU
+! Level Set induced forces are assembled on async queue 1. Project consumes
+! fx/fy/fz on the default queue, so close that producer/consumer boundary.
+!$acc wait(1)
+#endif
 if (coord == 0) then
     jz_min = 2
 else

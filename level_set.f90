@@ -40,6 +40,9 @@ public :: level_set_global_CA
 public :: level_set_smooth_vel, level_set_lag_dyn
 public :: level_set_Cs_lag_dyn
 public :: level_set_vel_err
+#ifdef PPLVLSET_GPU
+public :: level_set_gpu_data_init
+#endif
 
 character (*), parameter :: mod_name = 'level_set'
 
@@ -89,24 +92,24 @@ real (rp) :: phi_cutoff
 real (rp) :: phi_0
 
 
-!--these are the extra overlap arrays required for BC with MPI
-real (rp), allocatable, dimension(:,:,:) :: phitop
-real (rp), allocatable, dimension(:,:,:) :: phibot
-real (rp), allocatable, dimension(:,:,:) :: utop, vtop, wtop
-real (rp), allocatable, dimension(:,:,:) :: ubot, vbot, wbot
-real (rp), allocatable, dimension(:,:,:) :: txxtop, txytop, txztop,  &
-                                            tyytop, tyztop, tzztop
-real (rp), allocatable, dimension(:,:,:) :: txxbot, txybot, txzbot,  &
-                                            tyybot, tyzbot, tzzbot
-!--really only needed for Lagrangian SGS models
-real (rp), allocatable, dimension (:,:,:) :: FMMbot
-real (rp), allocatable, dimension (:,:,:) :: FMMtop
-
 real (rp), allocatable, dimension(:,:,:,:) :: norm !--normal vector
                                                  !--may want to change so only normals
                                                  !  near 0-set are stored
 !--experimental: desired velocities for IB method
 real (rp), allocatable, dimension(:,:,:) :: udes, vdes, wdes
+
+#ifdef PPLVLSET_GPU
+logical :: level_set_gpu_data_ready = .false.
+#ifdef PPMPI
+real(rp), allocatable :: vel_send_top(:,:,:,:), vel_recv_top(:,:,:,:)
+real(rp), allocatable :: vel_send_bot(:,:,:,:), vel_recv_bot(:,:,:,:)
+real(rp), allocatable :: tau_send_top(:,:,:,:), tau_recv_top(:,:,:,:)
+real(rp), allocatable :: tau_send_bot(:,:,:,:), tau_recv_bot(:,:,:,:)
+real(rp), allocatable :: tau_face_send(:,:,:), tau_face_recv(:,:,:)
+real(rp), allocatable :: lag_face_send(:,:,:), lag_face_recv(:,:,:)
+logical :: phi_gpu_synced = .false.
+#endif
+#endif
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -188,13 +191,32 @@ allocate( txxbot(ld, ny, ntaubot), &
 allocate( FMMbot(ld, ny, nFMMbot) )
 allocate( FMMtop(ld, ny, nFMMtop) )
 
+#if defined(PPLVLSET_GPU) && defined(PPMPI)
+allocate(vel_send_top(ld,ny,nveltop,3), vel_recv_top(ld,ny,nveltop,3))
+allocate(vel_send_bot(ld,ny,nvelbot,3), vel_recv_bot(ld,ny,nvelbot,3))
+allocate(tau_send_top(ld,ny,ntautop,6), tau_recv_top(ld,ny,ntautop,6))
+allocate(tau_send_bot(ld,ny,ntaubot,6), tau_recv_bot(ld,ny,ntaubot,6))
+allocate(tau_face_send(ld,ny,6), tau_face_recv(ld,ny,6))
+allocate(lag_face_send(ld,ny,2), lag_face_recv(ld,ny,2))
+#endif
+
 allocate( norm(nd, ld, ny, lbz:nz) )!--normal vector
 !                                   !--may want to change so only normals
 !                                   !  near 0-set are stored
 ! !--experimental: desired velocities for IB method
+#ifdef PPLVLSET_GPU
+! Keep valid device descriptors even when the optional velocity boundary
+! condition is disabled; the dense GPU forcing kernel contains a uniform
+! vel_BC branch.
+allocate( udes(ld, ny, lbz:nz), vdes(ld, ny, lbz:nz), wdes(ld, ny, lbz:nz) )
+udes = huge(1._rp)
+vdes = huge(1._rp)
+wdes = huge(1._rp)
+#else
 if( vel_BC ) allocate( udes(ld, ny, lbz:nz), &
                        vdes(ld, ny, lbz:nz), &
                        wdes(ld, ny, lbz:nz) )
+#endif
 
 inquire (unit=lun, exist=exst, opened=opn)
 
@@ -265,6 +287,47 @@ if (do_write_norm) then
 end if
 end subroutine level_set_init
 
+#ifdef PPLVLSET_GPU
+!**********************************************************************
+subroutine level_set_gpu_data_init()
+!**********************************************************************
+! Create one persistent OpenACC copy of Level Set geometry and overlap
+! buffers. Geometry is generated/read on the host once during startup and is
+! immutable during the time loop.
+use level_set_gpu_m, only : level_set_gpu_interp_selftest,                   &
+                            level_set_gpu_workspace_init
+implicit none
+real(rp) :: interp_error
+
+if (level_set_gpu_data_ready) return
+
+!$acc enter data copyin(phi, norm)
+#ifdef PPMPI
+!$acc enter data create(phitop, phibot, utop, vtop, wtop, ubot, vbot, wbot)
+!$acc enter data create(txxtop, txytop, txztop, tyytop, tyztop, tzztop)
+!$acc enter data create(txxbot, txybot, txzbot, tyybot, tyzbot, tzzbot)
+!$acc enter data create(FMMbot, FMMtop)
+!$acc enter data create(vel_send_top, vel_recv_top, vel_send_bot, vel_recv_bot)
+!$acc enter data create(tau_send_top, tau_recv_top, tau_send_bot, tau_recv_bot)
+!$acc enter data create(tau_face_send, tau_face_recv)
+!$acc enter data create(lag_face_send, lag_face_recv)
+#endif
+!$acc enter data copyin(udes, vdes, wdes)
+call level_set_gpu_workspace_init()
+
+call level_set_gpu_interp_selftest(interp_error)
+if (coord == 0) write(*,'(a,es12.5)')                                  &
+    'Level Set GPU interpolation self-test max error: ', interp_error
+if (interp_error > 1000._rp * epsilon(1._rp) *                         &
+    max(1._rp, maxval(abs(phi)))) then
+  call error(mod_name // '.level_set_gpu_data_init',                   &
+             'GPU interpolation layout self-test failed', interp_error)
+end if
+
+level_set_gpu_data_ready = .true.
+end subroutine level_set_gpu_data_init
+#endif
+
 !**********************************************************************
 subroutine level_set_vel_err()
 !**********************************************************************
@@ -303,6 +366,12 @@ w_err = 0._rprec
 
 !  Sum over bottom plane
 k=1
+#ifdef PPLVLSET_GPU
+! Keep this optional diagnostic device-resident as well. The reduction is
+! synchronous because the host immediately normalizes and writes the result.
+!$acc parallel loop collapse(2) default(present)                            &
+!$acc reduction(+:uv_err_navg,u_err,v_err)
+#endif
 do j=1, ny
   do i=1, nx
 
@@ -316,6 +385,10 @@ do j=1, ny
 enddo
 
 !  Sum over rest of planes
+#ifdef PPLVLSET_GPU
+!$acc parallel loop collapse(3) default(present)                            &
+!$acc reduction(+:uv_err_navg,w_err_navg,u_err,v_err,w_err)
+#endif
 do k=2, nz-1
   do j=1, ny
     do i=1, nx
@@ -408,6 +481,9 @@ do k = 1, nz
     s = 1
   end if
 
+#ifdef PPLVLSET_GPU
+  !$acc parallel loop collapse(2) default(present) async(1) private(phix)
+#endif
   do j = 1, ny
     do i = 1, nx
 
@@ -446,6 +522,11 @@ real (rp) :: phi_c
 
 !---------------------------------------------------------------------
 
+#ifdef PPLVLSET_GPU
+! Preserve the established Level Set API. GPU-aware callers do not need to
+! depend on implementation-specific entry points.
+call level_set_lag_dyn_gpu(S11,S12,S13,S22,S23,S33)
+#else
 !--part 1: smooth variables
 phi_c = 0._rp
 
@@ -468,7 +549,27 @@ call neumann_F_MM ()
 
 !--part 4 (optional): modify beta
 if (lag_dyn_modify_beta) call modify_beta ()
+#endif
 end subroutine level_set_lag_dyn
+
+#ifdef PPLVLSET_GPU
+!**********************************************************************
+subroutine level_set_lag_dyn_gpu(S11,S12,S13,S22,S23,S33)
+!**********************************************************************
+use level_set_gpu_m, only : level_set_lag_dyn_gpu_core
+implicit none
+real(rp), intent(inout) :: S11(ld,ny,nz), S12(ld,ny,nz), S13(ld,ny,nz),    &
+                           S22(ld,ny,nz), S23(ld,ny,nz), S33(ld,ny,nz)
+
+#ifdef PPMPI
+if (nproc > 1) call mpi_sync_lag_dyn_gpu(.true.)
+#endif
+call level_set_lag_dyn_gpu_core(S11,S12,S13,S22,S23,S33,norm)
+#ifdef PPMPI
+if (nproc > 1) call mpi_sync_lag_dyn_gpu(.false.)
+#endif
+end subroutine level_set_lag_dyn_gpu
+#endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine modify_beta ()
@@ -501,6 +602,10 @@ do k = 1, nz
     s = 1
   end if
 
+#ifdef PPLVLSET_GPU
+  !$acc parallel loop collapse(2) default(present) async(1)                  &
+  !$acc          private(phix, dmin, z)
+#endif
   do j = 1, ny
     do i = 1, nx
 
@@ -585,7 +690,8 @@ do k = 1, nz - 1
         !--dphi depends on normal?  should be > phi2 - phi1
         xp = x + dphi * n_hat
 
-        call interp_scal (1, F_MM, nFMMbot, FMMbot, nFMMtop, FMMtop,  &
+        call interp_scal (1, F_MM(:,:,1:nz), nFMMbot, FMMbot, nFMMtop,     &
+                          FMMtop,                                           &
                           xp, F_MM_xp, 'w')
 
         F_MM(i, j, k) = F_MM_xp
@@ -667,6 +773,9 @@ do k = 1, nz - 1
     s = 1
   end if
 
+#ifdef PPLVLSET_GPU
+  !$acc parallel loop collapse(2) default(present) async(1) private(phix)
+#endif
   do j = 1, ny
     do i = 1, nx
 
@@ -684,9 +793,26 @@ end do
   !--make F_LM valid at 1:nz (as in core code) by syncing nz to 1'
   !--not sure this is crucial
   !--probably can change above loop to 1:nz, since phi is valid there
+#ifdef PPLVLSET_GPU
+  !$acc wait(1)
+#ifdef PPGPU_AWARE_MPI
+  !$acc host_data use_device(F_LM)
   call mpi_sendrecv (F_LM(1, 1, 1), ld*ny, MPI_RPREC, down, tag+1,  &
                      F_LM(1, 1, nz), ld*ny, MPI_RPREC, up, tag+1,   &
                      comm, status, ierr)
+  !$acc end host_data
+#else
+  !$acc update self(F_LM(:,:,1))
+  call mpi_sendrecv (F_LM(1, 1, 1), ld*ny, MPI_RPREC, down, tag+1,  &
+                     F_LM(1, 1, nz), ld*ny, MPI_RPREC, up, tag+1,   &
+                     comm, status, ierr)
+  !$acc update device(F_LM(:,:,nz))
+#endif
+#else
+  call mpi_sendrecv (F_LM(1, 1, 1), ld*ny, MPI_RPREC, down, tag+1,  &
+                     F_LM(1, 1, nz), ld*ny, MPI_RPREC, up, tag+1,   &
+                     comm, status, ierr)
+#endif
 #endif
 end subroutine zero_F_LM
 
@@ -1521,7 +1647,7 @@ do k = 1, nz - 1
 
           vel2_n = dot_product (vel2, n_hat)
 
-          vel1_n = vel2_n * (phi1 / phi2)**2
+          vel1_n = dot_product (vel1, n_hat)
 
           vel1 = vel1 + (vel2_n * (phi1 / phi2)**2 - vel1_n)* n_hat
 
@@ -1586,7 +1712,7 @@ do k = 2, nz - 1  !--(-1) here due to BOGUS
 
           vel2_n = dot_product (vel2, n_hat)
 
-          vel1_n = vel2_n * (phi1 / phi2)**2
+          vel1_n = dot_product (vel1, n_hat)
 
           vel1 = vel1 + (vel2_n * (phi1 / phi2)**2 - vel1_n)* n_hat
 
@@ -2886,6 +3012,9 @@ end subroutine smooth_tau
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine level_set_smooth_vel (u, v, w)
 use param, only: lbz
+#ifdef PPLVLSET_GPU
+use level_set_gpu_m, only : smooth_field_gpu
+#endif
 implicit none
 
 real (rp), intent (in out), dimension (ld, ny, lbz:nz) :: u, v, w
@@ -2896,9 +3025,15 @@ real (rp), parameter :: phi_c = 0._rp !--any pt with phi < 0 is smoothed
 
 !---------------------------------------------------------------------
 
-call smooth (phi_c, lbound (u, 3), u)
-call smooth (phi_c, lbound (v, 3), v)
-call smooth (phi_c, lbound (w, 3), w, node='w')
+#ifdef PPLVLSET_GPU
+call smooth_field_gpu(u, lbound(u, 3), .false., phi_c)
+call smooth_field_gpu(v, lbound(v, 3), .false., phi_c)
+call smooth_field_gpu(w, lbound(w, 3), .true.,  phi_c)
+#else
+call smooth(phi_c, lbound(u, 3), u)
+call smooth(phi_c, lbound(v, 3), v)
+call smooth(phi_c, lbound(w, 3), w, node='w')
+#endif
 
 
 
@@ -3063,6 +3198,29 @@ integer :: i, j, k
 if (modulo (jt_total, global_CA_nskip) /= 0) return  !--do nothing
 fCA_out = path // 'output/global_CA.dat'
 
+#ifdef PPLVLSET_GPU
+f_Cx = 0._rp
+f_Cy = 0._rp
+f_Cz = 0._rp
+Uinf = 0._rp
+!$acc parallel loop collapse(3) default(present) reduction(+:f_Cx,f_Cy,f_Cz)
+do k = 1, nz - 1
+  do j = 1, ny
+    do i = 1, nx
+      f_Cx = f_Cx - fx(i, j, k) * dx * dy * dz
+      f_Cy = f_Cy - fy(i, j, k) * dx * dy * dz
+      f_Cz = f_Cz - fz(i, j, k) * dx * dy * dz
+    end do
+  end do
+end do
+!$acc parallel loop collapse(2) default(present) reduction(+:Uinf)
+do k = 1, nz - 1
+  do j = 1, ny
+    Uinf = Uinf + u(1, j, k)
+  end do
+end do
+Uinf = Uinf / real(ny * (nz - 1), rp)
+#else
 f_Cx = -sum (fx(1:nx, :, 1:nz-1)) * dx * dy * dz
      !--(-) since want force ON object
      !--dx*dy*dz is since force is per cell (unit volume)
@@ -3073,6 +3231,7 @@ f_Cy = -sum (fy(1:nx, :, 1:nz-1)) * dx * dy * dz
 f_Cz = -sum (fz(1:nx, :, 1:nz-1)) * dx * dy * dz
 
 Uinf = sum (u(1, :, 1:nz-1)) / (ny * (nz - 1))  !--measure at inflow plane
+#endif
 
 #ifdef PPMPI
 
@@ -3163,6 +3322,10 @@ if (.not. initialized) then
     jz = 1
 
     !--u-node at jz = 1
+#ifdef PPLVLSET_GPU
+    !$acc parallel loop collapse(2) default(present) async(1)                &
+    !$acc          private(dmin, z)
+#endif
     do jy = 1, ny
       do jx = 1, nx
 
@@ -3193,6 +3356,10 @@ if (.not. initialized) then
   end if
 
   !--w-nodes
+#ifdef PPLVLSET_GPU
+  !$acc parallel loop collapse(3) default(present) async(1)                  &
+  !$acc          private(dmin, z, phi_tmp)
+#endif
   do jz = jz_min, nz
     do jy = 1, ny
       do jx = 1, nx
@@ -3264,7 +3431,8 @@ if (.not. use_log_profile) then
   if (use_extrap_tau_log) then
 
     !<extrap_tau_log is used>
-    call error (sub_name, 'not implemented for use_extrap_tau_log')
+    if (nproc > 1) call error (sub_name,                               &
+        'use_extrap_tau_log is not implemented for multiple ranks')
 
   else
 
@@ -3330,7 +3498,8 @@ if (.not. use_log_profile) then
 
     else
       !<extrap_tau>
-      call error (sub_name, 'not implemented for use with extrap_tau')
+      if (nproc > 1) call error (sub_name,                             &
+          'legacy extrap_tau is not implemented for multiple ranks')
     end if
 
   end if
@@ -3340,6 +3509,308 @@ end if
 
 
 end subroutine mpi_sync
+#endif
+
+#if defined(PPMPI) && defined(PPLVLSET_GPU)
+!**********************************************************************
+subroutine mpi_sync_gpu()
+!**********************************************************************
+! Packed GPU halo exchange for the immersed-surface treatment. The legacy
+! CPU implementation sends each component separately; this path sends three
+! velocity components together and six stress components together.
+use sim_param, only : u,v,w,txx,txy,txz,tyy,tyz,tzz
+implicit none
+integer, parameter :: tag=1700
+integer :: i,j,l,n
+
+! Pack both velocity directions while the fields remain device-resident.
+!$acc parallel loop collapse(3) default(present) async(1)
+do n=1,3
+  do l=1,nveltop
+    do j=1,ny
+      do i=1,ld
+        select case(n)
+        case(1); vel_send_top(i,j,l,n)=u(i,j,l+1)
+        case(2); vel_send_top(i,j,l,n)=v(i,j,l+1)
+        case(3); vel_send_top(i,j,l,n)=w(i,j,l+1)
+        end select
+      end do
+    end do
+  end do
+end do
+!$acc parallel loop collapse(3) default(present) async(1)
+do n=1,3
+  do l=1,nvelbot
+    do j=1,ny
+      do i=1,ld
+        select case(n)
+        case(1); vel_send_bot(i,j,l,n)=u(i,j,nz-1-nvelbot+l-1)
+        case(2); vel_send_bot(i,j,l,n)=v(i,j,nz-1-nvelbot+l-1)
+        case(3); vel_send_bot(i,j,l,n)=w(i,j,nz-1-nvelbot+l-1)
+        end select
+      end do
+    end do
+  end do
+end do
+!$acc wait(1)
+#ifdef PPGPU_AWARE_MPI
+!$acc host_data use_device(vel_send_top,vel_recv_top,vel_send_bot,vel_recv_bot)
+call mpi_sendrecv(vel_send_top(1,1,1,1),size(vel_send_top),MPI_RPREC,down,tag+1,&
+                  vel_recv_top(1,1,1,1),size(vel_recv_top),MPI_RPREC,up,tag+1, &
+                  comm,status,ierr)
+call mpi_sendrecv(vel_send_bot(1,1,1,1),size(vel_send_bot),MPI_RPREC,up,tag+2, &
+                  vel_recv_bot(1,1,1,1),size(vel_recv_bot),MPI_RPREC,down,tag+2,&
+                  comm,status,ierr)
+!$acc end host_data
+#else
+!$acc update self(vel_send_top,vel_send_bot)
+call mpi_sendrecv(vel_send_top(1,1,1,1),size(vel_send_top),MPI_RPREC,down,tag+1,&
+                  vel_recv_top(1,1,1,1),size(vel_recv_top),MPI_RPREC,up,tag+1, &
+                  comm,status,ierr)
+call mpi_sendrecv(vel_send_bot(1,1,1,1),size(vel_send_bot),MPI_RPREC,up,tag+2, &
+                  vel_recv_bot(1,1,1,1),size(vel_recv_bot),MPI_RPREC,down,tag+2,&
+                  comm,status,ierr)
+!$acc update device(vel_recv_top,vel_recv_bot)
+#endif
+if (coord /= nproc-1) then
+  !$acc parallel loop collapse(3) default(present) async(1)
+  do l=1,nveltop; do j=1,ny; do i=1,ld
+    utop(i,j,l)=vel_recv_top(i,j,l,1)
+    vtop(i,j,l)=vel_recv_top(i,j,l,2)
+    wtop(i,j,l)=vel_recv_top(i,j,l,3)
+  end do; end do; end do
+end if
+if (coord /= 0) then
+  !$acc parallel loop collapse(3) default(present) async(1)
+  do l=1,nvelbot; do j=1,ny; do i=1,ld
+    ubot(i,j,l)=vel_recv_bot(i,j,l,1)
+    vbot(i,j,l)=vel_recv_bot(i,j,l,2)
+    wbot(i,j,l)=vel_recv_bot(i,j,l,3)
+  end do; end do; end do
+end if
+
+! Geometry is immutable, so exchange its extended slabs only once.
+if (.not. phi_gpu_synced) then
+  !$acc wait(1)
+#ifdef PPGPU_AWARE_MPI
+  !$acc host_data use_device(phi,phitop,phibot)
+  call mpi_sendrecv(phi(1,1,2),ld*ny*nphitop,MPI_RPREC,down,tag+3,           &
+                    phitop(1,1,1),ld*ny*nphitop,MPI_RPREC,up,tag+3,         &
+                    comm,status,ierr)
+  call mpi_sendrecv(phi(1,1,nz-1-nphibot),ld*ny*nphibot,MPI_RPREC,up,tag+4,&
+                    phibot(1,1,1),ld*ny*nphibot,MPI_RPREC,down,tag+4,       &
+                    comm,status,ierr)
+  !$acc end host_data
+#else
+  call mpi_sendrecv(phi(1,1,2),ld*ny*nphitop,MPI_RPREC,down,tag+3,           &
+                    phitop(1,1,1),ld*ny*nphitop,MPI_RPREC,up,tag+3,         &
+                    comm,status,ierr)
+  call mpi_sendrecv(phi(1,1,nz-1-nphibot),ld*ny*nphibot,MPI_RPREC,up,tag+4,&
+                    phibot(1,1,1),ld*ny*nphibot,MPI_RPREC,down,tag+4,       &
+                    comm,status,ierr)
+  !$acc update device(phitop,phibot)
+#endif
+  phi_gpu_synced=.true.
+end if
+
+! Make stress face ghosts valid. Reusing one packed buffer keeps allocation
+! small; each exchange is followed by unpack before the buffer is reused.
+!$acc parallel loop collapse(3) default(present) async(1)
+do n=1,6; do j=1,ny; do i=1,ld
+  select case(n)
+  case(1); tau_face_send(i,j,n)=txx(i,j,1)
+  case(2); tau_face_send(i,j,n)=txy(i,j,1)
+  case(3); tau_face_send(i,j,n)=txz(i,j,1)
+  case(4); tau_face_send(i,j,n)=tyy(i,j,1)
+  case(5); tau_face_send(i,j,n)=tyz(i,j,1)
+  case(6); tau_face_send(i,j,n)=tzz(i,j,1)
+  end select
+end do; end do; end do
+!$acc wait(1)
+#ifdef PPGPU_AWARE_MPI
+!$acc host_data use_device(tau_face_send,tau_face_recv)
+call mpi_sendrecv(tau_face_send(1,1,1),size(tau_face_send),MPI_RPREC,down,tag+5,&
+                  tau_face_recv(1,1,1),size(tau_face_recv),MPI_RPREC,up,tag+5, &
+                  comm,status,ierr)
+!$acc end host_data
+#else
+!$acc update self(tau_face_send)
+call mpi_sendrecv(tau_face_send(1,1,1),size(tau_face_send),MPI_RPREC,down,tag+5,&
+                  tau_face_recv(1,1,1),size(tau_face_recv),MPI_RPREC,up,tag+5, &
+                  comm,status,ierr)
+!$acc update device(tau_face_recv)
+#endif
+if (coord /= nproc-1) then
+  !$acc parallel loop collapse(2) default(present) async(1)
+  do j=1,ny; do i=1,ld
+    txx(i,j,nz)=tau_face_recv(i,j,1); txy(i,j,nz)=tau_face_recv(i,j,2)
+    txz(i,j,nz)=tau_face_recv(i,j,3); tyy(i,j,nz)=tau_face_recv(i,j,4)
+    tyz(i,j,nz)=tau_face_recv(i,j,5); tzz(i,j,nz)=tau_face_recv(i,j,6)
+  end do; end do
+end if
+!$acc wait(1)
+!$acc parallel loop collapse(3) default(present) async(1)
+do n=1,6; do j=1,ny; do i=1,ld
+  select case(n)
+  case(1); tau_face_send(i,j,n)=txx(i,j,nz-1)
+  case(2); tau_face_send(i,j,n)=txy(i,j,nz-1)
+  case(3); tau_face_send(i,j,n)=txz(i,j,nz-1)
+  case(4); tau_face_send(i,j,n)=tyy(i,j,nz-1)
+  case(5); tau_face_send(i,j,n)=tyz(i,j,nz-1)
+  case(6); tau_face_send(i,j,n)=tzz(i,j,nz-1)
+  end select
+end do; end do; end do
+!$acc wait(1)
+#ifdef PPGPU_AWARE_MPI
+!$acc host_data use_device(tau_face_send,tau_face_recv)
+call mpi_sendrecv(tau_face_send(1,1,1),size(tau_face_send),MPI_RPREC,up,tag+6,&
+                  tau_face_recv(1,1,1),size(tau_face_recv),MPI_RPREC,down,tag+6,&
+                  comm,status,ierr)
+!$acc end host_data
+#else
+!$acc update self(tau_face_send)
+call mpi_sendrecv(tau_face_send(1,1,1),size(tau_face_send),MPI_RPREC,up,tag+6,&
+                  tau_face_recv(1,1,1),size(tau_face_recv),MPI_RPREC,down,tag+6,&
+                  comm,status,ierr)
+!$acc update device(tau_face_recv)
+#endif
+if (coord /= 0) then
+  !$acc parallel loop collapse(2) default(present) async(1)
+  do j=1,ny; do i=1,ld
+    txx(i,j,0)=tau_face_recv(i,j,1); txy(i,j,0)=tau_face_recv(i,j,2)
+    txz(i,j,0)=tau_face_recv(i,j,3); tyy(i,j,0)=tau_face_recv(i,j,4)
+    tyz(i,j,0)=tau_face_recv(i,j,5); tzz(i,j,0)=tau_face_recv(i,j,6)
+  end do; end do
+end if
+
+! Pack and exchange all extended stress layers in two messages.
+!$acc parallel loop collapse(4) default(present) async(1)
+do n=1,6; do l=1,ntautop; do j=1,ny; do i=1,ld
+  select case(n)
+  case(1); tau_send_top(i,j,l,n)=txx(i,j,l+1)
+  case(2); tau_send_top(i,j,l,n)=txy(i,j,l+1)
+  case(3); tau_send_top(i,j,l,n)=txz(i,j,l+1)
+  case(4); tau_send_top(i,j,l,n)=tyy(i,j,l+1)
+  case(5); tau_send_top(i,j,l,n)=tyz(i,j,l+1)
+  case(6); tau_send_top(i,j,l,n)=tzz(i,j,l+1)
+  end select
+end do; end do; end do; end do
+!$acc parallel loop collapse(4) default(present) async(1)
+do n=1,6; do l=1,ntaubot; do j=1,ny; do i=1,ld
+  select case(n)
+  case(1); tau_send_bot(i,j,l,n)=txx(i,j,nz-1-ntaubot+l-1)
+  case(2); tau_send_bot(i,j,l,n)=txy(i,j,nz-1-ntaubot+l-1)
+  case(3); tau_send_bot(i,j,l,n)=txz(i,j,nz-1-ntaubot+l-1)
+  case(4); tau_send_bot(i,j,l,n)=tyy(i,j,nz-1-ntaubot+l-1)
+  case(5); tau_send_bot(i,j,l,n)=tyz(i,j,nz-1-ntaubot+l-1)
+  case(6); tau_send_bot(i,j,l,n)=tzz(i,j,nz-1-ntaubot+l-1)
+  end select
+end do; end do; end do; end do
+!$acc wait(1)
+#ifdef PPGPU_AWARE_MPI
+!$acc host_data use_device(tau_send_top,tau_recv_top,tau_send_bot,tau_recv_bot)
+call mpi_sendrecv(tau_send_top(1,1,1,1),size(tau_send_top),MPI_RPREC,down,tag+7,&
+                  tau_recv_top(1,1,1,1),size(tau_recv_top),MPI_RPREC,up,tag+7, &
+                  comm,status,ierr)
+call mpi_sendrecv(tau_send_bot(1,1,1,1),size(tau_send_bot),MPI_RPREC,up,tag+8,&
+                  tau_recv_bot(1,1,1,1),size(tau_recv_bot),MPI_RPREC,down,tag+8,&
+                  comm,status,ierr)
+!$acc end host_data
+#else
+!$acc update self(tau_send_top,tau_send_bot)
+call mpi_sendrecv(tau_send_top(1,1,1,1),size(tau_send_top),MPI_RPREC,down,tag+7,&
+                  tau_recv_top(1,1,1,1),size(tau_recv_top),MPI_RPREC,up,tag+7, &
+                  comm,status,ierr)
+call mpi_sendrecv(tau_send_bot(1,1,1,1),size(tau_send_bot),MPI_RPREC,up,tag+8,&
+                  tau_recv_bot(1,1,1,1),size(tau_recv_bot),MPI_RPREC,down,tag+8,&
+                  comm,status,ierr)
+!$acc update device(tau_recv_top,tau_recv_bot)
+#endif
+if (coord /= nproc-1) then
+  !$acc parallel loop collapse(3) default(present) async(1)
+  do l=1,ntautop; do j=1,ny; do i=1,ld
+    txxtop(i,j,l)=tau_recv_top(i,j,l,1); txytop(i,j,l)=tau_recv_top(i,j,l,2)
+    txztop(i,j,l)=tau_recv_top(i,j,l,3); tyytop(i,j,l)=tau_recv_top(i,j,l,4)
+    tyztop(i,j,l)=tau_recv_top(i,j,l,5); tzztop(i,j,l)=tau_recv_top(i,j,l,6)
+  end do; end do; end do
+end if
+if (coord /= 0) then
+  !$acc parallel loop collapse(3) default(present) async(1)
+  do l=1,ntaubot; do j=1,ny; do i=1,ld
+    txxbot(i,j,l)=tau_recv_bot(i,j,l,1); txybot(i,j,l)=tau_recv_bot(i,j,l,2)
+    txzbot(i,j,l)=tau_recv_bot(i,j,l,3); tyybot(i,j,l)=tau_recv_bot(i,j,l,4)
+    tyzbot(i,j,l)=tau_recv_bot(i,j,l,5); tzzbot(i,j,l)=tau_recv_bot(i,j,l,6)
+  end do; end do; end do
+end if
+end subroutine mpi_sync_gpu
+
+!**********************************************************************
+subroutine mpi_sync_lag_dyn_gpu(before_update)
+!**********************************************************************
+! Exchange the Level Set-specific model-4 histories. Before preconditioning,
+! populate the extended F_MM interpolation slabs. Afterwards, synchronize the
+! updated F_LM/F_MM interface face in one packed message.
+use sgs_param, only : F_LM,F_MM
+implicit none
+logical, intent(in) :: before_update
+integer, parameter :: tag=1800
+integer :: i,j
+
+!$acc wait(1)
+if (before_update) then
+#ifdef PPGPU_AWARE_MPI
+  !$acc host_data use_device(F_MM,FMMtop,FMMbot)
+  call mpi_sendrecv(F_MM(1,1,2),ld*ny*nFMMtop,MPI_RPREC,down,tag+1,         &
+                    FMMtop(1,1,1),ld*ny*nFMMtop,MPI_RPREC,up,tag+1,        &
+                    comm,status,ierr)
+  call mpi_sendrecv(F_MM(1,1,nz-nFMMbot),ld*ny*nFMMbot,MPI_RPREC,up,tag+2,&
+                    FMMbot(1,1,1),ld*ny*nFMMbot,MPI_RPREC,down,tag+2,      &
+                    comm,status,ierr)
+  !$acc end host_data
+#else
+  !$acc update self(F_MM(:,:,2:1+nFMMtop),F_MM(:,:,nz-nFMMbot:nz-1))
+  call mpi_sendrecv(F_MM(1,1,2),ld*ny*nFMMtop,MPI_RPREC,down,tag+1,         &
+                    FMMtop(1,1,1),ld*ny*nFMMtop,MPI_RPREC,up,tag+1,        &
+                    comm,status,ierr)
+  call mpi_sendrecv(F_MM(1,1,nz-nFMMbot),ld*ny*nFMMbot,MPI_RPREC,up,tag+2,&
+                    FMMbot(1,1,1),ld*ny*nFMMbot,MPI_RPREC,down,tag+2,      &
+                    comm,status,ierr)
+  !$acc update device(FMMtop,FMMbot)
+#endif
+  return
+end if
+
+!$acc parallel loop collapse(2) default(present) async(1)
+do j=1,ny
+  do i=1,ld
+    lag_face_send(i,j,1)=F_LM(i,j,1)
+    lag_face_send(i,j,2)=F_MM(i,j,1)
+  end do
+end do
+!$acc wait(1)
+#ifdef PPGPU_AWARE_MPI
+!$acc host_data use_device(lag_face_send,lag_face_recv)
+call mpi_sendrecv(lag_face_send(1,1,1),size(lag_face_send),MPI_RPREC,down,tag+3,&
+                  lag_face_recv(1,1,1),size(lag_face_recv),MPI_RPREC,up,tag+3, &
+                  comm,status,ierr)
+!$acc end host_data
+#else
+!$acc update self(lag_face_send)
+call mpi_sendrecv(lag_face_send(1,1,1),size(lag_face_send),MPI_RPREC,down,tag+3,&
+                  lag_face_recv(1,1,1),size(lag_face_recv),MPI_RPREC,up,tag+3, &
+                  comm,status,ierr)
+!$acc update device(lag_face_recv)
+#endif
+if (coord /= nproc-1) then
+  !$acc parallel loop collapse(2) default(present) async(1)
+  do j=1,ny
+    do i=1,ld
+      F_LM(i,j,nz)=lag_face_recv(i,j,1)
+      F_MM(i,j,nz)=lag_face_recv(i,j,2)
+    end do
+  end do
+end if
+end subroutine mpi_sync_lag_dyn_gpu
 #endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -3481,6 +3952,10 @@ character (*), parameter :: sub_name = mod_name // '.level_set_BC'
 
 !---------------------------------------------------------------------
 
+#ifdef PPLVLSET_GPU
+call level_set_BC_gpu()
+return
+#endif
 
 #ifdef PPMPI
   call mpi_sync ()
@@ -3532,6 +4007,43 @@ end if
 
 
 end subroutine level_set_BC
+
+#ifdef PPLVLSET_GPU
+!**********************************************************************
+subroutine level_set_BC_gpu()
+!**********************************************************************
+! Device-resident immersed-surface stress treatment. Optional legacy modes are
+! supported for one rank; configurations that the CPU implementation also
+! cannot communicate are rejected explicitly for multiple ranks.
+use sim_param, only : u, v, w, txx, txy, txz, tyy, tyz, tzz
+use level_set_gpu_m, only : level_set_bc_gpu_core
+implicit none
+character(*), parameter :: sub_name=mod_name // '.level_set_BC_gpu'
+
+if (.not. phi_cutoff_is_set) then
+  phi_cutoff = filter_size * 1.1_rp * dx
+  phi_cutoff_is_set = .true.
+end if
+if (.not. phi_0_is_set) then
+  phi_0 = -100._rp * epsilon(1._rp)
+  phi_0_is_set = .true.
+end if
+
+#ifdef PPMPI
+if (nproc > 1) then
+  if (use_extrap_tau_log) call error(sub_name,                              &
+      'use_extrap_tau_log is not implemented for multiple ranks')
+  if (.not. use_extrap_tau_simple) call error(sub_name,                     &
+      'legacy extrap_tau is not implemented for multiple ranks')
+  if (use_modify_dutdn) call error(sub_name,                                &
+      'modify_dutdn is not implemented for multiple ranks')
+  if (.not. use_log_profile) call mpi_sync_gpu()
+end if
+#endif
+
+call level_set_bc_gpu_core(phi_cutoff, phi_0, norm)
+end subroutine level_set_BC_gpu
+#endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !--now, we also need to do extrapolation passes for dead/solid nodes
@@ -3633,6 +4145,7 @@ do k = 2, nz-1
             txx(i, j, k) = txx(list(1, 1), list(2, 1), list(3, 1))
             txy(i, j, k) = txy(list(1, 1), list(2, 1), list(3, 1))
             tyy(i, j, k) = tyy(list(1, 1), list(2, 1), list(3, 1))
+            tzz(i, j, k) = tzz(list(1, 1), list(2, 1), list(3, 1))
 
           case (2)
 
@@ -3779,7 +4292,7 @@ logical :: output
 logical :: exst, opn
 
 real (rp) :: kappa
-real (rp) :: phi_c, phix
+real (rp) :: phi_c, phix, wall_distance
 real (rp) :: tau
 real (rp) :: n_hat(nd)
 real (rp) :: vel(nd), vel_t(nd)
@@ -3909,7 +4422,11 @@ do k = 1, nz-1
           if (physBC) then
             tau = -(kappa * mag (vel_t) / log (1._rp + phi_c / zo_level_set))**2
           else
-            tau = -(kappa * mag (vel_t) / log (1._rp + phix / zo_level_set))**2
+            ! The local log law is undefined at an interface-aligned node
+            ! (phix=0) and is not valid below the roughness length.
+            wall_distance = max(phix, zo_level_set)
+            tau = -(kappa * mag (vel_t) /                              &
+                    log (1._rp + wall_distance / zo_level_set))**2
           end if
 
           !--special case: only nonzero t_{i'j'} is t_{1'3'} & t_{3'1'}
@@ -3920,10 +4437,10 @@ do k = 1, nz-1
 
           if (use_modify_dutdn) then
 #ifdef PPMPI
-              call error (sub_name, 'modify_dutdn not MPI-enabled')
-#else
-              call modify_dutdn (i, j, k, tau, phix, x_hat, y_hat, z_hat)
+              if (nproc > 1) call error (sub_name,                     &
+                  'modify_dutdn is not implemented for multiple ranks')
 #endif
+              call modify_dutdn (i, j, k, tau, phix, x_hat, y_hat, z_hat)
           end if
 
         end if
@@ -4051,7 +4568,9 @@ do k = kmin, kmax
           if (physBC) then
             tau = -(kappa * mag (vel_t) / log (1._rp + phi_c / zo_level_set))**2
           else
-            tau = -(kappa * mag (vel_t) / log (1._rp + phix / zo_level_set))**2
+            wall_distance = max(phix, zo_level_set)
+            tau = -(kappa * mag (vel_t) /                              &
+                    log (1._rp + wall_distance / zo_level_set))**2
           end if
 
           txz(i, j, k) = (x_hat(1) * z_hat(3) + z_hat(1) * x_hat(3)) * tau
@@ -4059,10 +4578,10 @@ do k = kmin, kmax
 
           if (use_modify_dutdn) then
 #ifdef PPMPI
-              call error (sub_name, 'modify_dutdn not MPI enabled')
-#else
-              call modify_dutdn (i, j, k, tau, phix, x_hat, y_hat, z_hat, 'w')
+              if (nproc > 1) call error (sub_name,                     &
+                  'modify_dutdn is not implemented for multiple ranks')
 #endif
+              call modify_dutdn (i, j, k, tau, phix, x_hat, y_hat, z_hat, 'w')
           end if
 
         end if
@@ -4139,12 +4658,13 @@ end subroutine interp_tau
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine fit3 (p, nl, l, t)
 use linear_simple, only : solve_linear
+use param, only : lbz
 implicit none
 
 integer, intent (in) :: p(nd)
 integer, intent (in) :: nl
 integer, intent (in) :: l(nd, nl)
-real (rp), intent (in out) :: t(ld, ny, nz)
+real (rp), intent (in out) :: t(ld, ny, lbz:nz)
 
 character (*), parameter :: sub_name = mod_name // '.fit3'
 
@@ -4237,7 +4757,7 @@ else  !--just average all the points, for now
     tmp = tmp + t(l(1, m), l(2, m), l(3, m))
   end do
 
-  tmp = tmp / m
+  tmp = tmp / real(nl, rp)
 
   t(p(1), p(2), p(3)) = tmp
 
@@ -4256,6 +4776,9 @@ subroutine level_set_forcing ()
 use param, only : tadv1, dt, BOGUS, dx  !--in addition to param vars above
 use sim_param
 use sim_param, only : fx, fy, fz
+#ifdef PPLVLSET_GPU
+use level_set_gpu_m, only : level_set_desired_velocity_gpu
+#endif
 
 implicit none
 
@@ -4271,10 +4794,65 @@ real (rp) :: Rx, Ry, Rz
 
 !--this is experimental
 if (vel_BC) then
+#ifdef PPLVLSET_GPU
+  call level_set_desired_velocity_gpu(phi_0,phi_cutoff,norm,                  &
+                                      use_enforce_un,use_log_profile,        &
+                                      udes,vdes,wdes)
+#else
   if (use_enforce_un) call enforce_un ()
   if (use_log_profile) call enforce_log_profile ()
+#endif
 end if
 
+#ifdef PPLVLSET_GPU
+! The induced-force calculation is dense and independent at every grid point.
+! Keep all force initialization and immersed-boundary forcing on the device.
+!$acc parallel loop collapse(3) default(present) async(1)                    &
+!$acc          private(Rx, Ry, Rz)
+do k = 1, nz
+  do j = 1, ny
+    do i = 1, ld
+      fx(i, j, k) = 0._rp
+      fy(i, j, k) = 0._rp
+      fz(i, j, k) = 0._rp
+
+      if (i <= nx .and. k <= nz - 1) then
+        if (phi(i, j, k) <= 0._rp) then
+          Rx = -tadv1 * dpdx(i, j, k)
+          Ry = -tadv1 * dpdy(i, j, k)
+          fx(i, j, k) = -u(i, j, k) / dt - Rx
+          fy(i, j, k) = -v(i, j, k) / dt - Ry
+        else if (vel_BC) then
+          Rx = -tadv1 * dpdx(i, j, k)
+          Ry = -tadv1 * dpdy(i, j, k)
+          if (udes(i, j, k) < huge(1._rp) / 2._rp)                           &
+            fx(i, j, k) = (udes(i, j, k) - u(i, j, k)) / dt - Rx
+          if (vdes(i, j, k) < huge(1._rp) / 2._rp)                           &
+            fy(i, j, k) = (vdes(i, j, k) - v(i, j, k)) / dt - Ry
+        end if
+
+        if (.not. (coord == 0 .and. k == 1)) then
+          if (phi(i, j, k) + phi(i, j, k - 1) <= 0._rp) then
+            Rz = -tadv1 * dpdz(i, j, k)
+            fz(i, j, k) = -w(i, j, k) / dt - Rz
+          else if (vel_BC) then
+            Rz = -tadv1 * dpdz(i, j, k)
+            if (wdes(i, j, k) < huge(1._rp) / 2._rp)                         &
+              fz(i, j, k) = (wdes(i, j, k) - w(i, j, k)) / dt - Rz
+          end if
+        end if
+      end if
+
+      if (k == nz) then
+        fx(i, j, k) = BOGUS
+        fy(i, j, k) = BOGUS
+        if (coord < nproc - 1) fz(i, j, k) = BOGUS
+      end if
+    end do
+  end do
+end do
+return
+#endif
 
 if (coord == 0) then
 

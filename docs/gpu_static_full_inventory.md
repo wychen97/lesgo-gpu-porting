@@ -159,7 +159,7 @@ claims.
 | `forcing.f90:160` | `forcing_random` | `gpu-marked` |  |  |
 | `forcing.f90:230` | `forcing_applied` | `gpu-marked` |  |  |
 | `forcing.f90:323` | `forcing_induced` | `gpu-marked` |  |  |
-| `forcing.f90:380` | `project` | `gpu-marked` |  |  |
+| `forcing.f90:386` | `project` | `gpu-marked` |  |  |
 | `fringe.f90:59` | `constructor` | `unmarked-runtime-candidate` | `inflow-fringe-profile` | `hit_inflow`, `shifted_inflow`, `sponge_coriolis` |
 | `functions.f90:62` | `interp_to_uv_grid` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
 | `functions.f90:139` | `interp_to_w_grid` | `unmarked-runtime-candidate` | `generic-helper-profile` | `les_core_channel`, `adm_disk`, `atm_line` |
@@ -235,10 +235,10 @@ claims.
 | `lagrange_Sdep.f90:21` | `lagrange_Sdep` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `lagrange_Sdep_gpu.f90:135` | `lagrange_Sdep_gpu_init` | `gpu-marked` |  |  |
 | `lagrange_Sdep_gpu.f90:215` | `lagrange_Ssim_gpu` | `gpu-marked` |  |  |
-| `lagrange_Sdep_gpu.f90:489` | `lagrange_Sdep_gpu` | `gpu-marked` |  |  |
-| `lagrange_Sdep_gpu.f90:1081` | `interpolag_Ssim_gpu` | `gpu-marked` |  |  |
-| `lagrange_Sdep_gpu.f90:1248` | `interpolag_Sdep_gpu` | `gpu-marked` |  |  |
-| `lagrange_Sdep_gpu.f90:1895` | `sync_downup_F` | `gpu-marked` |  |  |
+| `lagrange_Sdep_gpu.f90:502` | `lagrange_Sdep_gpu` | `gpu-marked` |  |  |
+| `lagrange_Sdep_gpu.f90:1103` | `interpolag_Ssim_gpu` | `gpu-marked` |  |  |
+| `lagrange_Sdep_gpu.f90:1270` | `interpolag_Sdep_gpu` | `gpu-marked` |  |  |
+| `lagrange_Sdep_gpu.f90:1917` | `sync_downup_F` | `gpu-marked` |  |  |
 | `lagrange_Ssim.f90:21` | `lagrange_Ssim` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `linear_simple.f90:46` | `solve_linear` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `linear_simple.f90:86` | `assert_eq2` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
@@ -248,7 +248,7 @@ claims.
 | `linear_simple.f90:226` | `lubksb` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `linear_simple.f90:278` | `outerprod` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
 | `linear_simple.f90:288` | `swap` | `unmarked-runtime-candidate` | `atm-host-model` | `atm_line`, `large_windfarm` |
-| `main.f90:1059` | `main_read_env_real` | `host-or-diagnostic` |  |  |
+| `main.f90:1087` | `main_read_env_real` | `host-or-diagnostic` |  |  |
 | `messages.f90:63` | `message_a` | `host-boundary` |  |  |
 | `messages.f90:73` | `message_ai` | `host-boundary` |  |  |
 | `messages.f90:84` | `message_aiai` | `host-boundary` |  |  |
@@ -313,13 +313,13 @@ claims.
 | `scalars.f90:1725` | `to_big` | `unmarked-runtime-candidate` | `scalar-init-fallback` | `scalar_passive`, `scalar_active`, `cps_scalar` |
 | `scalars.f90:1749` | `buoyancy_force` | `gpu-marked` |  |  |
 | `scaledep_dynamic.f90:21` | `scaledep_dynamic` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
-| `sgs_gpu.f90:109` | `divstress_gpu_init` | `gpu-marked` |  |  |
-| `sgs_gpu.f90:126` | `std_dynamic_pples_gpu` | `gpu-marked` |  |  |
-| `sgs_gpu.f90:278` | `scaledep_dynamic_pples_gpu` | `gpu-marked` |  |  |
-| `sgs_gpu.f90:554` | `sgs_stag_gpu` | `gpu-marked` |  |  |
-| `sgs_gpu.f90:913` | `calc_Sij_gpu` | `gpu-marked` |  |  |
-| `sgs_gpu.f90:1080` | `divstress_uv_gpu` | `gpu-marked` |  |  |
-| `sgs_gpu.f90:1183` | `divstress_w_gpu` | `gpu-marked` |  |  |
+| `sgs_gpu.f90:113` | `divstress_gpu_init` | `gpu-marked` |  |  |
+| `sgs_gpu.f90:130` | `std_dynamic_pples_gpu` | `gpu-marked` |  |  |
+| `sgs_gpu.f90:282` | `scaledep_dynamic_pples_gpu` | `gpu-marked` |  |  |
+| `sgs_gpu.f90:558` | `sgs_stag_gpu` | `gpu-marked` |  |  |
+| `sgs_gpu.f90:936` | `calc_Sij_gpu` | `gpu-marked` |  |  |
+| `sgs_gpu.f90:1103` | `divstress_uv_gpu` | `gpu-marked` |  |  |
+| `sgs_gpu.f90:1206` | `divstress_w_gpu` | `gpu-marked` |  |  |
 | `sgs_param.f90:111` | `sgs_param_init` | `gpu-marked` |  |  |
 | `sgs_stag_util.f90:47` | `sgs_stag` | `unmarked-runtime-candidate` | `diagnostic-profiling` | `diagnostics_output` |
 | `sgs_stag_util.f90:494` | `calc_Sij` | `unmarked-runtime-candidate` | `diagnostic-profiling` | `diagnostics_output` |

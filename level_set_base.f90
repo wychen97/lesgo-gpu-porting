@@ -86,6 +86,18 @@ logical :: phi_0_is_set = .false.
 !real (rp) :: phi(ld, ny, lbz:nz)
 real(rp), allocatable, dimension(:,:,:) :: phi
 
+!--Extended vertical overlap fields used by immersed-surface interpolation.
+!--They live with the Level Set data model so both the CPU implementation and
+!--the GPU interpolation kernels share one owner and one allocation.
+real(rp), allocatable, dimension(:,:,:) :: phitop, phibot
+real(rp), allocatable, dimension(:,:,:) :: utop, vtop, wtop
+real(rp), allocatable, dimension(:,:,:) :: ubot, vbot, wbot
+real(rp), allocatable, dimension(:,:,:) :: txxtop, txytop, txztop,          &
+                                           tyytop, tyztop, tzztop
+real(rp), allocatable, dimension(:,:,:) :: txxbot, txybot, txzbot,          &
+                                           tyybot, tyzbot, tzzbot
+real(rp), allocatable, dimension(:,:,:) :: FMMbot, FMMtop
+
 logical :: use_trees
 
 #ifdef PPMPI

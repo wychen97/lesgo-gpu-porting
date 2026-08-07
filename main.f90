@@ -68,8 +68,11 @@ use cuda_mpi_debug, only : mpi_dbg_sendrecv_r
 #endif
 
 #ifdef PPLVLSET
-use level_set, only : level_set_global_CA, level_set_vel_err
+use level_set, only : level_set_global_CA
 use level_set_base, only : global_CA_calc
+#if defined(PPLES_GPU)
+use sim_param, only : fx, fy, fz
+#endif
 #if defined(PPSGS_GPU) && defined(PPLES_GPU)
 use sgs_param, only : S11, S12, S13, S22, S23, S33, Nu_t, Cs_opt2,            &
                       F_LM, F_MM, F_QN, F_NN, Beta, Tn_all
@@ -386,7 +389,7 @@ time_loop: do jt_step = nstart, nsteps
         call error(prog_name,                                                   &
             'PPSGS_GPU currently supports active SGS models 1, 2, 3, 4, and 5 only')
     end if
-#if defined(PPLVLSET) && defined(PPLES_GPU)
+#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(PPLVLSET_GPU)
     ! LVLSET has no OpenACC SGS path yet. Use the established CPU LVLSET SGS
     ! routines and explicitly bridge the resident LES/SGS arrays.
     !$acc wait(1)
@@ -451,9 +454,12 @@ time_loop: do jt_step = nstart, nsteps
     ! in this version. Provides divtz 1:nz-1, except 1:nz at top process
     call clock_sgs_divuv%start
 #ifdef PPSGS_GPU
-#if defined(PPLVLSET) && defined(PPLES_GPU)
-    ! LVLSET stress boundary treatment is still host-only. Keep div-stress on
-    ! the same path as the LVLSET SGS bridge, then refresh device divtau.
+#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(PPLVLSET_GPU)
+    ! Until the Level Set-compatible GPU divergence path is enabled, refresh
+    ! the host stresses produced by sgs_stag_gpu before CPU divstress reads
+    ! them. The former whole-SGS host bridge performed this implicitly.
+    !$acc wait(1)
+    !$acc update self(txx, txy, txz, tyy, tyz, tzz)
     call divstress_uv(divtx, divty, txx, txy, txz, tyy, tyz)
     !$acc update device(divtx, divty)
 #else
@@ -467,7 +473,7 @@ time_loop: do jt_step = nstart, nsteps
 
     call clock_sgs_divw%start
 #ifdef PPSGS_GPU
-#if defined(PPLVLSET) && defined(PPLES_GPU)
+#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(PPLVLSET_GPU)
     call divstress_w(divtz, txz, tyz, tzz)
     !$acc update device(divtz)
 #else
@@ -730,7 +736,7 @@ time_loop: do jt_step = nstart, nsteps
     call clock_press%start
 
 #ifdef PPPRESS_GPU
-#if defined(PPLVLSET) && defined(PPLES_GPU)
+#if defined(PPLVLSET) && defined(PPLES_GPU) && !defined(PPLVLSET_GPU)
     ! LVLSET bridge: pressure still has to consume host RHS values produced by
     ! the host LVLSET/divstress fallback, then return pressure gradients to the
     ! device for the remaining explicit-residency update/projection kernels.
@@ -739,6 +745,12 @@ time_loop: do jt_step = nstart, nsteps
     call press_stag_array()
     !$acc update device(RHSx, RHSy, RHSz, p, dpdx, dpdy, dpdz)
 #else
+#ifdef PPLVLSET_GPU
+    ! Level Set forcing/divergence kernels use queue 1, while the pressure
+    ! implementation owns separate asynchronous work. Close that producer-
+    ! consumer boundary before pressure reads RHS and velocity state.
+    !$acc wait(1)
+#endif
     call press_stag_array_gpu()
 #endif
 #else
@@ -766,6 +778,19 @@ time_loop: do jt_step = nstart, nsteps
         end do
         end do
     end if
+#ifdef PPLVLSET
+    if (coord == 0) then
+        ! w(:,:,1) is the impermeable lower-boundary value, not an evolved
+        ! momentum degree of freedom. Do not retain its pressure residual in
+        ! the Adams-Bashforth history.
+        !$acc parallel loop collapse(2) default(present) async(1)
+        do jy = 1, ny
+        do jx = 1, ld
+            RHSz(jx,jy,1) = 0._rprec
+        end do
+        end do
+    end if
+#endif
 #else
     RHSx(:,:,1:nz-1) = RHSx(:,:,1:nz-1) - dpdx(:,:,1:nz-1)
     RHSy(:,:,1:nz-1) = RHSy(:,:,1:nz-1) - dpdy(:,:,1:nz-1)
@@ -773,6 +798,9 @@ time_loop: do jt_step = nstart, nsteps
     if(coord == nproc-1) then
         RHSz(:,:,nz) = RHSz(:,:,nz) - dpdz(:,:,nz)
     end if
+#ifdef PPLVLSET
+    if (coord == 0) RHSz(:,:,1) = 0._rprec
+#endif
 #endif
     ! -------------------------------
     call clock_press%stop
@@ -817,7 +845,7 @@ time_loop: do jt_step = nstart, nsteps
     end if
 
 #ifdef PPLVLSET
-#if defined(PPLES_GPU)
+#if defined(PPLES_GPU) && !defined(PPLVLSET_GPU)
     if (global_CA_calc) then
         !$acc wait(1)
         !$acc update self(u, fx, fy, fz)

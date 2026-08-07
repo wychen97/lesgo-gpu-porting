@@ -87,6 +87,7 @@ cmake -S . -B build-cpu-baseline \
 - Build options and standard profiles: `docs/build_profiles.md`
 - Source layout and timestep order: `docs/code_organization.md`
 - Module ownership and validation expectations: `docs/gpu_module_contracts.md`
+- Optional Level Set GPU profile: `docs/level_set_gpu_port.md`
 - Runtime `LESGO_*` switches: `docs/environment_switches.md`
 - Presentation-oriented CPU/GPU cases: `test-cases/`
 - Known cleanup order: `docs/refactor_backlog.md`
@@ -108,8 +109,9 @@ sgs_model=5: supported
 sgs_model=6/7: unsupported runtime values, guard-fail as expected
 ```
 
-LVLSET files remain tracked for completeness, but LVLSET is outside the current
-optimized production scope.
+An opt-in Level Set GPU profile supports the same SGS values and has its own
+CPU/GPU matrix. It is intentionally separate from the canonical turbine
+production profile; see `docs/level_set_gpu_port.md`.
 
 ## Editing Rules
 

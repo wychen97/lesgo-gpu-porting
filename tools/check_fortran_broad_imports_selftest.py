@@ -59,7 +59,7 @@ def main() -> int:
     classification_cases = {
         "MPI compiler interface": BroadImport(ROOT / "main.f90", 64, "main", "mpi"),
         "optional CGNS interface": BroadImport(ROOT / "io.f90", 46, "io", "cgns"),
-        "LVLSET deferred": BroadImport(
+        "Level Set optional profile": BroadImport(
             ROOT / "level_set.f90", 32, "level_set", "level_set_base"
         ),
         "candidate": BroadImport(ROOT / "forcing.f90", 999, "forcing::demo", "param"),

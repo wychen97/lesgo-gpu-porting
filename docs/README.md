@@ -1,7 +1,8 @@
 # LESGO Documentation Index
 
-This directory is the collaborator-facing map for the optimized non-LVLSET GPU
-branch.  Read these files before changing solver code.
+This directory is the collaborator-facing map for the optimized GPU branch,
+including the opt-in Level Set GPU path. Read these files before changing
+solver code.
 
 ## Reading Order
 
@@ -112,6 +113,11 @@ branch.  Read these files before changing solver code.
    - CPU/GPU device-ownership requirements at restart;
    - continuous-versus-split validation protocol.
 
+23. `level_set_gpu_port.md`
+   - Level Set CPU/GPU ownership and MPI communication contract;
+   - SGS and optional-path validation matrix;
+   - build flags, restrictions, and measured correctness/performance evidence.
+
 ## Historical References
 
 - `gpu_port_refactor_history.md`: historical architecture plan that informed
@@ -130,10 +136,10 @@ branch.  Read these files before changing solver code.
 
 ## Production Scope
 
-The validated production branch is the optimized non-LVLSET GPU path.  LVLSET
-files remain in the repository for completeness, but LVLSET is outside the
-current optimized production scope and should not be used as validation evidence
-for GPU changes.
+The canonical turbine production profile remains the optimized non-Level-Set
+GPU path. An additional opt-in Level Set GPU profile is now implemented and
+validated separately. Evidence from one profile must not be presented as
+coverage for the other.
 
 The major enabled production modules are:
 
@@ -142,6 +148,7 @@ The major enabled production modules are:
 - CPS/concurrent precursor;
 - scalar transport with the GPU scalar path;
 - turbine and ATM/structural coupling;
+- immersed-surface Level Set physics when `USE_LVLSET_GPU=ON`;
 - diagnostics and output paths needed by the validated benchmark cases.
 
 ## Keeping This Directory Current

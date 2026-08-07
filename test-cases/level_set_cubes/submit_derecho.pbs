@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+# Derecho PBS run-only script for the Level Set cubes case.
+# Compile first with ./compile_derecho.sh gpu or ./compile_derecho.sh cpu.
+#
+# Keep the PBS select line, MPI_RANKS, MPI_PPN, and lesgo.conf nproc equal.
+# The default is one MPI rank on one A100 GPU. For a multi-GPU run, use one
+# rank per GPU and partition Nz evenly across the ranks.
+
+# Change this account to your Derecho allocation.
+#PBS -A ujhb0028
+#PBS -N lesgo_level_set_gpu
+#PBS -q main
+#PBS -l select=1:ncpus=32:mpiprocs=1:ngpus=1:mem=120gb:gpu_type=a100
+#PBS -l walltime=00:30:00
+#PBS -l place=scatter
+#PBS -j oe
+
+set -euo pipefail
+
+cd "${PBS_O_WORKDIR}"
+
+MPI_RANKS="${MPI_RANKS:-1}"
+MPI_PPN="${MPI_PPN:-1}"
+RUN_PROFILE="${RUN_PROFILE:-gpu}"
+RUN_LABEL="${RUN_LABEL:-${RUN_PROFILE}}"
+ARCHIVE_ROOT="${ARCHIVE_ROOT:-run-archives}"
+
+case "${RUN_PROFILE}" in
+  gpu) RUN_EXE=./lesgo-run-exe-gpu ;;
+  cpu) RUN_EXE=./lesgo-run-exe-cpu ;;
+  *)
+    echo "ERROR: RUN_PROFILE must be gpu or cpu" >&2
+    exit 2
+    ;;
+esac
+
+module reset
+if [[ "${RUN_PROFILE}" == "gpu" ]]; then
+  module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10
+  export MPICH_GPU_SUPPORT_ENABLED=1
+  export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
+else
+  module load nvhpc/25.9 cray-mpich/8.1.32 fftw/3.3.10
+  unset MPICH_GPU_SUPPORT_ENABLED
+  unset MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED
+fi
+
+if [[ ! -x "${RUN_EXE}" ]]; then
+  echo "ERROR: ${RUN_EXE} is missing; compile ${RUN_PROFILE} first" >&2
+  exit 2
+fi
+
+rm -rf output
+rm -f total_time.dat check_ke.out grid.out vel.out.c* lesgo_param.out
+rm -f phi.out phi.out.c* norm.dat norm.dat.c* global_fmask.out
+mkdir -p output
+
+LOG_FILE="lesgo_${RUN_LABEL}.log"
+set +e
+if [[ "${RUN_PROFILE}" == "gpu" ]] && command -v set_gpu_rank >/dev/null 2>&1; then
+  mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" \
+    set_gpu_rank "${RUN_EXE}" 2>&1 | tee "${LOG_FILE}"
+  MPI_STATUS=${PIPESTATUS[0]}
+else
+  mpiexec -n "${MPI_RANKS}" -ppn "${MPI_PPN}" \
+    "${RUN_EXE}" 2>&1 | tee "${LOG_FILE}"
+  MPI_STATUS=${PIPESTATUS[0]}
+fi
+set -e
+echo "MPI_EXIT_STATUS=${MPI_STATUS}" | tee -a "${LOG_FILE}"
+
+ARCHIVE_DIR="${ARCHIVE_ROOT}/${RUN_LABEL}"
+rm -rf "${ARCHIVE_DIR}"
+mkdir -p "${ARCHIVE_DIR}"
+for item in "${LOG_FILE}" output total_time.dat check_ke.out grid.out \
+            lesgo_param.out; do
+  [[ -e "${item}" ]] && cp -a "${item}" "${ARCHIVE_DIR}/"
+done
+shopt -s nullglob
+for item in vel.out.c* phi.out.c* norm.dat.c*; do
+  cp -a "${item}" "${ARCHIVE_DIR}/"
+done
+shopt -u nullglob
+
+if [[ "${MPI_STATUS}" -ne 0 ]]; then
+  exit "${MPI_STATUS}"
+fi
+
+echo "Simulation finished"

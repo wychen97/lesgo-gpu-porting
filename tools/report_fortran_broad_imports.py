@@ -52,13 +52,13 @@ def classify_broad_import(row: BroadImport) -> ImportClassification:
         or module in {"level_set_base", "trees_base_ls"}
     ):
         return ImportClassification(
-            "LVLSET deferred",
-            "Leave for a separate LVLSET cleanup/validation pass.",
+            "Level Set optional profile",
+            "Keep broad unless narrowed under the dedicated Level Set validation matrix.",
         )
     if rel.startswith("level_set") and module in {"grid_m", "messages", "sim_param"}:
         return ImportClassification(
-            "LVLSET deferred",
-            "Leave for a separate LVLSET cleanup/validation pass.",
+            "Level Set optional profile",
+            "Keep broad unless narrowed under the dedicated Level Set validation matrix.",
         )
     return ImportClassification(
         "candidate",
@@ -128,7 +128,7 @@ def markdown_report(rows: list[BroadImport]) -> str:
         "",
         "The `category` and `recommended action` columns distinguish safe",
         "cleanup candidates from intentionally broad imports that depend on",
-        "external compiler interfaces or deferred optional modules.",
+        "external compiler interfaces or separately validated optional modules.",
         "",
         f"Total broad imports: `{len(rows)}`",
         "",

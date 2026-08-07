@@ -78,6 +78,9 @@ use concurrent_precursor, only : initialize_cps
 #ifdef PPLVLSET
 use level_set_base, only : level_set_base_init
 use level_set, only : level_set_init
+#ifdef PPLVLSET_GPU
+use level_set, only : level_set_gpu_data_init
+#endif
 #endif
 
 #if defined(PPTURBINES) && !defined(PPATM)
@@ -180,6 +183,9 @@ endif
 #ifdef PPLVLSET
 call level_set_base_init()
 call level_set_init()
+#ifdef PPLVLSET_GPU
+call level_set_gpu_data_init()
+#endif
 #endif
 
 call inflow_init

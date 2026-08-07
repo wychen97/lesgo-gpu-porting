@@ -12,15 +12,16 @@ structure, but they should be split only when a clean ownership boundary exists.
 | --- | --- | ---: | --- |
 | 1 | `actuator_turbine_model.f90` | 134,875 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, restart state, and turbine output writing. |
 | 2 | `atm_lesgo_interface.f90` | 101,248 bytes | Separate timing, optional sampling bridges, gather helpers, and LESGO force application after the active ownership boundary remains stable. |
-| 3 | `lagrange_Sdep_gpu.f90` | 93,225 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
+| 3 | `lagrange_Sdep_gpu.f90` | 94,070 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
 | 4 | `scalars.f90` | 63,405 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
 | 5 | `io.f90` | 61,928 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
 | 6 | `atm_input_util.f90` | 57,365 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |
-| 7 | `sgs_gpu.f90` | 55,232 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
-| 8 | `turbines.f90` | 52,909 bytes | Separate ADM input, node search, GPU metadata, and forcing/output paths. |
+| 7 | `sgs_gpu.f90` | 56,080 bytes | Separate SGS GPU kernels by tensor assembly, wall stress, and model dispatch. |
+| 8 | `level_set_gpu.f90` | 54,155 bytes | Keep workspace ownership, stress treatment, smoothing, SGS, and packed-halo sections navigable; split only with the dedicated Level Set matrix in place. |
 
-`level_set.f90` and `trees_*_ls.f90` are intentionally lower priority because
-LVLSET is not part of the optimized production path.
+`level_set.f90`, `level_set_gpu.f90`, and `trees_*_ls.f90` use a separate
+validated optional profile. Further file splitting is lower priority than
+preserving the completed CPU/GPU matrix and startup/runtime ownership boundary.
 The readiness gate checks this table against the current tracked source tree so
 the priority list does not silently drift as files are refactored.
 

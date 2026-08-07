@@ -29,6 +29,7 @@ docs/architecture_hardening_audit.md
 docs/architecture_performance_review_20260727.md
 docs/fortran_broad_import_audit.md
 docs/restart_state_contract.md
+docs/level_set_gpu_port.md
 CONTRIBUTING.md
 tools/README.md
 ```
@@ -72,6 +73,7 @@ USE_GPU_AWARE_MPI=AUTO
 USE_SCALARS=ON
 USE_SCALARS_GPU=ON
 USE_LVLSET=OFF
+USE_LVLSET_GPU=OFF
 USE_HIT=OFF
 USE_DYN_TN=OFF
 USE_CGNS=OFF

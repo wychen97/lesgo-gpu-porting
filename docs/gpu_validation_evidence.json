@@ -2749,7 +2749,7 @@
       "gpu_runtime": null,
       "cpu_runtime": null,
       "speedup_claim": null,
-      "notes": "Excluded from this non-LVLSET audit."
+      "notes": "Excluded from this legacy non-Level-Set ledger only. Dedicated CPU/GPU correctness and performance evidence is documented in docs/level_set_gpu_port.md."
     }
   ]
 }

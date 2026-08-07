@@ -225,14 +225,16 @@ Required action:
 - verify CGNS output only when `USE_CGNS=ON` is needed;
 - report overhead separately from ordinary timestep performance.
 
-## Excluded Scope
+## Separate Level Set Scope
 
 Rows:
 
 - `lvlset`
 
-LVLSET is excluded from the current non-LVLSET GPU validation scope.  It needs a
-separate project if users decide to optimize it later.
+Level Set remains excluded from this non-Level-Set runbook so its geometry and
+runtime restrictions are not mixed with turbine evidence. Its completed
+CPU/GPU matrix, build profile, and remaining multi-GPU acceptance item are in
+`docs/level_set_gpu_port.md`.
 
 ## Completion Rule
 

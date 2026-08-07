@@ -24,9 +24,10 @@ module sgs_gpu_m
 !   5. Wall BCs for txx,txy,tyy,tzz at jz=1 (coord 0) and jz=nz-1 (top coord),
 !      including the w-grid stress slots that the wall path writes.
 !   6. Bulk tau loop for jz_min..jz_max.
-!   7. End data region copies txx..tzz back to host; copy(txz, tyz) preserves
-!      wallstress' jz=1 / jz=nz writes.
-!   8. MPI sync of txz, tyz (host buffers, same as CPU).
+!   7. Apply the immersed-surface stress treatment on the device when Level
+!      Set GPU support is enabled.
+!   8. MPI sync of txz, tyz, directly from device memory when GPU-aware MPI
+!      is available or through boundary slabs on host otherwise.
 !   9. BOGUS lines for safety mode.
 !
 ! Navigation map:
@@ -48,9 +49,9 @@ module sgs_gpu_m
 !   dudx..dwdz - only the dudz/dvdz at jz=1 (and nz) were touched on host by
 !                wallstress; main.f90 issues update_device on those slabs.
 !
-! Outputs to sim_param (still host-resident):
-!   txx, txy, txz, tyy, tyz, tzz - moved back to host via the data region
-!                                  copy(out) clauses, then MPI-synced on host.
+! Outputs to sim_param (device-resident):
+!   txx, txy, txz, tyy, tyz, tzz remain on the device for divstress and the
+!   pressure pipeline. Only MPI boundary slabs are staged when required.
 !*******************************************************************************
 #ifdef PPSGS_GPU
 use types, only : rprec
@@ -81,6 +82,9 @@ use derivatives_gpu_m, only : ddx_gpu, ddy_gpu, ddxy_gpu, ddz_uv_gpu, ddz_w_gpu
 use lagrange_Sdep_gpu_m, only : lagrange_Sdep_gpu, lagrange_Ssim_gpu
 use test_filtermodule, only : test_filter_plane_gpu, test_test_filter_plane_gpu
 use sgs_stag_util, only : rtnewt
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+use level_set, only : level_set_BC, level_set_Cs
+#endif
 
 #ifdef PPMPI
 use mpi
@@ -563,6 +567,13 @@ integer  :: jz_min, jz_max
 real(rprec) :: const, const2, const3, const4
 real(rprec) :: dsq, wall_exp, zloc, lsgs, lsq, domain_height
 
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+! Level Set wall-stress and derivative inputs can be produced by a mixture of
+! default-stream and queue-1 kernels. Close that ownership boundary before the
+! device SGS construction consumes them.
+!$acc wait
+#endif
+
 ! ----- 1. Host scalar bookkeeping (Lagrangian dt accumulator). -----
 if (use_cfl_dt) then
     if (sgs_model == SGS_MODEL_LAGRANGE_SIMILARITY .or.                       &
@@ -628,6 +639,9 @@ end if
 !   skip Nu_t entirely; the later stress kernels use the molecular branches and
 !   do not read Nu_t.
 dsq = delta * delta
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+if (sgs .and. sgs_model == SGS_MODEL_SMAGORINSKY) call level_set_Cs(delta)
+#endif
 if (sgs) then
     wall_exp = real(wall_damp_exp, rprec)
     domain_height = real((nz - 1) * nproc, rprec) * dz
@@ -641,6 +655,9 @@ if (sgs) then
                     S13(jx,jy,jz)**2 + S23(jx,jy,jz)**2)))
 
                 if (sgs_model == SGS_MODEL_SMAGORINSKY) then
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+                    Nu_t(jx,jy,jz) = const * Cs_opt2(jx,jy,jz) * dsq
+#else
                     if (lbc_mom == 0 .and. ubc_mom == 0) then
                         lsq = dsq
                     else if (lbc_mom > 0 .and. ubc_mom == 0) then
@@ -676,6 +693,7 @@ if (sgs) then
                         lsq = lsgs * lsgs
                     end if
                     Nu_t(jx,jy,jz) = const * Co * Co * lsq
+#endif
                 else
                     Nu_t(jx,jy,jz) = const * Cs_opt2(jx,jy,jz) * dsq
                 end if
@@ -851,6 +869,11 @@ end if
 
 !$acc wait(1)
 !$acc end data    ! txx..tzz remain device-resident
+
+#if defined(PPLVLSET) && defined(PPLVLSET_GPU)
+! Apply immersed-surface stress treatment after the dense stress construction.
+call level_set_BC()
+#endif
 
 ! ----- 9. MPI sync of txz, tyz across ranks (DOWN: send slab 1, recv slab nz).
 !   txz, tyz are device-resident.

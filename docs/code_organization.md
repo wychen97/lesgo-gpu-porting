@@ -1,8 +1,9 @@
 # LESGO Code Organization
 
-This branch is the optimized non-LVLSET GPU branch intended for shared
-development.  The solver is still mostly organized as flat Fortran modules, so
-this document is the source map collaborators should read before editing code.
+This branch contains the optimized LES GPU core and an opt-in GPU Level Set
+path intended for shared development. The solver is still mostly organized as
+flat Fortran modules, so this document is the source map collaborators should
+read before editing code.
 See `docs/gpu_module_contracts.md` for per-module ownership and validation
 contracts.
 
@@ -20,14 +21,15 @@ USE_GPU_AWARE_MPI=AUTO
 USE_SCALARS=ON
 USE_SCALARS_GPU=ON
 USE_LVLSET=OFF
+USE_LVLSET_GPU=OFF
 USE_HIT=OFF
 USE_DYN_TN=OFF
 USE_CGNS=OFF
 ```
 
-`USE_LVLSET` remains outside the optimized production path.  Do not use LVLSET
-files as evidence that a GPU change has been validated unless a dedicated
-LVLSET validation run has been added.
+The canonical turbine production profile keeps Level Set disabled because it
+is different physics. Level Set GPU builds are supported and have a dedicated
+validation profile; their evidence is recorded separately from turbine cases.
 
 Use `docs/build_profiles.md` for copy-paste CMake configure commands and
 user-facing cache variables such as `hostname`, `WRITE_ENDIAN`, and
@@ -43,7 +45,8 @@ readiness gate checks this table against `CMakeLists.txt`.
 | `USE_MPI` | `PPMPI` | `mpi_defs.f90`, `mpi_transpose_mod.f90` | Required for production runs. |
 | `USE_CPS` | `PPCPS` | `concurrent_precursor.f90` | Concurrent precursor path. |
 | `USE_HIT` | `PPHIT` | `hit_inflow.f90`, `hit_inflow_gpu.f90` | Optional HIT inflow path. |
-| `USE_LVLSET` | `PPLVLSET` | `level_set*.f90`, `trees_*_ls.f90` | Deferred from the optimized production path. |
+| `USE_LVLSET` | `PPLVLSET` | `level_set.f90`, `level_set_base.f90`, `trees_*_ls.f90` | Enables immersed-surface Level Set physics. |
+| `USE_LVLSET_GPU` | `PPLVLSET_GPU` | `level_set_gpu.f90`, Level Set dispatch in SGS/forcing | GPU Level Set hot path. Requires `USE_LVLSET=ON` and `USE_LES_GPU=ON`. |
 | `USE_TURBINES` | `PPTURBINES` | `turbines.f90`, `turbines_gpu.f90`, `turbine_indicator.f90` | Actuator disk style turbine support. |
 | `USE_ATM` | `PPATM` | `atm_base.f90`, `atm_input_util.f90`, `actuator_turbine_model.f90`, `atm_lesgo_interface.f90` | Actuator turbine model / structural solver interface. |
 | `USE_LES_GPU` | `PPLES_GPU`, `PPCONVEC_GPU`, `PPDERIVS_GPU`, `PPPRESS_GPU`, `PPSGS_GPU` | `*_gpu.f90`, pressure, SGS, derivatives, convection | Optimized OpenACC/CUDA LES core. |
@@ -88,8 +91,9 @@ readiness gate checks this table against `CMakeLists.txt`.
 - `inflow.f90`, `shifted_inflow.f90`, `hit_inflow*.f90`,
   `concurrent_precursor.f90`: inflow sources and concurrent precursor support.
 - `scalars.f90`, `stability.f90`: scalar transport and stability coupling.
-- `level_set*.f90`, `trees_*_ls.f90`: LVLSET support, not optimized in this
-  branch.
+- `level_set.f90`, `level_set_base.f90`, `level_set_gpu.f90`: Level Set CPU
+  reference, shared state, and GPU kernels.
+- `trees_*_ls.f90`: host-side Level Set geometry preprocessing at startup.
 
 ### Turbine and ATM modules
 
@@ -177,8 +181,12 @@ LES arrays.  The practical ownership rules are:
 - SGS model dispatch must keep the disabled path and supported runtime values
   `1..5` covered.  Do not optimize only `sgs=5` and leave another runtime value
   on a stale path.
-- LVLSET files are excluded from the validated production path.  Their CPU/GPU
-  transfer patterns should not be generalized to the non-LVLSET GPU path.
+- Level Set geometry is initialized on the host once, then `phi`, normals,
+  overlap buffers, and interpolation workspaces remain device-resident when
+  `USE_LVLSET_GPU=ON`.
+- Level Set MPI communication uses packed velocity/stress/history messages;
+  CUDA-aware MPI uses device pointers and the fallback stages only compact
+  boundary buffers.
 
 ## Current Optimization Status
 
@@ -205,7 +213,6 @@ Available as an opt-in non-production path:
 
 Deferred:
 
-- LVLSET GPU optimization.
 - Arbitrary-seam ATM restart with `updateInterval > 1`; aligned restart points
   are enforced until a held-force checkpoint sidecar is implemented.
 

@@ -28,6 +28,9 @@ check_ke.out
 grid.out
 vel.out.c*
 tavg.out.c*
+phi.out*
+norm.dat*
+global_fmask.out*
 turbineOutput/
 lesgo-run-exe
 lesgo-mpi*

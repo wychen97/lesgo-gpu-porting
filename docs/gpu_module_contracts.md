@@ -1,8 +1,8 @@
 # GPU Module Contracts
 
-This document records the working contracts for the optimized non-LVLSET GPU
-branch.  Use it when deciding where a change belongs and which validation is
-needed before accepting it.
+This document records the working contracts for the optimized GPU branch. Use
+it when deciding where a change belongs and which validation is needed before
+accepting it.
 
 The goal is not to freeze the implementation.  The goal is to make ownership
 and CPU/GPU boundaries explicit so future optimizations do not accidentally
@@ -23,7 +23,7 @@ reintroduce hidden transfers, stale host data, or one-SGS-value-only behavior.
 | CPS / inflow | `concurrent_precursor.f90`, `inflow.f90`, `shifted_inflow.f90`, `hit_inflow*.f90` | Inflow source dispatch and concurrent precursor exchange | Production CPS path and optional HIT/shifted inflow isolation. |
 | ATM / structural coupling | `atm_lesgo_interface.f90`, `actuator_turbine_model.f90`, `atm_base.f90`, `atm_input_util.f90` | Turbine sampling, force application, induced-velocity correction, structural solver coupling | Structure-off and structure-on correctness, turbine power output, and phase ordering. |
 | Diagnostics / output | `io.f90`, `rmsdiv.f90`, `time_average.f90`, `stat_defs.f90`, `clocks.f90`, `cuda_mpi_debug.f90` | Output, restart, statistics, divergence/energy diagnostics, timing/debug prints | Periodic diagnostic costs are reported separately from regular-step timing. |
-| LVLSET | `level_set*.f90`, `trees_*_ls.f90` | Legacy LVLSET support | Not part of the optimized production path unless explicitly revalidated. |
+| Level Set | `level_set.f90`, `level_set_base.f90`, `level_set_gpu.f90`, `trees_*_ls.f90` | Immersed-surface geometry, stress treatment, forcing, and SGS coupling | CPU reference parity, persistent device state, packed MPI halos, and optional-mode restrictions. |
 
 ## CMake Source Group Map
 
@@ -39,7 +39,8 @@ the executable.  Keep these groups aligned with the ownership contracts above.
 | `MPI_SOURCES` | MPI transpose and domain metadata. |
 | `CPS_SOURCES` | CPS / inflow. |
 | `HIT_SOURCES` | Optional HIT inflow. |
-| `LVLSET_SOURCES` | Deferred LVLSET support. |
+| `LVLSET_SOURCES` | Level Set CPU reference and host geometry setup. |
+| `LVLSET_GPU_SOURCES` | Level Set OpenACC kernels and device interpolation. |
 | `TURBINE_SOURCES` | Legacy actuator-disk turbine model. |
 | `ATM_SOURCES` | ATM / structural coupling. |
 | `LES_GPU_SOURCES` | Optimized LES GPU kernels and GPU pressure/SGS helpers. |
@@ -233,6 +234,33 @@ Rules:
 - Turbine power files remain the authoritative power output; stdout diagnostics
   are secondary.
 
+## Level Set Contract
+
+`level_set_base.f90` owns geometry and compact overlap arrays.
+`level_set.f90` preserves the public CPU-facing API and selects CPU or GPU
+implementations at compile time. `level_set_gpu.f90` owns device interpolation,
+immersed-surface stress treatment, desired-velocity forcing, smoothing, and
+Lagrangian SGS preconditioning.
+
+Rules:
+
+- `USE_LVLSET_GPU=ON` requires `USE_LVLSET=ON` and `USE_LES_GPU=ON`.
+- Geometry generation, `phi.out` input, normal construction, and tree setup are
+  one-time host operations; geometry becomes immutable persistent device data
+  before the timestep loop.
+- Regular timestep work must not copy full velocity, stress, or Level Set
+  fields through the host.
+- Multi-rank communication packs velocity, stress, and Lagrangian histories.
+  GPU-aware MPI passes device buffers; the fallback stages compact boundary
+  buffers only.
+- `smooth_mode='3d'`, logarithmic stress extrapolation, legacy stress
+  extrapolation, and `use_modify_dutdn` retain the same multi-rank restrictions
+  as the CPU implementation.
+- CPU/GPU validation must cover SGS disabled and models 1 through 5. Models 4
+  and 5 require at least one multi-rank comparison.
+- Startup geometry and file I/O are correctness boundaries, not GPU
+  performance kernels.
+
 ## Diagnostics And Output Contract
 
 Diagnostics are allowed to synchronize or reduce data, but their timing must be
@@ -259,4 +287,4 @@ Rules:
 | Scalars | readiness check | scalar off/on, GPU scalar path when enabled. |
 | CPS / inflow | readiness check | CPS smoke and stage-timing comparison; HIT configure/runtime smoke when `USE_HIT=ON`. |
 | ATM / structural solver | readiness check | structure off/on, turbine power output, force/velocity sanity checks. |
-| LVLSET | readiness check | dedicated LVLSET validation; not covered by production non-LVLSET smoke. |
+| Level Set | readiness check plus Level Set CPU/GPU builds | SGS-off and models 1-5 CPU/GPU comparison, multi-rank model 4/5, optional-mode matrix, divergence/energy checks. |

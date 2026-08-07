@@ -1,15 +1,15 @@
 # GPU Port Coverage Audit
 
-This audit records the current non-LVLSET GPU-port coverage by build option
-and runtime path.  It is intentionally stricter than the handoff summary:
+This audit records the current GPU-port coverage by build option and runtime
+path. It is intentionally stricter than the handoff summary:
 source code can be GPU-ported while still needing stronger production-size
 validation before it should be advertised as faster for every `lesgo.conf`
 configuration.
 
 Scope:
 
-- included: non-LVLSET LESGO paths and optional modules;
-- excluded: `USE_LVLSET=ON`, `level_set*.f90`, and `trees_*_ls.f90`;
+- included: the established LES/turbine paths and the separately validated
+  optional Level Set GPU path;
 - source baseline: current public `lesgo-gpu-porting` worktree;
 - validation baseline: published Derecho validation records and local source
   checks available at the time of this audit.
@@ -55,7 +55,7 @@ total wall-time estimates.  Do not mix the labels.
 | Sponge and Coriolis forcing | `use_sponge`, `coriolis_forcing` | Source contains GPU branches and reductions. | Not separately isolated in the published four-case validation. | Add targeted runtime checks for configurations that use these options. |
 | CGNS output | `USE_CGNS=ON` | Host I/O dependency path; not a GPU hot-path optimization target. | Not part of canonical production validation. | Treat as output compatibility, not GPU performance evidence. |
 | Diagnostics, restart, statistics | output cadence and restart settings | Host-visible boundaries are expected; core fields are copied explicitly before output where needed. | Covered only as required by published cases. | Do not use output/statistics timesteps alone as regular-step performance evidence. |
-| LVLSET | `USE_LVLSET=ON` | Excluded from this branch's optimized production scope. | Not validated. | Leave deferred unless a separate LVLSET project starts. |
+| Level Set | `USE_LVLSET=ON`, `USE_LVLSET_GPU=ON` | Persistent OpenACC geometry, interpolation, stress treatment, forcing, smoothing, SGS 1-5 coupling, and packed MPI halos are implemented. | One-rank SGS-off/1-5, two-rank model-4/5 host-staged MPI, non-MPI model 5, and optional runtime paths passed CPU/GPU comparison; worst primary normalized difference `3.302591e-13`. | Run the same two-rank gate with one rank per GPU on a CUDA-aware multi-GPU node before publishing GPU-aware scaling. |
 
 ## `lesgo.conf` Runtime Coverage Map
 
@@ -175,9 +175,10 @@ python3 tools/report_gpu_static_inventory.py --review
 
 ## Current Conclusion
 
-The major non-LVLSET hot path is GPU-ported: LES core, derivatives, convection,
-pressure, supported SGS runtime values, ADM, ATM, and the published wind-farm
-path all have GPU implementations and validation evidence.
+The major LES hot path is GPU-ported: LES core, derivatives, convection,
+pressure, supported SGS runtime values, ADM, ATM, the published wind-farm
+path, and the opt-in Level Set timestep path all have GPU implementations and
+validation evidence appropriate to their separate profiles.
 
 The codebase is not yet proven faster for every possible `lesgo.conf`
 combination.  The remaining gaps are mostly optional or less common paths:
@@ -200,3 +201,6 @@ targets, excluding LVLSET.
    IWM/lower-wall and upper-wall combinations at production-enough grid size.
 5. Optional forcing/inflow gate:
    shifted inflow, sponge, and Coriolis configurations used by real users.
+6. Level Set multi-GPU gate:
+   two or more MPI ranks with one GPU per rank, SGS models 4 and 5, comparing
+   CUDA-aware MPI against the validated compact host-staged reference.

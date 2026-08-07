@@ -63,15 +63,17 @@ The active production modules are:
 
 ## Intentionally Deferred
 
-These areas remain in the repository but are not proof of production readiness:
+These areas remain in the repository but are not proof of the canonical
+turbine-profile production readiness:
 
-- LVLSET and `trees_*` sources;
+- Level Set evidence, which is maintained separately in
+  `docs/level_set_gpu_port.md`;
 - replicated global pressure tridiagonal solve as a production default;
 - broad source-file splitting without a validation plan.
 
-Deferred code may still contain legacy comments.  The active-source comment
-quality gate intentionally excludes LVLSET/tree files because they are outside
-the optimized non-LVLSET production scope.
+The legacy non-Level-Set source-quality report still excludes Level Set/tree
+files. Level Set source and validation are reviewed through their dedicated
+contract and test case.
 
 ## Editing Rule
 
