@@ -108,7 +108,6 @@ else
   k0 = int(floor(zs + 0.5_rprec))
   az = zs - (floor(zs + 0.5_rprec) - 0.5_rprec)
 end if
-k0 = min(nzv - 1, max(lbzv, k0))
 k1 = k0 + 1
 
 w00 = (1._rprec - ax) * (1._rprec - ay)
@@ -137,11 +136,11 @@ integer, intent(in) :: nbot,ntop,albzv,k,i,j,ldim,nyv,nzv
 integer :: kb, q
 
 if (k < albzv) then
-  kb=max(1,min(nbot,nbot+k+1-albzv))
+  kb=nbot+k+1-albzv
   q=i+(j-1)*ldim+(kb-1)*ldim*nyv
   value=abot(q)
 else if (k > nzv) then
-  kb=max(1,min(ntop,k-nzv))
+  kb=k-nzv
   q=i+(j-1)*ldim+(kb-1)*ldim*nyv
   value=atop(q)
 else

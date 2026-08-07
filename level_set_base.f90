@@ -21,7 +21,8 @@ module level_set_base
 use types, only : rp => rprec
 use types, only : rprec
 use param, only : ld, ny, nz, dx, lbz, nproc
-use sgs_param, only : SGS_MODEL_LAGRANGE_SIMILARITY
+use sgs_param, only : SGS_MODEL_LAGRANGE_SIMILARITY,                       &
+                      SGS_MODEL_LAGRANGE_SCALE_DEP
 use messages, only : error
 implicit none
 
@@ -146,23 +147,26 @@ type(level_set_halo_requirements_t), intent(out) :: required
 
 required = level_set_halo_requirements_t()
 
-! Direct log-profile forcing does not interpolate velocity or stress across
-! rank boundaries. All other stress paths interpolate velocity by one plane.
-if (.not. use_log_profile) then
+! Direct log-profile stress treatment does not interpolate stress across rank
+! boundaries. The optional velocity boundary treatment still interpolates the
+! resolved velocity, including when it enforces a log profile.
+if (.not. use_log_profile .or. vel_BC) then
   required%velocity_top = 1
   required%velocity_bottom = 1
-
-  ! Simple stress extrapolation reflects points across the interface. The
-  ! historical default depths are the minimum supported stencil contract.
-  if (.not. use_extrap_tau_log .and. use_extrap_tau_simple) then
-    required%phi_top = 3
-    required%phi_bottom = 2
-    required%stress_top = 3
-    required%stress_bottom = 2
-  end if
 end if
 
-if (sgs_enabled .and. sgs_model == SGS_MODEL_LAGRANGE_SIMILARITY) then
+! Simple stress extrapolation reflects points across the interface. The
+! historical default depths are the minimum supported stencil contract.
+if (.not. use_log_profile .and. .not. use_extrap_tau_log .and.              &
+    use_extrap_tau_simple) then
+  required%phi_top = 3
+  required%phi_bottom = 2
+  required%stress_top = 3
+  required%stress_bottom = 2
+end if
+
+if (sgs_enabled .and. (sgs_model == SGS_MODEL_LAGRANGE_SIMILARITY .or.      &
+    sgs_model == SGS_MODEL_LAGRANGE_SCALE_DEP)) then
   required%fmm_top = 1
   required%fmm_bottom = 1
 end if
