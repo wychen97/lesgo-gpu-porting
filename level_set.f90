@@ -120,7 +120,7 @@ contains
 subroutine level_set_init ()
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 use param, only : path, read_endian
-use param, only : dx, dy, dz, lbz  !--in addition to those above
+use param, only : dx, dy, dz, lbz, sgs, sgs_model  !--in addition to those above
 use trees_pre_ls_mod, only : trees_pre_ls
 implicit none
 
@@ -142,6 +142,10 @@ logical :: exst, opn
 real (rp) :: x, y, z
 
 !---------------------------------------------------------------------
+
+! Keep initialization safe for callers that construct configuration without
+! going through input_util (unit tests and future AMR patch drivers).
+call level_set_validate_config(sgs, sgs_model)
 
 fphi_in_base = path // 'phi.out'
 fnorm_out_base = path // 'norm.dat'

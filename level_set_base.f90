@@ -20,13 +20,26 @@
 module level_set_base
 use types, only : rp => rprec
 use types, only : rprec
-use param, only : ld, ny, nz, dx, lbz
+use param, only : ld, ny, nz, dx, lbz, nproc
+use sgs_param, only : SGS_MODEL_LAGRANGE_SIMILARITY
+use messages, only : error
 implicit none
 
 save
 
 public
-private :: rp, ld, ny, nz, dx, lbz
+private :: rp, ld, ny, nz, dx, lbz, nproc
+
+type :: level_set_halo_requirements_t
+  integer :: phi_top = 0
+  integer :: phi_bottom = 0
+  integer :: velocity_top = 0
+  integer :: velocity_bottom = 0
+  integer :: stress_top = 0
+  integer :: stress_bottom = 0
+  integer :: fmm_top = 0
+  integer :: fmm_bottom = 0
+end type level_set_halo_requirements_t
 
 !private
 !public :: phi
@@ -123,6 +136,107 @@ logical :: use_trees
 
 
 contains
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine level_set_required_halos(sgs_enabled, sgs_model, required)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+logical, intent(in) :: sgs_enabled
+integer, intent(in) :: sgs_model
+type(level_set_halo_requirements_t), intent(out) :: required
+
+required = level_set_halo_requirements_t()
+
+! Direct log-profile forcing does not interpolate velocity or stress across
+! rank boundaries. All other stress paths interpolate velocity by one plane.
+if (.not. use_log_profile) then
+  required%velocity_top = 1
+  required%velocity_bottom = 1
+
+  ! Simple stress extrapolation reflects points across the interface. The
+  ! historical default depths are the minimum supported stencil contract.
+  if (.not. use_extrap_tau_log .and. use_extrap_tau_simple) then
+    required%phi_top = 3
+    required%phi_bottom = 2
+    required%stress_top = 3
+    required%stress_bottom = 2
+  end if
+end if
+
+if (sgs_enabled .and. sgs_model == SGS_MODEL_LAGRANGE_SIMILARITY) then
+  required%fmm_top = 1
+  required%fmm_bottom = 1
+end if
+end subroutine level_set_required_halos
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+subroutine level_set_validate_config(sgs_enabled, sgs_model)
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+logical, intent(in) :: sgs_enabled
+integer, intent(in) :: sgs_model
+type(level_set_halo_requirements_t) :: required
+character(*), parameter :: sub_name = 'level_set_base.level_set_validate_config'
+logical :: active_log_law
+
+if (trim(smooth_mode) /= 'xy' .and. trim(smooth_mode) /= '3d') then
+  call error(sub_name, 'smooth_mode must be exactly "xy" or "3d": ' //       &
+      trim(smooth_mode))
+end if
+
+#ifdef PPMPI
+if (trim(smooth_mode) == '3d') then
+  call error(sub_name, 'smooth_mode="3d" requires a non-MPI build')
+end if
+#endif
+
+if (nproc > 1) then
+  if (use_extrap_tau_log) then
+    call error(sub_name, 'use_extrap_tau_log requires a single-rank run')
+  end if
+  if (.not. use_extrap_tau_log .and. .not. use_extrap_tau_simple) then
+    call error(sub_name, 'legacy stress extrapolation requires a single-rank run')
+  end if
+  if (use_modify_dutdn) then
+    call error(sub_name, 'use_modify_dutdn requires a single-rank run')
+  end if
+end if
+
+active_log_law = use_extrap_tau_log .or. (vel_BC .and. use_log_profile)
+if (active_log_law .and. zo_level_set <= 0._rprec) then
+  call error(sub_name, 'active Level Set log-law paths require zo_level_set > 0')
+end if
+
+if (global_CA_calc .and. global_CA_nskip <= 0) then
+  call error(sub_name, 'global_CA_nskip must be positive when global_CA_calc is enabled')
+end if
+
+#ifdef PPMPI
+call level_set_required_halos(sgs_enabled, sgs_model, required)
+call validate_halo('nphitop', nphitop, required%phi_top)
+call validate_halo('nphibot', nphibot, required%phi_bottom)
+call validate_halo('nveltop', nveltop, required%velocity_top)
+call validate_halo('nvelbot', nvelbot, required%velocity_bottom)
+call validate_halo('ntautop', ntautop, required%stress_top)
+call validate_halo('ntaubot', ntaubot, required%stress_bottom)
+call validate_halo('nFMMtop', nFMMtop, required%fmm_top)
+call validate_halo('nFMMbot', nFMMbot, required%fmm_bottom)
+#endif
+
+contains
+
+subroutine validate_halo(name, actual, minimum)
+character(*), intent(in) :: name
+integer, intent(in) :: actual, minimum
+
+if (actual < 0 .or. actual >= nz) then
+  call error(sub_name, trim(name) // ' must satisfy 0 <= depth < Nz', actual)
+end if
+if (actual < minimum) then
+  call error(sub_name, trim(name) // ' is smaller than the active stencil minimum', &
+      actual, ' required=', minimum)
+end if
+end subroutine validate_halo
+
+end subroutine level_set_validate_config
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 subroutine level_set_base_init()

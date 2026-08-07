@@ -62,9 +62,12 @@ contains
 !*******************************************************************************
 subroutine read_input_conf ()
 !*******************************************************************************
-use param, only : coord
+use param, only : coord, sgs, sgs_model
 use messages, only : error, mesg
 use string_util, only : eat_whitespace, uppercase
+#ifdef PPLVLSET
+use level_set_base, only : level_set_validate_config
+#endif
 implicit none
 
 integer, parameter :: lun = 1
@@ -139,6 +142,12 @@ do
 end do
 
 close (lun)
+
+#ifdef PPLVLSET
+! Validate the complete Level Set configuration after all blocks have been
+! parsed, before any geometry or device allocation depends on it.
+call level_set_validate_config(sgs, sgs_model)
+#endif
 
 contains
 

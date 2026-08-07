@@ -14,6 +14,7 @@ module level_set_gpu_m
 !   6. Packed MPI halo helpers for geometry, velocity, stress, and SGS state
 use types, only : rprec
 use param, only : ld, nx, ny, nz, lbz, dx, dy, dz, L_x, L_y, coord, nproc
+use messages, only : error
 use level_set_base, only : phi, physBC, use_smooth_tau, smooth_mode,           &
     use_log_profile, use_extrap_tau_log, use_extrap_tau_simple,               &
     use_modify_dutdn, zo_level_set, nphitop, nphibot, nveltop, nvelbot,       &
@@ -1290,7 +1291,8 @@ else if (trim(smooth_mode) == '3d') then
   kmin=2
   kmax=nz-1
 else
-  return
+  call error('level_set_gpu_m.smooth_field_gpu',                           &
+      'smooth_mode must be exactly "xy" or "3d": ' // trim(smooth_mode))
 end if
 ! A lexicographic (k,j,i) Gauss-Seidel sweep is equivalent to ascending
 ! i+j+k wavefronts: minus-direction neighbors are already updated and
