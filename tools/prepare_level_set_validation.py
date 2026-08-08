@@ -189,7 +189,7 @@ def main() -> int:
             else:
                 conf = replace_setting(conf, "use_trees", ".false.")
                 generate_geometry(case_dir, conf, str(item["geometry"]), int(item["nproc"]))
-            (case_dir / "lesgo.conf").write_text(conf, encoding="utf-8", newline="\n")
+            (case_dir / "lesgo.conf").write_text(conf, encoding="utf-8")
             tasks.append(
                 {
                     "id": task_id,
