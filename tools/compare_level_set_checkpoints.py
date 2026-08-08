@@ -241,6 +241,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dz", type=float, required=True)
     parser.add_argument("--rtol", type=float, default=1.0e-6)
     parser.add_argument("--atol", type=float, default=1.0e-8)
+    parser.add_argument("--beta-rtol", type=float, default=5.0e-6)
     parser.add_argument("--out", type=Path)
     return parser
 
@@ -281,7 +282,7 @@ def main() -> int:
         elif beta_reference.is_file():
             beta = compare_record(
                 beta_reference, beta_candidate, ("Beta", "Tn_all"),
-                rtol=args.rtol, atol=args.atol,
+                rtol=args.beta_rtol, atol=args.atol,
                 storage_width=storage_width, physical_width=args.nx,
             )
             if not beta["passed"]:

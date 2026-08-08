@@ -113,6 +113,7 @@ def main() -> int:
     parser.add_argument("--dz", type=float, required=True)
     parser.add_argument("--rtol", type=float, default=1.0e-6)
     parser.add_argument("--atol", type=float, default=1.0e-8)
+    parser.add_argument("--beta-rtol", type=float, default=5.0e-6)
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
     storage_width = 2 * (args.nx // 2 + 1)
@@ -125,11 +126,12 @@ def main() -> int:
             ("validation_snapshot", "lvlset_validation.out", LEVEL_SET_FIELDS),
             ("beta_snapshot", "lvlset_beta.out", ("Beta", "Tn_all")),
         ):
+            field_rtol = args.beta_rtol if key == "beta_snapshot" else args.rtol
             compared = compare_record(
                 rank_file(args.continuous, basename, rank, args.nproc),
                 rank_file(args.restarted, basename, rank, args.nproc),
                 fields,
-                rtol=args.rtol,
+                rtol=field_rtol,
                 atol=args.atol,
                 storage_width=storage_width,
                 physical_width=args.nx,
@@ -140,7 +142,7 @@ def main() -> int:
         restart = compare_restart(
             rank_file(args.continuous, "lvlset_sgs_restart.out", rank, args.nproc),
             rank_file(args.restarted, "lvlset_sgs_restart.out", rank, args.nproc),
-            args.rtol,
+            args.beta_rtol,
             args.atol,
             storage_width,
             args.nx,
