@@ -57,11 +57,17 @@ BASE_SETTINGS = {
 }
 
 
-def variant(name: str, *, nproc: int = 1, geometry: str = "trees", **settings: str) -> dict[str, object]:
+def variant(
+    name: str, *, nproc: int = 1, geometry: str = "trees",
+    expected_error: str | None = None, **settings: str,
+) -> dict[str, object]:
     merged = dict(BASE_SETTINGS)
     merged.update(settings)
     merged["nproc"] = str(nproc)
-    return {"name": name, "nproc": nproc, "geometry": geometry, "settings": merged}
+    return {
+        "name": name, "nproc": nproc, "geometry": geometry,
+        "settings": merged, "expected_error": expected_error,
+    }
 
 
 VARIANTS = [
@@ -85,6 +91,39 @@ VARIANTS = [
     variant(
         "tilted_rank_crossing_4rank", nproc=4, geometry="tilted",
         sgs=".true.", sgs_model="5", lbc_mom="1",
+    ),
+    variant(
+        "reject_invalid_smooth_mode", smooth_mode="'bogus'",
+        expected_error='smooth_mode must be exactly "xy" or "3d"',
+    ),
+    variant(
+        "reject_smooth_3d_mpi", smooth_mode="'3d'",
+        expected_error='smooth_mode="3d" requires a non-MPI build',
+    ),
+    variant(
+        "reject_nonpositive_log_roughness", use_extrap_tau_log=".true.",
+        zo_level_set="0.0",
+        expected_error="active Level Set log-law paths require zo_level_set > 0",
+    ),
+    variant(
+        "reject_nonpositive_global_ca_skip", global_CA_calc=".true.",
+        global_CA_nskip="0",
+        expected_error="global_CA_nskip must be positive",
+    ),
+    variant(
+        "reject_multirank_log_extrapolation", nproc=2, geometry="sphere",
+        use_extrap_tau_log=".true.",
+        expected_error="use_extrap_tau_log requires a single-rank run",
+    ),
+    variant(
+        "reject_multirank_legacy_extrapolation", nproc=2, geometry="sphere",
+        use_extrap_tau_simple=".false.",
+        expected_error="legacy stress extrapolation requires a single-rank run",
+    ),
+    variant(
+        "reject_multirank_modify_dutdn", nproc=2, geometry="sphere",
+        use_modify_dutdn=".true.",
+        expected_error="use_modify_dutdn requires a single-rank run",
     ),
 ]
 
@@ -154,6 +193,8 @@ def generate_geometry(case_dir: Path, conf: str, kind: str, nproc: int) -> None:
 
 
 def profiles_for_variant(name: str, nproc: int) -> list[str]:
+    if name.startswith("reject_"):
+        return ["cpu_mpi"]
     if name == "smooth_3d":
         return ["cpu_nompi", "gpu_nompi"]
     if name == "tilted_rank_crossing_4rank":
@@ -204,6 +245,7 @@ def main() -> int:
                     "nproc": item["nproc"],
                     "geometry": item["geometry"],
                     "case_dir": str(case_dir.relative_to(output)),
+                    "expected_error": item["expected_error"],
                     "environment": {
                         "LESGO_LVLSET_VALIDATION_SNAPSHOT": "ON",
                         "LESGO_RANDOM_SEED": "20260807",

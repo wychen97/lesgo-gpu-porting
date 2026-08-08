@@ -112,13 +112,19 @@ def main() -> int:
                 check=False,
             )
         elapsed = time.time() - started
-        passed = completed.returncode == 0 and any(case_dir.glob("vel.out*"))
+        expected_error = task.get("expected_error")
+        if expected_error:
+            log_text = log_path.read_text(encoding="utf-8", errors="replace")
+            passed = completed.returncode != 0 and str(expected_error) in log_text
+        else:
+            passed = completed.returncode == 0 and any(case_dir.glob("vel.out*"))
         status["tasks"][task_id] = {
             "status": "passed" if passed else "failed",
             "returncode": completed.returncode,
             "elapsed_seconds": elapsed,
             "command": command,
             "log": str(log_path.relative_to(matrix_root)),
+            "expected_error": expected_error,
         }
         status_path.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
         print(f"{task_id}: {status['tasks'][task_id]['status']} ({elapsed:.3f} s)")
