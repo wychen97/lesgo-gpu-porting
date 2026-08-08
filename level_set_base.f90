@@ -204,7 +204,9 @@ if (nproc > 1) then
   end if
 end if
 
-active_log_law = use_extrap_tau_log .or. (vel_BC .and. use_log_profile)
+! use_log_profile selects the direct stress treatment even when optional
+! velocity forcing is disabled, so it is independently a log-law path.
+active_log_law = use_extrap_tau_log .or. use_log_profile
 if (active_log_law .and. zo_level_set <= 0._rprec) then
   call error(sub_name, 'active Level Set log-law paths require zo_level_set > 0')
 end if

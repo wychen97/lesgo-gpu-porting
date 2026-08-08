@@ -116,6 +116,11 @@ VARIANTS = [
         expected_error="active Level Set log-law paths require zo_level_set > 0",
     ),
     variant(
+        "reject_nonpositive_direct_log_roughness", use_log_profile=".true.",
+        zo_level_set="0.0",
+        expected_error="active Level Set log-law paths require zo_level_set > 0",
+    ),
+    variant(
         "reject_nonpositive_global_ca_skip", global_CA_calc=".true.",
         global_CA_nskip="0",
         expected_error="global_CA_nskip must be positive",
