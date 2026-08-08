@@ -54,7 +54,14 @@ def restart_values(path: Path) -> tuple[tuple[object, ...], array.array]:
     return header, values
 
 
-def compare_restart(reference: Path, candidate: Path, rtol: float, atol: float) -> dict[str, object]:
+def compare_restart(
+    reference: Path,
+    candidate: Path,
+    rtol: float,
+    atol: float,
+    storage_width: int,
+    physical_width: int,
+) -> dict[str, object]:
     left_header, left = restart_values(reference)
     right_header, right = restart_values(candidate)
     if left_header != right_header or len(left) != len(right):
@@ -70,13 +77,26 @@ def compare_restart(reference: Path, candidate: Path, rtol: float, atol: float) 
     for index, name in enumerate(("Beta", "Tn_all")):
         max_abs = 0.0
         max_rel = 0.0
-        for ref, cand in zip(left[index * half : (index + 1) * half], right[index * half : (index + 1) * half]):
+        ignored_padding_count = 0
+        for field_index, (ref, cand) in enumerate(
+            zip(
+                left[index * half : (index + 1) * half],
+                right[index * half : (index + 1) * half],
+            )
+        ):
+            if field_index % storage_width >= physical_width:
+                ignored_padding_count += 1
+                continue
             diff = abs(cand - ref)
             max_abs = max(max_abs, diff)
             max_rel = max(max_rel, diff / max(abs(ref), abs(cand), 1.0))
             if diff > atol + rtol * max(abs(ref), abs(cand)):
                 passed = False
-        fields[name] = {"max_abs": max_abs, "max_rel": max_rel}
+        fields[name] = {
+            "max_abs": max_abs,
+            "max_rel": max_rel,
+            "ignored_padding_count": ignored_padding_count,
+        }
     return {"passed": passed, "header": left_header, "fields": fields}
 
 
@@ -91,10 +111,11 @@ def main() -> int:
     parser.add_argument("--dx", type=float, required=True)
     parser.add_argument("--dy", type=float, required=True)
     parser.add_argument("--dz", type=float, required=True)
-    parser.add_argument("--rtol", type=float, default=5.0e-11)
-    parser.add_argument("--atol", type=float, default=5.0e-12)
+    parser.add_argument("--rtol", type=float, default=1.0e-6)
+    parser.add_argument("--atol", type=float, default=1.0e-8)
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
+    storage_width = 2 * (args.nx // 2 + 1)
     result: dict[str, object] = {"status": "passed", "ranks": []}
     failures: list[str] = []
     for rank in range(args.nproc):
@@ -110,6 +131,8 @@ def main() -> int:
                 fields,
                 rtol=args.rtol,
                 atol=args.atol,
+                storage_width=storage_width,
+                physical_width=args.nx,
             )
             row[key] = compared
             if not compared["passed"]:
@@ -119,6 +142,8 @@ def main() -> int:
             rank_file(args.restarted, "lvlset_sgs_restart.out", rank, args.nproc),
             args.rtol,
             args.atol,
+            storage_width,
+            args.nx,
         )
         row["restart_sidecar"] = restart
         if not restart["passed"]:

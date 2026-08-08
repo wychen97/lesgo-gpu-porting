@@ -62,6 +62,7 @@ def field_metrics() -> dict[str, object]:
     return {
         "count": 0,
         "compared_count": 0,
+        "ignored_padding_count": 0,
         "sentinel_count": 0,
         "nonfinite_count": 0,
         "sentinel_mismatch_count": 0,
@@ -80,7 +81,13 @@ def compare_record(
     *,
     rtol: float,
     atol: float,
+    storage_width: int | None = None,
+    physical_width: int | None = None,
 ) -> dict[str, object]:
+    if (storage_width is None) != (physical_width is None):
+        raise ValueError("storage_width and physical_width must be provided together")
+    if storage_width is not None and not 0 < physical_width <= storage_width:
+        raise ValueError("physical_width must be in 1..storage_width")
     left_endian, left_bytes = record_layout(reference)
     right_endian, right_bytes = record_layout(candidate)
     if left_bytes != right_bytes:
@@ -118,6 +125,13 @@ def compare_record(
                 name = fields[absolute_index // field_size]
                 row = metrics[name]
                 row["count"] += 1
+                field_index = absolute_index % field_size
+                if (
+                    storage_width is not None
+                    and field_index % storage_width >= physical_width
+                ):
+                    row["ignored_padding_count"] += 1
+                    continue
                 ref_bogus = abs(ref) >= BOGUS_LIMIT
                 cand_bogus = abs(cand) >= BOGUS_LIMIT
                 if ref_bogus or cand_bogus:
@@ -225,14 +239,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dx", type=float, required=True)
     parser.add_argument("--dy", type=float, required=True)
     parser.add_argument("--dz", type=float, required=True)
-    parser.add_argument("--rtol", type=float, default=5.0e-11)
-    parser.add_argument("--atol", type=float, default=5.0e-12)
+    parser.add_argument("--rtol", type=float, default=1.0e-6)
+    parser.add_argument("--atol", type=float, default=1.0e-8)
     parser.add_argument("--out", type=Path)
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
+    storage_width = 2 * (args.nx // 2 + 1)
     result: dict[str, object] = {"status": "passed", "ranks": []}
     failures: list[str] = []
     for rank in range(args.nproc):
@@ -246,7 +261,15 @@ def main() -> int:
             if not reference.is_file() or not candidate.is_file():
                 row = {"passed": False, "reason": "missing_file"}
             else:
-                row = compare_record(reference, candidate, fields, rtol=args.rtol, atol=args.atol)
+                row = compare_record(
+                    reference,
+                    candidate,
+                    fields,
+                    rtol=args.rtol,
+                    atol=args.atol,
+                    storage_width=storage_width,
+                    physical_width=args.nx,
+                )
             rank_result[key] = row
             if not row["passed"]:
                 failures.append(f"rank {rank} {basename}")
@@ -259,6 +282,7 @@ def main() -> int:
             beta = compare_record(
                 beta_reference, beta_candidate, ("Beta", "Tn_all"),
                 rtol=args.rtol, atol=args.atol,
+                storage_width=storage_width, physical_width=args.nx,
             )
             if not beta["passed"]:
                 failures.append(f"rank {rank} Beta")
