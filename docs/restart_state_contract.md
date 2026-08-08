@@ -46,9 +46,12 @@ values can create a force/coefficient transient. Grid, decomposition, or
 geometry-signature mismatches are also rejected.
 
 The current contract is for the uniform-grid backend. An AMR restart format
-must additionally serialize level hierarchy, patch extents/generations,
-coverage masks, and level-specific `phi`/normal ownership. A uniform sidecar
-must not be reused for an AMR hierarchy.
+must additionally serialize the level hierarchy, per-level refinement ratios,
+patch valid/ghost boxes and geometry generations, coverage masks,
+level-specific `phi`/normal ownership, coarse/fine correction state, and any
+held defect-projection state. Restart must restore those records before device
+geometry is rebound and must reject a hierarchy or generation mismatch. A
+uniform sidecar must not be reused for an AMR hierarchy.
 
 ## ATM State
 

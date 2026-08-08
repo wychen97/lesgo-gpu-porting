@@ -43,12 +43,15 @@ and checks the bound extents. `level_set_finalize()` releases device mappings
 and host allocations before MPI finalization.
 
 The descriptor reserves cell-weight and coverage-mask references for composite
-diagnostics. They remain unbound in the uniform backend. An AMR backend must
-bind level-volume weights and mask coarse cells covered by finer levels before
-using `global_CA`; summing each patch independently would double-count force
-and area. The velocity-error and inflow diagnostics reduce raw sums and sample
-counts before normalization, so unequal patch/rank populations do not receive
-equal-rank weighting.
+diagnostics. They remain unbound in the uniform backend. An adapter can bind
+both through `level_set_bind_diagnostic_weights()` and clear them through
+`level_set_clear_diagnostic_weights()`. The target arrays must outlive the
+binding; every geometry refresh clears the references so an adapter cannot
+silently reuse metadata from an old generation. When bound, the velocity-error
+diagnostic excludes covered coarse cells and normalizes weighted raw error sums
+by globally reduced volume weights while retaining raw sample-count reductions.
+An AMR backend must provide equivalent composite integration before using
+`global_CA`; summing each patch independently would double-count force and area.
 
 Persistent optional storage follows active runtime physics:
 

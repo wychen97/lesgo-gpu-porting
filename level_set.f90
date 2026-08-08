@@ -43,6 +43,7 @@ public :: level_set_Cs_lag_dyn
 public :: level_set_vel_err
 public :: level_set_finalize, level_set_geometry_refresh
 public :: level_set_patch_descriptor_t, level_set_get_patch_descriptor
+public :: level_set_bind_diagnostic_weights, level_set_clear_diagnostic_weights
 #ifdef PPLVLSET_GPU
 public :: level_set_gpu_data_init
 #endif
@@ -371,6 +372,40 @@ descriptor=level_set_uniform_patch
 end subroutine level_set_get_patch_descriptor
 
 !**********************************************************************
+subroutine level_set_bind_diagnostic_weights(cell_weight,coverage_mask)
+!**********************************************************************
+! Bind host-owned composite-grid metadata to the current geometry generation.
+! A geometry refresh invalidates these references and the adapter must rebind.
+use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
+real(rp), target, intent(in) :: cell_weight(ld,ny,lbz:nz)
+logical, target, intent(in) :: coverage_mask(ld,ny,lbz:nz)
+integer :: i,j,k
+
+do k=lbz,nz
+  do j=1,ny
+    do i=1,nx
+      if (coverage_mask(i,j,k)) then
+        if (.not. ieee_is_finite(cell_weight(i,j,k)) .or.                 &
+            cell_weight(i,j,k) < 0._rp) then
+          call error(mod_name // '.level_set_bind_diagnostic_weights',   &
+              'active diagnostic cell weights must be finite and nonnegative')
+        end if
+      end if
+    end do
+  end do
+end do
+level_set_uniform_patch%cell_weight_ref=>cell_weight
+level_set_uniform_patch%coverage_mask_ref=>coverage_mask
+end subroutine level_set_bind_diagnostic_weights
+
+!**********************************************************************
+subroutine level_set_clear_diagnostic_weights()
+!**********************************************************************
+nullify(level_set_uniform_patch%cell_weight_ref)
+nullify(level_set_uniform_patch%coverage_mask_ref)
+end subroutine level_set_clear_diagnostic_weights
+
+!**********************************************************************
 subroutine level_set_finalize()
 !**********************************************************************
 #ifdef PPLVLSET_GPU
@@ -604,9 +639,12 @@ character(128) :: fname_write
 
 integer :: i,j,k
 integer :: uv_err_navg, w_err_navg
-real(rprec) :: u_err, v_err, w_err
+real(rprec) :: u_err, v_err, w_err, uv_err_weight, w_err_weight
+real(rprec) :: point_weight
+logical :: use_composite_weights
 #ifdef PPMPI
 real(rprec) :: u_err_global, v_err_global, w_err_global
+real(rprec) :: uv_err_weight_global,w_err_weight_global
 integer :: uv_err_navg_global,w_err_navg_global
 #endif
 integer :: fid
@@ -618,73 +656,120 @@ w_err_navg = 0
 u_err = 0._rprec
 v_err = 0._rprec
 w_err = 0._rprec
+uv_err_weight = 0._rprec
+w_err_weight = 0._rprec
+use_composite_weights=associated(level_set_uniform_patch%cell_weight_ref) .and. &
+    associated(level_set_uniform_patch%coverage_mask_ref)
+if (associated(level_set_uniform_patch%cell_weight_ref) .neqv.             &
+    associated(level_set_uniform_patch%coverage_mask_ref)) then
+  call error(sub_name,'diagnostic weight and coverage hooks must be bound together')
+end if
 
-!  Sum over bottom plane
-k=1
+if (.not. use_composite_weights) then
+  ! Uniform backend: retain the device-resident reduction and unit weights.
+  k=1
 #ifdef PPLVLSET_GPU
-! Keep this optional diagnostic device-resident as well. The reduction is
-! synchronous because the host immediately normalizes and writes the result.
-!$acc parallel loop collapse(2) default(present)                            &
-!$acc reduction(+:uv_err_navg,u_err,v_err)
+  !$acc parallel loop collapse(2) default(present)                          &
+  !$acc reduction(+:uv_err_navg,u_err,v_err)
 #endif
-do j=1, ny
-  do i=1, nx
-
-    if( phi(i,j,k) <= 0._rprec ) then
-      uv_err_navg = uv_err_navg + 1
-      u_err = u_err + abs( u(i,j,k) )
-      v_err = v_err + abs( v(i,j,k) )
-    endif
-
-  enddo
-enddo
-
-!  Sum over rest of planes
+  do j=1,ny
+    do i=1,nx
+      if (phi(i,j,k) <= 0._rprec) then
+        uv_err_navg=uv_err_navg+1
+        u_err=u_err+abs(u(i,j,k))
+        v_err=v_err+abs(v(i,j,k))
+      end if
+    end do
+  end do
 #ifdef PPLVLSET_GPU
-!$acc parallel loop collapse(3) default(present)                            &
-!$acc reduction(+:uv_err_navg,w_err_navg,u_err,v_err,w_err)
+  !$acc parallel loop collapse(3) default(present)                          &
+  !$acc reduction(+:uv_err_navg,w_err_navg,u_err,v_err,w_err)
 #endif
-do k=2, nz-1
-  do j=1, ny
-    do i=1, nx
-
-      if( phi(i,j,k) <= 0._rprec ) then
-        uv_err_navg = uv_err_navg + 1
-        u_err = u_err + abs( u(i,j,k) )
-        v_err = v_err + abs( v(i,j,k) )
-      endif
-
-
-      if( phi(i,j,k) + phi(i,j,k-1) <= 0._rprec ) then
-        w_err_navg = w_err_navg + 1
-        w_err = w_err + abs( w(i,j,k) )
-      endif
-
-    enddo
-  enddo
-enddo
+  do k=2,nz-1
+    do j=1,ny
+      do i=1,nx
+        if (phi(i,j,k) <= 0._rprec) then
+          uv_err_navg=uv_err_navg+1
+          u_err=u_err+abs(u(i,j,k))
+          v_err=v_err+abs(v(i,j,k))
+        end if
+        if (phi(i,j,k)+phi(i,j,k-1) <= 0._rprec) then
+          w_err_navg=w_err_navg+1
+          w_err=w_err+abs(w(i,j,k))
+        end if
+      end do
+    end do
+  end do
+  uv_err_weight=real(uv_err_navg,rprec)
+  w_err_weight=real(w_err_navg,rprec)
+else
+#ifdef PPLVLSET_GPU
+  ! Composite diagnostics are low-frequency host work. The future AMR adapter
+  ! owns its weight/mask storage, so synchronize fields rather than assuming
+  ! that arbitrary adapter pointers are mapped into the OpenACC data region.
+  !$acc wait(1)
+  !$acc update self(phi,u,v,w)
+#endif
+  k=1
+  do j=1,ny
+    do i=1,nx
+      if (level_set_uniform_patch%coverage_mask_ref(i,j,k) .and.           &
+          phi(i,j,k) <= 0._rprec) then
+        point_weight=level_set_uniform_patch%cell_weight_ref(i,j,k)
+        uv_err_navg=uv_err_navg+1
+        uv_err_weight=uv_err_weight+point_weight
+        u_err=u_err+point_weight*abs(u(i,j,k))
+        v_err=v_err+point_weight*abs(v(i,j,k))
+      end if
+    end do
+  end do
+  do k=2,nz-1
+    do j=1,ny
+      do i=1,nx
+        if (level_set_uniform_patch%coverage_mask_ref(i,j,k)) then
+          point_weight=level_set_uniform_patch%cell_weight_ref(i,j,k)
+          if (phi(i,j,k) <= 0._rprec) then
+            uv_err_navg=uv_err_navg+1
+            uv_err_weight=uv_err_weight+point_weight
+            u_err=u_err+point_weight*abs(u(i,j,k))
+            v_err=v_err+point_weight*abs(v(i,j,k))
+          end if
+          if (phi(i,j,k)+phi(i,j,k-1) <= 0._rprec) then
+            w_err_navg=w_err_navg+1
+            w_err_weight=w_err_weight+point_weight
+            w_err=w_err+point_weight*abs(w(i,j,k))
+          end if
+        end if
+      end do
+    end do
+  end do
+end if
 
 #ifdef PPMPI
 
 call mpi_reduce (u_err, u_err_global, 1, MPI_RPREC, MPI_SUM, 0, comm, ierr)
 call mpi_reduce (v_err, v_err_global, 1, MPI_RPREC, MPI_SUM, 0, comm, ierr)
 call mpi_reduce (w_err, w_err_global, 1, MPI_RPREC, MPI_SUM, 0, comm, ierr)
+call mpi_reduce (uv_err_weight, uv_err_weight_global, 1, MPI_RPREC, MPI_SUM,&
+                 0, comm, ierr)
+call mpi_reduce (w_err_weight, w_err_weight_global, 1, MPI_RPREC, MPI_SUM, &
+                 0, comm, ierr)
 call mpi_reduce (uv_err_navg, uv_err_navg_global, 1, MPI_INTEGER, MPI_SUM,  &
                  0, comm, ierr)
 call mpi_reduce (w_err_navg, w_err_navg_global, 1, MPI_INTEGER, MPI_SUM,   &
                  0, comm, ierr)
 
-if( rank == 0 ) then
+if (rank == 0) then
 
-    if (uv_err_navg_global > 0) then
-      u_err=u_err_global/real(uv_err_navg_global,rprec)
-      v_err=v_err_global/real(uv_err_navg_global,rprec)
+    if (uv_err_navg_global > 0 .and. uv_err_weight_global > 0._rprec) then
+      u_err=u_err_global/uv_err_weight_global
+      v_err=v_err_global/uv_err_weight_global
     else
       u_err=0._rprec
       v_err=0._rprec
     end if
-    if (w_err_navg_global > 0) then
-      w_err=w_err_global/real(w_err_navg_global,rprec)
+    if (w_err_navg_global > 0 .and. w_err_weight_global > 0._rprec) then
+      w_err=w_err_global/w_err_weight_global
     else
       w_err=0._rprec
     end if
@@ -698,15 +783,15 @@ endif
 
 #else
 
-if (uv_err_navg > 0) then
-  u_err=u_err/real(uv_err_navg,rprec)
-  v_err=v_err/real(uv_err_navg,rprec)
+if (uv_err_navg > 0 .and. uv_err_weight > 0._rprec) then
+  u_err=u_err/uv_err_weight
+  v_err=v_err/uv_err_weight
 else
   u_err=0._rprec
   v_err=0._rprec
 end if
-if (w_err_navg > 0) then
-  w_err=w_err/real(w_err_navg,rprec)
+if (w_err_navg > 0 .and. w_err_weight > 0._rprec) then
+  w_err=w_err/w_err_weight
 else
   w_err=0._rprec
 end if
