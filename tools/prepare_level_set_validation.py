@@ -87,10 +87,13 @@ VARIANTS = [
     ),
     variant("smooth_3d", sgs=".true.", sgs_model="2", smooth_mode="'3d'"),
     variant("sphere_rank_crossing", nproc=2, geometry="sphere", sgs=".true.", sgs_model="4"),
-    variant("tilted_rank_crossing", nproc=2, geometry="tilted", sgs=".true.", sgs_model="5", lbc_mom="1"),
     variant(
-        "tilted_rank_crossing_4rank", nproc=4, geometry="tilted",
-        sgs=".true.", sgs_model="5", lbc_mom="1",
+        "sphere_rank_crossing_model5", nproc=2, geometry="sphere",
+        sgs=".true.", sgs_model="5",
+    ),
+    variant(
+        "sphere_rank_crossing_4rank", nproc=4, geometry="sphere",
+        sgs=".true.", sgs_model="5",
     ),
     variant(
         "reject_invalid_smooth_mode", smooth_mode="'bogus'",
@@ -197,7 +200,7 @@ def profiles_for_variant(name: str, nproc: int) -> list[str]:
         return ["cpu_mpi"]
     if name == "smooth_3d":
         return ["cpu_nompi", "gpu_nompi"]
-    if name == "tilted_rank_crossing_4rank":
+    if name == "sphere_rank_crossing_4rank":
         return ["gpu_mpi_staged", "gpu_mpi_aware"]
     if name == "sgs_model_4":
         return ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"]
