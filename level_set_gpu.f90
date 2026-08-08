@@ -1344,17 +1344,22 @@ subroutine smooth_tau_gpu(phi_limit)
 real(rprec), intent(in) :: phi_limit
 integer, parameter :: niter=5
 real(rprec), parameter :: omega=1.5_rprec
-integer :: iter,color,ncolors,point_color,cx,cy,i,j,k,im1,ip1,jm1,jp1
+integer :: iter,color,ncolors,point_color,cx,cy,i,j,k
+integer :: im1,ip1,jm1,jp1,kmin,kmax
 real(rprec) :: phi_uv,phi_w,update
+logical :: smooth_3d
 
-if (trim(smooth_mode) /= 'xy') then
-  call smooth_field_gpu(txx, lbz, .false., phi_limit)
-  call smooth_field_gpu(txy, lbz, .false., phi_limit)
-  call smooth_field_gpu(txz, lbz, .true.,  phi_limit)
-  call smooth_field_gpu(tyy, lbz, .false., phi_limit)
-  call smooth_field_gpu(tyz, lbz, .true.,  phi_limit)
-  call smooth_field_gpu(tzz, lbz, .false., phi_limit)
-  return
+if (trim(smooth_mode) == 'xy') then
+  kmin=1
+  kmax=nz
+  smooth_3d=.false.
+else if (trim(smooth_mode) == '3d') then
+  kmin=2
+  kmax=nz-1
+  smooth_3d=.true.
+else
+  call error('level_set_gpu_m.smooth_tau_gpu',                             &
+      'smooth_mode must be exactly "xy" or "3d": ' // trim(smooth_mode))
 end if
 
 ncolors=2
@@ -1362,19 +1367,23 @@ if (modulo(nx,2) /= 0 .or. modulo(ny,2) /= 0) ncolors=3
 do iter=1,niter
   do color=0,ncolors-1
     !$acc parallel loop collapse(3) default(present) async(1)               &
-    !$acc firstprivate(color,ncolors)                                       &
+    !$acc firstprivate(color,ncolors,smooth_3d,kmin)                        &
     !$acc private(point_color,cx,cy,im1,ip1,jm1,jp1,phi_uv,phi_w,update)
-    do k=1,nz
+    do k=kmin,kmax
       do j=1,ny
         do i=1,nx
         if (ncolors == 2) then
           point_color=modulo(i+j,2)
+          if (smooth_3d) point_color=modulo(point_color+k,2)
         else
           cx=modulo(i-1,2)
           cy=modulo(j-1,2)
           if (modulo(nx,2) /= 0 .and. i == nx) cx=2
           if (modulo(ny,2) /= 0 .and. j == ny) cy=2
           point_color=modulo(cx+cy,3)
+          if (smooth_3d) then
+            point_color=modulo(point_color+modulo(k-kmin,2),3)
+          end if
         end if
         if (point_color == color) then
         im1=i-1
@@ -1388,13 +1397,37 @@ do iter=1,niter
 
         phi_uv=phi(i,j,k)
         if (phi_uv < phi_limit) then
-          update=(txx(im1,j,k)+txx(ip1,j,k)+txx(i,jm1,k)+txx(i,jp1,k))/4._rprec
+          if (smooth_3d) then
+            update=(txx(im1,j,k)+txx(ip1,j,k)+txx(i,jm1,k)+txx(i,jp1,k) + &
+                    txx(i,j,k-1)+txx(i,j,k+1))/6._rprec
+          else
+            update=(txx(im1,j,k)+txx(ip1,j,k)+txx(i,jm1,k)+txx(i,jp1,k)) / &
+                    4._rprec
+          end if
           txx(i,j,k)=(1._rprec-omega)*txx(i,j,k)+omega*update
-          update=(txy(im1,j,k)+txy(ip1,j,k)+txy(i,jm1,k)+txy(i,jp1,k))/4._rprec
+          if (smooth_3d) then
+            update=(txy(im1,j,k)+txy(ip1,j,k)+txy(i,jm1,k)+txy(i,jp1,k) + &
+                    txy(i,j,k-1)+txy(i,j,k+1))/6._rprec
+          else
+            update=(txy(im1,j,k)+txy(ip1,j,k)+txy(i,jm1,k)+txy(i,jp1,k)) / &
+                    4._rprec
+          end if
           txy(i,j,k)=(1._rprec-omega)*txy(i,j,k)+omega*update
-          update=(tyy(im1,j,k)+tyy(ip1,j,k)+tyy(i,jm1,k)+tyy(i,jp1,k))/4._rprec
+          if (smooth_3d) then
+            update=(tyy(im1,j,k)+tyy(ip1,j,k)+tyy(i,jm1,k)+tyy(i,jp1,k) + &
+                    tyy(i,j,k-1)+tyy(i,j,k+1))/6._rprec
+          else
+            update=(tyy(im1,j,k)+tyy(ip1,j,k)+tyy(i,jm1,k)+tyy(i,jp1,k)) / &
+                    4._rprec
+          end if
           tyy(i,j,k)=(1._rprec-omega)*tyy(i,j,k)+omega*update
-          update=(tzz(im1,j,k)+tzz(ip1,j,k)+tzz(i,jm1,k)+tzz(i,jp1,k))/4._rprec
+          if (smooth_3d) then
+            update=(tzz(im1,j,k)+tzz(ip1,j,k)+tzz(i,jm1,k)+tzz(i,jp1,k) + &
+                    tzz(i,j,k-1)+tzz(i,j,k+1))/6._rprec
+          else
+            update=(tzz(im1,j,k)+tzz(ip1,j,k)+tzz(i,jm1,k)+tzz(i,jp1,k)) / &
+                    4._rprec
+          end if
           tzz(i,j,k)=(1._rprec-omega)*tzz(i,j,k)+omega*update
         end if
 
@@ -1404,9 +1437,21 @@ do iter=1,niter
           phi_w=0.5_rprec*(phi(i,j,k)+phi(i,j,k-1))
         end if
         if (phi_w < phi_limit) then
-          update=(txz(im1,j,k)+txz(ip1,j,k)+txz(i,jm1,k)+txz(i,jp1,k))/4._rprec
+          if (smooth_3d) then
+            update=(txz(im1,j,k)+txz(ip1,j,k)+txz(i,jm1,k)+txz(i,jp1,k) + &
+                    txz(i,j,k-1)+txz(i,j,k+1))/6._rprec
+          else
+            update=(txz(im1,j,k)+txz(ip1,j,k)+txz(i,jm1,k)+txz(i,jp1,k)) / &
+                    4._rprec
+          end if
           txz(i,j,k)=(1._rprec-omega)*txz(i,j,k)+omega*update
-          update=(tyz(im1,j,k)+tyz(ip1,j,k)+tyz(i,jm1,k)+tyz(i,jp1,k))/4._rprec
+          if (smooth_3d) then
+            update=(tyz(im1,j,k)+tyz(ip1,j,k)+tyz(i,jm1,k)+tyz(i,jp1,k) + &
+                    tyz(i,j,k-1)+tyz(i,j,k+1))/6._rprec
+          else
+            update=(tyz(im1,j,k)+tyz(ip1,j,k)+tyz(i,jm1,k)+tyz(i,jp1,k)) / &
+                    4._rprec
+          end if
           tyz(i,j,k)=(1._rprec-omega)*tyz(i,j,k)+omega*update
         end if
         end if
@@ -1503,6 +1548,158 @@ end do
 end subroutine smooth_field_gpu
 
 !*******************************************************************************
+subroutine smooth_lag_fields_gpu(S11,S12,S13,S22,S23,S33)
+!*******************************************************************************
+! Batch the nine independent fields used by model 4/5 into one color sequence.
+! This preserves each field's multi-color SOR order while avoiding nine copies
+! of the kernel-launch sequence.
+real(rprec), intent(inout) :: S11(ld,ny,nz), S12(ld,ny,nz), S13(ld,ny,nz)
+real(rprec), intent(inout) :: S22(ld,ny,nz), S23(ld,ny,nz), S33(ld,ny,nz)
+integer, parameter :: niter=5
+real(rprec), parameter :: omega=1.5_rprec
+integer :: iter,color,ncolors,point_color,cx,cy,i,j,k
+integer :: im1,ip1,jm1,jp1,kmin,kmax
+real(rprec) :: phi_uv,phi_w,update
+logical :: smooth_3d
+
+if (trim(smooth_mode) == 'xy') then
+  kmin=1
+  kmax=nz
+  smooth_3d=.false.
+else if (trim(smooth_mode) == '3d') then
+  kmin=2
+  kmax=nz-1
+  smooth_3d=.true.
+else
+  call error('level_set_gpu_m.smooth_lag_fields_gpu',                      &
+      'smooth_mode must be exactly "xy" or "3d": ' // trim(smooth_mode))
+end if
+
+ncolors=2
+if (modulo(nx,2) /= 0 .or. modulo(ny,2) /= 0) ncolors=3
+do iter=1,niter
+  do color=0,ncolors-1
+    !$acc parallel loop collapse(3) default(present) async(1)               &
+    !$acc firstprivate(color,ncolors,smooth_3d,kmin)                        &
+    !$acc private(point_color,cx,cy,im1,ip1,jm1,jp1,phi_uv,phi_w,update)
+    do k=kmin,kmax
+      do j=1,ny
+        do i=1,nx
+          if (ncolors == 2) then
+            point_color=modulo(i+j,2)
+            if (smooth_3d) point_color=modulo(point_color+k,2)
+          else
+            cx=modulo(i-1,2)
+            cy=modulo(j-1,2)
+            if (modulo(nx,2) /= 0 .and. i == nx) cx=2
+            if (modulo(ny,2) /= 0 .and. j == ny) cy=2
+            point_color=modulo(cx+cy,3)
+            if (smooth_3d) then
+              point_color=modulo(point_color+modulo(k-kmin,2),3)
+            end if
+          end if
+          if (point_color /= color) cycle
+
+          im1=i-1
+          if (im1 < 1) im1=nx
+          ip1=i+1
+          if (ip1 > nx) ip1=1
+          jm1=j-1
+          if (jm1 < 1) jm1=ny
+          jp1=j+1
+          if (jp1 > ny) jp1=1
+
+          phi_uv=phi(i,j,k)
+          if (phi_uv < 0._rprec) then
+            if (smooth_3d) then
+              update=(u(im1,j,k)+u(ip1,j,k)+u(i,jm1,k)+u(i,jp1,k) +       &
+                      u(i,j,k-1)+u(i,j,k+1))/6._rprec
+            else
+              update=(u(im1,j,k)+u(ip1,j,k)+u(i,jm1,k)+u(i,jp1,k)) /     &
+                      4._rprec
+            end if
+            u(i,j,k)=(1._rprec-omega)*u(i,j,k)+omega*update
+            if (smooth_3d) then
+              update=(v(im1,j,k)+v(ip1,j,k)+v(i,jm1,k)+v(i,jp1,k) +       &
+                      v(i,j,k-1)+v(i,j,k+1))/6._rprec
+            else
+              update=(v(im1,j,k)+v(ip1,j,k)+v(i,jm1,k)+v(i,jp1,k)) /     &
+                      4._rprec
+            end if
+            v(i,j,k)=(1._rprec-omega)*v(i,j,k)+omega*update
+          end if
+
+          if (coord == 0 .and. k == 1) then
+            phi_w=phi(i,j,k)
+          else
+            phi_w=0.5_rprec*(phi(i,j,k)+phi(i,j,k-1))
+          end if
+          if (phi_w < 0._rprec) then
+            if (smooth_3d) then
+              update=(w(im1,j,k)+w(ip1,j,k)+w(i,jm1,k)+w(i,jp1,k) +       &
+                      w(i,j,k-1)+w(i,j,k+1))/6._rprec
+            else
+              update=(w(im1,j,k)+w(ip1,j,k)+w(i,jm1,k)+w(i,jp1,k)) /     &
+                      4._rprec
+            end if
+            w(i,j,k)=(1._rprec-omega)*w(i,j,k)+omega*update
+            if (smooth_3d) then
+              update=(S11(im1,j,k)+S11(ip1,j,k)+S11(i,jm1,k)+            &
+                      S11(i,jp1,k)+S11(i,j,k-1)+S11(i,j,k+1))/6._rprec
+            else
+              update=(S11(im1,j,k)+S11(ip1,j,k)+S11(i,jm1,k)+            &
+                      S11(i,jp1,k))/4._rprec
+            end if
+            S11(i,j,k)=(1._rprec-omega)*S11(i,j,k)+omega*update
+            if (smooth_3d) then
+              update=(S12(im1,j,k)+S12(ip1,j,k)+S12(i,jm1,k)+            &
+                      S12(i,jp1,k)+S12(i,j,k-1)+S12(i,j,k+1))/6._rprec
+            else
+              update=(S12(im1,j,k)+S12(ip1,j,k)+S12(i,jm1,k)+            &
+                      S12(i,jp1,k))/4._rprec
+            end if
+            S12(i,j,k)=(1._rprec-omega)*S12(i,j,k)+omega*update
+            if (smooth_3d) then
+              update=(S13(im1,j,k)+S13(ip1,j,k)+S13(i,jm1,k)+            &
+                      S13(i,jp1,k)+S13(i,j,k-1)+S13(i,j,k+1))/6._rprec
+            else
+              update=(S13(im1,j,k)+S13(ip1,j,k)+S13(i,jm1,k)+            &
+                      S13(i,jp1,k))/4._rprec
+            end if
+            S13(i,j,k)=(1._rprec-omega)*S13(i,j,k)+omega*update
+            if (smooth_3d) then
+              update=(S22(im1,j,k)+S22(ip1,j,k)+S22(i,jm1,k)+            &
+                      S22(i,jp1,k)+S22(i,j,k-1)+S22(i,j,k+1))/6._rprec
+            else
+              update=(S22(im1,j,k)+S22(ip1,j,k)+S22(i,jm1,k)+            &
+                      S22(i,jp1,k))/4._rprec
+            end if
+            S22(i,j,k)=(1._rprec-omega)*S22(i,j,k)+omega*update
+            if (smooth_3d) then
+              update=(S23(im1,j,k)+S23(ip1,j,k)+S23(i,jm1,k)+            &
+                      S23(i,jp1,k)+S23(i,j,k-1)+S23(i,j,k+1))/6._rprec
+            else
+              update=(S23(im1,j,k)+S23(ip1,j,k)+S23(i,jm1,k)+            &
+                      S23(i,jp1,k))/4._rprec
+            end if
+            S23(i,j,k)=(1._rprec-omega)*S23(i,j,k)+omega*update
+            if (smooth_3d) then
+              update=(S33(im1,j,k)+S33(ip1,j,k)+S33(i,jm1,k)+            &
+                      S33(i,jp1,k)+S33(i,j,k-1)+S33(i,j,k+1))/6._rprec
+            else
+              update=(S33(im1,j,k)+S33(ip1,j,k)+S33(i,jm1,k)+            &
+                      S33(i,jp1,k))/4._rprec
+            end if
+            S33(i,j,k)=(1._rprec-omega)*S33(i,j,k)+omega*update
+          end if
+        end do
+      end do
+    end do
+  end do
+end do
+end subroutine smooth_lag_fields_gpu
+
+!*******************************************************************************
 subroutine level_set_lag_dyn_gpu_core(S11,S12,S13,S22,S23,S33,normal,      &
                                       modify_beta_enabled)
 !*******************************************************************************
@@ -1521,15 +1718,7 @@ real(rprec), parameter :: c1=0.65_rprec, c2=0.7_rprec
 real(rprec) :: phix,phi1,dphi,x,y,z,xp,yp,zp,nxv,nyv,nzv
 real(rprec) :: delta_filter,dmin,zglobal
 
-call smooth_field_gpu(u,   lbz, .false., 0._rprec)
-call smooth_field_gpu(v,   lbz, .false., 0._rprec)
-call smooth_field_gpu(w,   lbz, .true.,  0._rprec)
-call smooth_field_gpu(S11, 1,   .true.,  0._rprec)
-call smooth_field_gpu(S12, 1,   .true.,  0._rprec)
-call smooth_field_gpu(S13, 1,   .true.,  0._rprec)
-call smooth_field_gpu(S22, 1,   .true.,  0._rprec)
-call smooth_field_gpu(S23, 1,   .true.,  0._rprec)
-call smooth_field_gpu(S33, 1,   .true.,  0._rprec)
+call smooth_lag_fields_gpu(S11,S12,S13,S22,S23,S33)
 
 ! F_LM is inactive inside the solid and in its filter-width buffer.
 !$acc parallel loop collapse(3) default(present) async(1) private(s,phix)
