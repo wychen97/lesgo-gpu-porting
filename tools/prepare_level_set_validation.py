@@ -82,6 +82,10 @@ VARIANTS = [
     variant("smooth_3d", sgs=".true.", sgs_model="2", smooth_mode="'3d'"),
     variant("sphere_rank_crossing", nproc=2, geometry="sphere", sgs=".true.", sgs_model="4"),
     variant("tilted_rank_crossing", nproc=2, geometry="tilted", sgs=".true.", sgs_model="5", lbc_mom="1"),
+    variant(
+        "tilted_rank_crossing_4rank", nproc=4, geometry="tilted",
+        sgs=".true.", sgs_model="5", lbc_mom="1",
+    ),
 ]
 
 
