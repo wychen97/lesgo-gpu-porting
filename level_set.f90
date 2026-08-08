@@ -100,6 +100,9 @@ real (rp), allocatable, target, dimension(:,:,:,:) :: norm !--normal vector
                                                  !  near 0-set are stored
 !--experimental: desired velocities for IB method
 real (rp), allocatable, dimension(:,:,:) :: udes, vdes, wdes
+! CPU/host-bridge scratch used to make stress extrapolation independent of
+! traversal order. One field is reused for all six stress components.
+real (rp), allocatable, dimension(:,:,:) :: tau_source_cpu
 
 ! Uniform-grid patch metadata is kept explicit so a future AMR adapter can
 ! refresh geometry without relying on hidden module allocation state.
@@ -242,6 +245,9 @@ allocate( norm(nd, ld, ny, lbz:nz) )!--normal vector
 if( vel_BC ) allocate( udes(ld, ny, lbz:nz), &
                        vdes(ld, ny, lbz:nz), &
                        wdes(ld, ny, lbz:nz) )
+#ifndef PPLVLSET_GPU
+if (use_extrap_tau_simple) allocate(tau_source_cpu(ld,ny,lbz:nz))
+#endif
 
 inquire (unit=lun, exist=exst, opened=opn)
 
@@ -379,6 +385,7 @@ if (allocated(udes)) deallocate(udes)
 if (allocated(vdes)) deallocate(vdes)
 if (allocated(wdes)) deallocate(wdes)
 if (allocated(phi)) deallocate(phi)
+if (allocated(tau_source_cpu)) deallocate(tau_source_cpu)
 if (allocated(phitop)) deallocate(phitop)
 if (allocated(phibot)) deallocate(phibot)
 if (allocated(utop)) deallocate(utop)
@@ -1176,402 +1183,102 @@ end subroutine modify_dutdn
 !--this avoids using fit3
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine extrap_tau_simple ()
-use param, only : jt_total
-use sim_param, only : u, v, w, txx, txy, txz, tyy, tyz, tzz
+use sim_param, only : txx, txy, txz, tyy, tyz, tzz
 implicit none
 
 character (*), parameter :: sub_name = mod_name // '.extrap_tau_simple'
-character (*), parameter :: fmta3r = '(a,3(es12.5,1x))'
-character (*), parameter :: fmta3i = '(a,3(i0,1x))'
 
-integer, parameter :: noutput = 200
-integer, parameter :: lun = 1
-
-logical, parameter :: use_output = .false.
-
-real (rp), parameter :: eps = 100._rp * epsilon (0._rp)
-
-character (128) :: fprefix
-character (128) :: fname
-
-integer :: i, j, k
-!--experiment to reduce time spent on looping over fluid pts
-!integer, save :: imn = 1, imx = nx, jmn = 1, jmx = ny
-integer :: imn, imx, jmn, jmx
-integer :: imn_used, imx_used, jmn_used, jmx_used
-integer :: nbad
-integer :: kmn
-
-logical :: output
-logical :: exst, opn
-
-real (rp) :: phi_c, phi_x
-real (rp) :: dphi0, dphi
-real (rp) :: phi1, phi2
-real (rp) :: txx1, txy1, txz1, tyy1, tyz1, tzz1
-real (rp) :: txx2, txy2, txz2, tyy2, tyz2, tzz2
-real (rp) :: wgt
-real (rp) :: x(nd), x1(nd), x2(nd)
-real (rp) :: n_hat(nd)
-
-!---------------------------------------------------------------------
-fprefix = path // 'output/extrap_tau_simple.'
-
-! Set default values
-imn = 1
-imx = nx
-jmn = 1
-jmx = ny
-
-if (use_output) then
-
-  if (modulo (jt_total, noutput) == 0) then
-
-    output = .true.
-
-    write (fname, '(a,i6.6,a)') trim (fprefix), jt_total, '.dat'
-
-    inquire (unit=lun, exist=exst, opened=opn)
-
-    if (exst .and. (.not. opn)) then
-      open (lun, file=fname)
-    else
-      call error (sub_name, 'problem opening file')
-    end if
-
-  else
-    output = .false.
-  end if
-
-else
-
-  output = .false.
-
+if (.not. allocated(tau_source_cpu)) then
+  call error(sub_name, 'source-stable extrapolation scratch is not allocated')
 end if
 
-if (phi_cutoff_is_set) then
-  phi_c = phi_cutoff
-else
-  call error (sub_name, 'trying to use uninitialized phi_cutoff')
-end if
-
-if (.not. phi_0_is_set) then
-  call error (sub_name, 'trying to use uninitialized phi_0')
-end if
-
-dphi0 = filter_size * dx  !--experiment
-
-if (output) then
-  write (lun, *) 'phi_c = ', phi_c
-  write (lun, *) 'phi_0 = ', phi_0
-  write (lun, *) 'dphi = ', dphi
-end if
-
-!  initial values for _used variables
-!  setting to non-previously used values
-imn_used = nx
-imx_used = 1
-jmn_used = ny
-jmx_used = 1
-
-nbad = 0
-
-if (output) write (lun, *) 'u-node pass'
-
-!--u-node pass
-do k = 1, nz - 1
-  do j = jmn, jmx
-    do i = imn, imx
-
-      phi_x = phi(i, j, k)
-
-      if ((-phi_c <= phi_x) .and. (phi_x < phi_0)) then
-
-        ! Find bounding box for all "banded" points"
-        imn_used = min (imn_used, i)
-        imx_used = max (imx_used, i)
-        jmn_used = min (jmn_used, j)
-        jmx_used = max (jmx_used, j)
-
-        x = (/ (i - 1) * dx, (j - 1) * dy, (k - 0.5_rp) * dz /)
-
-        n_hat = norm(:, i, j, k)
-
-        dphi = dphi0
-        x1 = x + dphi * n_hat  !--this pt is supposed to be in fluid
-                               !--this means dphi >= phi_c
-
-        !--check phi(x1) >= 0
-        call interp_phi (x1, phi1)
-
-        if (phi1 < phi_0) then
-          !--try a larger dphi--experimental
-          dphi = 1.5_rp * dphi
-          x1 = x + dphi * n_hat
-          call interp_phi (x1, phi1)
-
-          if (phi1 < phi_0) then
-            !--probably here because of the way the normal (phi)
-            !  inside the trees are calculated: its not a true
-            !  signed distance function, due to the complex internal
-            !  geometry
-            !--not sure how to set tau here: for now set to 0._rp
-            nbad = nbad + 1
-
-            !call mesg (sub_name, 'bad point (u): ', (/ i, j, k /))
-
-            txx(i, j, k) = 0._rp
-            txy(i, j, k) = 0._rp
-            txz(i, j, k) = 0._rp
-            tyy(i, j, k) = 0._rp
-            tyz(i, j, k) = 0._rp
-            tzz(i, j, k) = 0._rp
-
-            cycle  !--onto next point
-
-            !call mesg (sub_name, 'at u-node (i, j, k) =', (/ i, j, k /))
-            !call mesg (sub_name, 'phi_x =', phi_x)
-            !call mesg (sub_name, 'x =', x)
-            !call mesg (sub_name, 'n_hat =', n_hat)
-            !call mesg (sub_name, 'dphi =', dphi)
-            !call mesg (sub_name, 'x1 =', x1)
-            !call mesg (sub_name, 'phi_0 =', phi_0)
-            !call mesg (sub_name, 'phi1 =', phi1)
-            !call error (sub_name, 'phi1 < phi_0')
-
-          end if
-        end if
-
-        !if (phi1 < 0._rp) call error (sub_name, 'phi1 =', phi1)
-
-        x2 = x1 + dphi * n_hat  !--this is supposed to be further into fluid
-                                !  than x1
-                                !--problem for highly wrinkled surface
-
-        !--check phi(x2) >= 0
-        call interp_phi (x2, phi2)
-
-        !--calculate tij1, for use in extrapolation
-        call interp_tij_u (x1, txx1, txy1, tyy1, tzz1)
-        !call interp_scal (txx, x1, txx1)
-        !call interp_scal (txy, x1, txy1)
-        !call interp_scal (tyy, x1, tyy1)
-        !call interp_scal (tzz, x1, tzz1)
-
-        !--calculate tij2, for use in extrapolation
-        call interp_tij_u (x2, txx2, txy2, tyy2, tzz2)
-        !call interp_scal (txx, x2, txx2)
-        !call interp_scal (txy, x2, txy2)
-        !call interp_scal (tyy, x2, tyy2)
-        !call interp_scal (tzz, x2, tzz2)
-
-        !--now extrapolate
-        !--simple linear extrap, for now
-        !wgt = (phi2 - phi1) / (phi2 - phi_x)
-        !--since the two dphi steps are equal, the wgt is 0.5
-        wgt = 0.5_rp
-
-        !--the way we define the phis right now, expect wgt ~= 0.5
-        !--its a problem is wgt is smaller than say 0.25
-        !if (wgt < 0.25_rp) then
-        !  write (msg, *) 'extrapolation weight too small (u-node)', n_l,  &
-        !                 'coord = ', coord, n_l,                          &
-        !                 'wgt = ', wgt, n_l,                              &
-        !                 'i, j, k = ', i, j, k, n_l,                      &
-        !                 'x = ', x, n_l,                                  &
-        !                 'x1 = ', x1, n_l,                                &
-        !                 'x2 = ', x2, n_l,                                &
-        !                 'phi = ', phi_x, n_l,                            &
-        !                 'phi1 = ', phi1, n_l,                            &
-        !                 'phi2 = ', phi2, n_l,                            &
-        !                 'n_hat = ', n_hat
-        !  call error (sub_name, msg)
-        !end if
-
-        txx(i, j, k) = (txx1 - (1._rp - wgt) * txx2) / wgt
-        txy(i, j, k) = (txy1 - (1._rp - wgt) * txy2) / wgt
-        tyy(i, j, k) = (tyy1 - (1._rp - wgt) * tyy2) / wgt
-        tzz(i, j, k) = (tzz1 - (1._rp - wgt) * tzz2) / wgt
-
-        if (output) then
-          write (lun, fmta3i) 'i, j, k = ', i, j, k
-          write (lun, *) 'phi_x = ', phi_x
-          write (lun, fmta3r) 'x = ', x
-          write (lun, fmta3r) 'n_hat = ', n_hat
-          write (lun, fmta3r) 'x1 = ', x1
-          write (lun, *) 'phi1 = ', phi1
-          write (lun, fmta3r) 'x2 = ', x2
-          write (lun, *) 'phi2 = ', phi2
-          write (lun, *) 'txx1 = ', txx1
-          write (lun, *) 'txy1 = ', txy1
-          write (lun, *) 'tyy1 = ', tyy1
-          write (lun, *) 'tzz1 = ', tzz1
-          write (lun, *) 'txx2 = ', txx2
-          write (lun, *) 'txy2 = ', txy2
-          write (lun, *) 'tyy2 = ', tyy2
-          write (lun, *) 'tzz2 = ', tzz2
-          write (lun, *) 'wgt = ', wgt
-          write (lun, *) 'txx = ', txx(i, j, k)
-          write (lun, *) 'txy = ', txy(i, j, k)
-          write (lun, *) 'tyy = ', tyy(i, j, k)
-          write (lun, *) 'tzz = ', tzz(i, j, k)
-        end if
-
-      end if
-
-    end do
-  end do
-end do
-
-nbad = 0
-
-if (output) write (lun, *) 'w-node pass'
-
-if (coord == 0) then
-  kmn = 2
-else
-  kmn = 1
-end if
-
-!--w-node pass
-do k = kmn, nz - 1
-  do j = jmn, jmx
-    do i = imn, imx
-
-      phi_x = 0.5_rp * (phi(i, j, k) + phi(i, j, k - 1))
-                                       !--MPI: requires phi(k=0)
-
-      if ((-phi_c <= phi_x) .and. (phi_x < phi_0)) then
-
-        imn_used = min (imn_used, i)
-        imx_used = max (imx_used, i)
-        jmn_used = min (jmn_used, j)
-        jmx_used = max (jmx_used, j)
-
-        x = (/ (i - 1) * dx, (j - 1) * dy, (k - 1) * dz /)
-
-        n_hat = 0.5_rp * (norm(:, i, j, k) + norm(:, i, j, k - 1))
-                                             !--MPI: requires phi(k=0)
-
-        if (mag (n_hat) > eps) then
-          n_hat = n_hat / mag (n_hat)
-        else  !--normal cancelled?
-          n_hat = norm(:, i, j, k)
-        end if
-
-        dphi = dphi0
-        x1 = x + dphi * n_hat
-
-        !--check phi(x1) >= 0
-        call interp_phi (x1, phi1)
-
-        if (phi1 < phi_0) then
-          !--try a larger dphi--experimental
-          dphi = 1.5_rp * dphi
-          x1 = x + dphi * n_hat
-          call interp_phi (x1, phi1)
-
-          if (phi1 < phi_0) then
-
-            nbad = nbad + 1
-
-            !call mesg (sub_name, 'bad point (w): ', (/ i, j, k /))
-
-            txz(i, j, k) = 0._rp
-            tyz(i, j, k) = 0._rp
-
-            cycle
-
-            !call mesg (sub_name, 'at w-node (i, j, k) =', (/ i, j, k /))
-            !call mesg (sub_name, 'phi_x =', phi_x)
-            !call mesg (sub_name, 'x =', x)
-            !call mesg (sub_name, 'n_hat =', n_hat)
-            !call mesg (sub_name, 'dphi =', dphi)
-            !call mesg (sub_name, 'x1 =', x1)
-            !call mesg (sub_name, 'phi_0 =', phi_0)
-            !call mesg (sub_name, 'phi1 =', phi1)
-            !call error (sub_name, 'phi1 < phi_0')
-
-          end if
-        end if
-
-        !if (phi1 < 0._rp) call error (sub_name, 'phi1 =', phi1)
-
-        x2 = x1 + dphi * n_hat  !--this is supposed to be further into fluid
-                                !  than x1
-
-        !--check phi(x2) >= 0
-        call interp_phi (x2, phi2)
-
-        !--calculate tij1, for use in extrapolation
-        call interp_tij_w (x1, txz1, tyz1)
-        !call interp_scal (txz, x1, txz1, 'w')
-        !call interp_scal (tyz, x1, tyz1, 'w')
-
-        !--calculate tij2, for use in extrapolation
-        call interp_tij_w (x2, txz2, tyz2)
-        !call interp_scal (txz, x2, txz2, 'w')
-        !call interp_scal (tyz, x2, tyz2, 'w')
-
-        !--now extrapolate
-        !--simple linear extrap, for now
-        !wgt = (phi2 - phi1) / (phi2 - phi_x)
-        wgt = 0.5_rp
-
-        !--the way we define the phis right now, expect wgt ~= 0.5
-        !--its a problem is wgt is smaller than say 0.25
-        !if (wgt < 0.25_rp) then
-        !  write (msg, *) 'extrapolation weight too small (w-node)', n_l,  &
-        !                 'wgt = ', wgt, n_l,                              &
-        !                 'i, j, k = ', i, j, k, n_l,                      &
-        !                 'x = ', x, n_l,                                  &
-        !                 'x1 = ', x1, n_l,                                &
-        !                 'x2 = ', x2, n_l,                                &
-        !                 'phi = ', phi_x, n_l,                            &
-        !                 'phi1 = ', phi1, n_l,                            &
-        !                 'phi2 = ', phi2, n_l,                            &
-        !                 'n_hat = ', n_hat
-        !  call error (sub_name, msg)
-        !end if
-
-        txz(i, j, k) = (txz1 - (1._rp - wgt) * txz2) / wgt
-        tyz(i, j, k) = (tyz1 - (1._rp - wgt) * tyz2) / wgt
-
-        if (output) then
-          write (lun, fmta3i) 'i, j, k = ', i, j, k
-          write (lun, *) 'phi_x = ', phi_x
-          write (lun, fmta3r) 'x = ', x
-          write (lun, fmta3r) 'n_hat = ', n_hat
-          write (lun, fmta3r) 'x1 = ', x1
-          write (lun, *) 'phi1 = ', phi1
-          write (lun, fmta3r) 'x2 = ', x2
-          write (lun, *) 'phi2 = ', phi2
-          write (lun, *) 'txz1 = ', txz1
-          write (lun, *) 'tyz1 = ', tyz1
-          write (lun, *) 'txz2 = ', txz2
-          write (lun, *) 'tyz2 = ', tyz2
-          write (lun, *) 'wgt = ', wgt
-          write (lun, *) 'txz = ', txz(i, j, k)
-          write (lun, *) 'tyz = ', tyz(i, j, k)
-        end if
-
-      end if
-
-    end do
-  end do
-end do
-
-imn = imn_used
-imx = imx_used
-jmn = jmn_used
-jmx = jmx_used
-
-if (output) then
-  write (lun, *) ' '
-  close (lun)
-end if
+! Each component reads an immutable snapshot. This removes the historical
+! dependence on CPU loop traversal and defines the same semantics used by the
+! parallel GPU implementation while requiring only one reusable field.
+call extrap_tau_field_cpu(txx, txxbot, txxtop, .false.)
+call extrap_tau_field_cpu(txy, txybot, txytop, .false.)
+call extrap_tau_field_cpu(tyy, tyybot, tyytop, .false.)
+call extrap_tau_field_cpu(tzz, tzzbot, tzztop, .false.)
+call extrap_tau_field_cpu(txz, txzbot, txztop, .true.)
+call extrap_tau_field_cpu(tyz, tyzbot, tyztop, .true.)
 
 end subroutine extrap_tau_simple
+
+!**********************************************************************
+subroutine extrap_tau_field_cpu(a, abot, atop, w_node)
+!**********************************************************************
+real(rp), intent(inout) :: a(ld,ny,lbz:nz)
+real(rp), intent(in) :: abot(ld,ny,ntaubot), atop(ld,ny,ntautop)
+logical, intent(in) :: w_node
+
+real(rp), parameter :: eps=100._rp*epsilon(0._rp)
+integer :: i,j,k,kmin
+real(rp) :: phi_x,n_hat(nd),nmag,x(nd),x1(nd),x2(nd),dphi,phi1,a1,a2
+
+tau_source_cpu=a
+kmin=1
+if (w_node .and. coord == 0) kmin=2
+
+do k=kmin,nz-1
+  do j=1,ny
+    do i=1,nx
+      if (w_node) then
+        phi_x=0.5_rp*(phi(i,j,k)+phi(i,j,k-1))
+        n_hat=0.5_rp*(norm(:,i,j,k)+norm(:,i,j,k-1))
+      else
+        phi_x=phi(i,j,k)
+        n_hat=norm(:,i,j,k)
+      end if
+
+      if (-phi_cutoff <= phi_x .and. phi_x < phi_0) then
+        nmag=mag(n_hat)
+        if (w_node .and. nmag <= eps) then
+          n_hat=norm(:,i,j,k)
+          nmag=mag(n_hat)
+        end if
+        if (nmag <= eps) cycle
+        n_hat=n_hat/nmag
+
+        x(1)=real(i-1,rp)*dx
+        x(2)=real(j-1,rp)*dy
+        if (w_node) then
+          x(3)=real(k-1,rp)*dz
+        else
+          x(3)=(real(k,rp)-0.5_rp)*dz
+        end if
+
+        dphi=filter_size*dx
+        x1=x+dphi*n_hat
+        call interp_phi(x1,phi1)
+        if (phi1 < phi_0) then
+          dphi=1.5_rp*dphi
+          x1=x+dphi*n_hat
+          call interp_phi(x1,phi1)
+        end if
+        if (phi1 < phi_0) then
+          a(i,j,k)=0._rp
+          cycle
+        end if
+
+        x2=x1+dphi*n_hat
+        if (w_node) then
+          call interp_scal(lbz,tau_source_cpu,ntaubot,abot,ntautop,atop, &
+                           x1,a1,'w')
+          call interp_scal(lbz,tau_source_cpu,ntaubot,abot,ntautop,atop, &
+                           x2,a2,'w')
+        else
+          call interp_scal(lbz,tau_source_cpu,ntaubot,abot,ntautop,atop, &
+                           x1,a1)
+          call interp_scal(lbz,tau_source_cpu,ntaubot,abot,ntautop,atop, &
+                           x2,a2)
+        end if
+        a(i,j,k)=2._rp*a1-a2
+      end if
+    end do
+  end do
+end do
+
+end subroutine extrap_tau_field_cpu
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !--extrapolate fluid tau through log-law at wall into solid
