@@ -150,6 +150,8 @@ def generate_geometry(case_dir: Path, conf: str, kind: str, nproc: int) -> None:
 
 
 def profiles_for_variant(name: str, nproc: int) -> list[str]:
+    if name == "smooth_3d":
+        return ["cpu_nompi", "gpu_nompi"]
     if name == "sgs_model_4":
         return ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"]
     if name == "sgs_model_5":
