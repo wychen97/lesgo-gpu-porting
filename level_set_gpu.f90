@@ -1359,7 +1359,10 @@ if (trim(smooth_mode) /= 'xy') then
   return
 end if
 
-!$acc parallel loop gang present(phi,txx,txy,txz,tyy,tyz,tzz) async(1)
+! Each z-plane gang advances its own SOR wavefront. Keep the nested loop
+! controls gang-private so planes cannot race through shared diagonal bounds.
+!$acc parallel loop gang present(phi,txx,txy,txz,tyy,tyz,tzz) async(1)     &
+!$acc private(iter,diagonal,ilo,ihi)
 do k=1,nz
   do iter=1,niter
     do diagonal=2,nx+ny
@@ -1422,7 +1425,8 @@ shift=0
 if (w_node) shift=1
 
 if (trim(smooth_mode) == 'xy') then
-  !$acc parallel loop gang present(phi,a) async(1)
+  !$acc parallel loop gang present(phi,a) async(1)                         &
+  !$acc private(iter,diagonal,ilo,ihi)
   do k=1,nz
     do iter=1,niter
       do diagonal=2,nx+ny
