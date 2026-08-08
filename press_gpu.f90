@@ -539,6 +539,20 @@ do jz = 1, nz-1
     end do
 end do
 
+! The lower pressure boundary is homogeneous Neumann.  The host pressure path
+! produces p(:,:,1) == p(:,:,0), so its bottom w-grid gradient is exactly zero.
+! Enforce the same public dpdz contract after the device inverse transforms;
+! RHSz(:,:,1) is a boundary value, but diagnostics and optional consumers still
+! observe this array.
+if (coord == 0) then
+    !$acc parallel loop collapse(2) default(present) async(1)
+    do jy = 1, ny
+        do jx = 1, nx
+            dpdz(jx, jy, 1) = 0._rprec
+        end do
+    end do
+end if
+
 #ifdef PPSAFETYMODE
 if (coord < nproc-1) then
     !$acc parallel loop collapse(2) default(present) async(1)
