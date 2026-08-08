@@ -101,7 +101,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/parse_lesgo_timing.py` | Parses LESGO stdout/stderr timing blocks into JSON for validation evidence import. |
 | `tools/compare_scalar_checkpoint.py` | Compares CPU/GPU `scal.out.c*` scalar checkpoints and reports scalar-field differences. |
 | `tools/compare_atm_restart_runs.py` | Compares uninterrupted and split channel, ADM, or ATM runs, including model-owned sidecars and streamed LES checkpoint fields. |
-| `tools/compare_level_set_checkpoints.py` | Compares complete Level Set LES, pressure-gradient, force, stress-divergence, and beta snapshots rank by rank. |
+| `tools/compare_level_set_checkpoints.py` | Compares complete Level Set LES, pressure-gradient, force, stress-divergence, beta, integrated IBM force, kinetic energy, and divergence evidence rank by rank. |
 | `tools/compare_level_set_runs.py` | Stable public entry point for complete Level Set run comparisons. |
 | `tools/compare_level_set_restart.py` | Compares continuous and split Level Set model-4/5 runs, including the versioned SGS sidecar. |
 | `tools/collect_level_set_evidence.py` | Collects prepared Level Set CPU/bridge/GPU pairs into a cluster- and commit-stamped evidence JSON file. |

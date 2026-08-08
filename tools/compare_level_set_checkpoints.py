@@ -241,12 +241,46 @@ def last_log_value(path: Path, label: str) -> float | None:
     return values[-1] if values else None
 
 
+def compare_scalar(
+    reference: float | None,
+    candidate: float | None,
+    *,
+    rtol: float,
+    atol: float,
+) -> dict[str, object]:
+    """Compare one required finite diagnostic using the field tolerances."""
+    row: dict[str, object] = {
+        "reference": reference,
+        "candidate": candidate,
+        "rtol": rtol,
+        "atol": atol,
+    }
+    if reference is None or candidate is None:
+        row.update({"passed": False, "reason": "missing_value"})
+        return row
+    if not math.isfinite(reference) or not math.isfinite(candidate):
+        row.update({"passed": False, "reason": "nonfinite_value"})
+        return row
+    absolute_difference = abs(candidate - reference)
+    scale = max(abs(reference), abs(candidate))
+    tolerance = atol + rtol * scale
+    row.update(
+        {
+            "absolute_difference": absolute_difference,
+            "relative_difference": absolute_difference / max(scale, 1.0),
+            "tolerance": tolerance,
+            "passed": absolute_difference <= tolerance,
+        }
+    )
+    return row
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference", type=Path, required=True)
     parser.add_argument("--candidate", type=Path, required=True)
-    parser.add_argument("--reference-log", type=Path)
-    parser.add_argument("--candidate-log", type=Path)
+    parser.add_argument("--reference-log", type=Path, required=True)
+    parser.add_argument("--candidate-log", type=Path, required=True)
     parser.add_argument("--nx", type=positive_int, required=True)
     parser.add_argument("--ny", type=positive_int, required=True)
     parser.add_argument("--nz", type=positive_int, required=True)
@@ -320,15 +354,56 @@ def main() -> int:
         args.candidate, nx=args.nx, ny=args.ny, nz=args.nz, nproc=args.nproc,
         dx=args.dx, dy=args.dy, dz=args.dz,
     )
-    result["derived"] = {"reference": reference_derived, "candidate": candidate_derived}
+    kinetic_comparison = compare_scalar(
+        reference_derived["mean_component_kinetic_energy"],
+        candidate_derived["mean_component_kinetic_energy"],
+        rtol=args.rtol,
+        atol=args.atol,
+    )
+    force_comparisons = [
+        compare_scalar(reference, candidate, rtol=args.rtol, atol=args.atol)
+        for reference, candidate in zip(
+            reference_derived["integrated_force"],
+            candidate_derived["integrated_force"],
+        )
+    ]
+    sample_count_matches = (
+        reference_derived["kinetic_sample_count"]
+        == candidate_derived["kinetic_sample_count"]
+    )
+    result["derived"] = {
+        "reference": reference_derived,
+        "candidate": candidate_derived,
+        "comparison": {
+            "kinetic_energy": kinetic_comparison,
+            "kinetic_sample_count": {
+                "reference": reference_derived["kinetic_sample_count"],
+                "candidate": candidate_derived["kinetic_sample_count"],
+                "passed": sample_count_matches,
+            },
+            "integrated_force": force_comparisons,
+        },
+    }
+    if not kinetic_comparison["passed"]:
+        failures.append("derived kinetic energy")
+    if not sample_count_matches:
+        failures.append("derived kinetic sample count")
+    for direction, compared in zip("xyz", force_comparisons):
+        if not compared["passed"]:
+            failures.append(f"integrated IBM force {direction}")
     if args.reference_log and args.candidate_log:
-        result["printed_diagnostics"] = {
-            label: {
-                "reference": last_log_value(args.reference_log, label),
-                "candidate": last_log_value(args.candidate_log, label),
-            }
-            for label in ("divergence", "kinetic energy")
-        }
+        printed_diagnostics: dict[str, object] = {}
+        for label in ("divergence", "kinetic energy"):
+            compared = compare_scalar(
+                last_log_value(args.reference_log, label),
+                last_log_value(args.candidate_log, label),
+                rtol=args.rtol,
+                atol=args.atol,
+            )
+            printed_diagnostics[label] = compared
+            if not compared["passed"]:
+                failures.append(f"printed {label}")
+        result["printed_diagnostics"] = printed_diagnostics
     if failures:
         result["status"] = "failed"
         result["failures"] = failures
