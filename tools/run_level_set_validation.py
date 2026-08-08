@@ -93,7 +93,8 @@ def main() -> int:
         mpi_enabled = manifest["build_profiles"][profile]["USE_MPI"] == "ON"
         command = [str(executable)]
         if mpi_enabled:
-            command = shlex.split(args.launcher.format(nproc=task["nproc"])) + command
+            launcher = args.launcher.replace("{nproc}", str(task["nproc"]))
+            command = shlex.split(launcher) + command
         environment = os.environ.copy()
         environment.update({str(k): str(v) for k, v in task["environment"].items()})
         environment.update(
