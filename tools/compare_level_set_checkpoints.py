@@ -67,6 +67,7 @@ def field_metrics() -> dict[str, object]:
         "sentinel_count": 0,
         "nonfinite_count": 0,
         "sentinel_mismatch_count": 0,
+        "elementwise_violation_count": 0,
         "max_abs": 0.0,
         "max_rel": 0.0,
         "reference_scale": 0.0,
@@ -107,7 +108,6 @@ def compare_record(
     native = "<" if sys.byteorder == "little" else ">"
     chunk_bytes = 8 * 1024 * 1024
     value_index = 0
-    passed = True
     with reference.open("rb") as left, candidate.open("rb") as right:
         left.seek(4)
         right.seek(4)
@@ -140,11 +140,9 @@ def compare_record(
                     row["sentinel_count"] += 1
                     if ref_bogus != cand_bogus:
                         row["sentinel_mismatch_count"] += 1
-                        passed = False
                     continue
                 if not math.isfinite(ref) or not math.isfinite(cand):
                     row["nonfinite_count"] += 1
-                    passed = False
                     continue
                 row["compared_count"] += 1
                 diff = cand - ref
@@ -157,18 +155,32 @@ def compare_record(
                 row["sum_sq_reference"] += ref * ref
                 field_rtol = (rtol_by_field or {}).get(name, rtol)
                 if not math.isclose(ref, cand, rel_tol=field_rtol, abs_tol=atol):
-                    passed = False
+                    row["elementwise_violation_count"] += 1
             value_index += len(left_values)
             remaining -= count
-    for row in metrics.values():
+    passed = True
+    for name, row in metrics.items():
         count = row.pop("compared_count")
         sum_sq_diff = row.pop("sum_sq_diff")
         sum_sq_reference = row.pop("sum_sq_reference")
         row["rms_diff"] = math.sqrt(sum_sq_diff / count) if count else 0.0
+        row["reference_rms"] = math.sqrt(sum_sq_reference / count) if count else 0.0
         row["relative_l2"] = (
             math.sqrt(sum_sq_diff / sum_sq_reference) if sum_sq_reference else 0.0
         )
         row["compared_count"] = count
+        field_rtol = (rtol_by_field or {}).get(name, rtol)
+        row["norm_tolerance"] = atol + field_rtol * row["reference_rms"]
+        row["norm_close"] = row["rms_diff"] <= row["norm_tolerance"]
+        row["passed"] = (
+            row["nonfinite_count"] == 0
+            and row["sentinel_mismatch_count"] == 0
+            and (
+                row["elementwise_violation_count"] == 0
+                or row["norm_close"]
+            )
+        )
+        passed = passed and row["passed"]
     return {"passed": passed, "field_size": field_size, "fields": metrics}
 
 
