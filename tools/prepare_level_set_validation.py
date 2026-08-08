@@ -204,7 +204,10 @@ def main() -> int:
                     "nproc": item["nproc"],
                     "geometry": item["geometry"],
                     "case_dir": str(case_dir.relative_to(output)),
-                    "environment": {"LESGO_LVLSET_VALIDATION_SNAPSHOT": "ON"},
+                    "environment": {
+                        "LESGO_LVLSET_VALIDATION_SNAPSHOT": "ON",
+                        "LESGO_RANDOM_SEED": "20260807",
+                    },
                 }
             )
     manifest = {
