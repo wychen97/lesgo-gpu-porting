@@ -127,57 +127,90 @@ The following CPU restrictions are preserved:
 
 ## Validation Results
 
-Validation used the `test-cases/level_set_cubes` geometry on a
-`64 x 64 x 32` grid with 10 timesteps. CPU and GPU builds used identical
-inputs. Checkpoints include velocity, RHS, SGS coefficient, and Lagrangian
-history fields.
+The release gate uses generated variants of `test-cases/level_set_cubes` on a
+`64 x 64 x 32` uniform grid. Strict checkpoint comparisons run for two
+timesteps with `DYN_init=1` and `cs_count=2`, so the dynamic-SGS update is
+active while the comparison still isolates implementation differences from
+long-horizon chaotic amplification. The checked-in base case remains a
+20-step smoke case.
 
-| Coverage | Result |
-| --- | --- |
-| One rank, SGS disabled | Passed |
-| One rank, SGS models 1-5 | Passed |
-| Two ranks, SGS models 4 and 5, compact host-staged MPI | Passed |
-| Non-MPI model 5 | Passed |
-| LES-GPU plus CPU-Level-Set host bridge, model 5 | Passed |
-| Optional logarithmic/simple/legacy stress paths | Passed |
-| `use_modify_dutdn`, desired log profile, direct local treatment | Passed |
-| `smooth_mode='3d'` exact CPU-order wavefront | Passed |
+The matrix contains 57 runtime tasks:
 
-The worst normalized CPU/GPU field difference in the 16-run primary matrix was
-`3.302591e-13` (two-rank model 4, `RHSz`). The `smooth_mode='3d'` comparison
-was `2.614140e-15`. The host-bridge regression differed from the CPU reference
-by at most `1.794502e-13`. Divergence and kinetic energy matched at printed
-precision.
+- 44 one-rank tasks covering SGS disabled and models 1-5, MPI and non-MPI,
+  CPU reference, LES-GPU/CPU-Level-Set bridge, full Level Set GPU, and every
+  supported stress and velocity-boundary option;
+- 11 two-rank tasks covering CPU, bridge, host-staged GPU, GPU-aware MPI, and
+  model-4/5 spherical interfaces crossing the z-rank boundary;
+- two four-rank tasks covering host-staged and GPU-aware MPI with one rank per
+  A100 and a spherical rank-crossing interface.
 
-Nine clean build profiles passed: Level Set CPU/GPU with MPI and without MPI,
-non-Level-Set CPU/GPU, forced GPU-aware MPI Level Set/non-Level-Set builds, and
-the host-bridge fallback. A 10-step non-Level-Set channel checkpoint from the
-new source was byte-for-byte identical to the untouched `origin/main` GPU
-checkpoint at commit `3e83529438310bfac969f72a191b6dd864cea6fc`; the Level Set
-work therefore does not alter that build path.
+The comparator checks `u`, `v`, `w`, RHS, pressure gradients, SGS coefficient
+and history fields, `Beta`, Level Set force, divergence, kinetic energy, and
+integrated IBM force. It rejects NaN/Inf and sentinel mismatches. A field passes
+when all physical cells satisfy the elementwise tolerance or when the
+whole-field RMS difference satisfies `atol + rtol * reference_rms`. This avoids
+letting a handful of near-zero values dominate a physically negligible field
+comparison; a retained 20-step SGS-3 regression still fails the norm gate and
+therefore confirms that the criterion remains discriminating.
 
-The `use_enforce_un` branch matched for a one-step smoke test. Longer runs of
-that experimental CPU boundary condition require a separate physical-stability
-study; CPU/GPU parity alone is not evidence that the model is suitable for a
-production simulation.
+Derecho passed all 57 runtime tasks and all 51 CPU/bridge/GPU evidence pairs:
 
-## Performance Sanity Check
+| Ranks / GPUs | Job | Runtime tasks | Evidence pairs | Result |
+| ---: | --- | ---: | ---: | --- |
+| 1 / 1 A100 | `7045326.desched1` | 44/44 | 38/38 | Passed |
+| 2 / 2 A100 | `7045327.desched1` | 11/11 | 12/12 | Passed |
+| 4 / 4 A100 | `7045328.desched1` | 2/2 | 1/1 | Passed |
 
-The small one-rank case includes diagnostics every timestep, so it is a
-correctness-oriented performance sanity check rather than a production scaling
-benchmark.
+Derecho also passed 18 continuous-versus-split restart comparisons for models
+4 and 5 at seams 1, 2, and 3 (`7045350.desched1`). Both model-4 and model-5
+`USE_DYN_TN=ON` gates and the non-Level-Set isolation checkpoint passed
+(`7045351.desched1`). The compiler stack was NVHPC 25.9, CUDA 12.9.0,
+Cray MPICH 8.1.32, and FFTW 3.3.10. The detailed machine-readable record is
+`docs/level_set_gpu_validation_evidence.json`.
 
-| Runtime path | CPU wall | GPU wall | CPU/GPU |
-| --- | ---: | ---: | ---: |
-| SGS disabled, 10 steps | 0.28837 s | 0.04796 s | 6.01x |
-| SGS model 1, 10 steps | 0.29087 s | 0.04762 s | 6.11x |
-| SGS model 5, 10 steps | 0.38014 s | 0.05506 s | 6.90x |
+Delta RH96 independently passed the same 57 tasks and 51 evidence pairs:
 
-The two-rank fallback test shared one physical GPU and is correctness evidence,
-not a scaling result. A forced CUDA-aware MPI build succeeds on OpenMPI+UCX,
-but device-direct multi-rank runtime acceptance requires one MPI rank per GPU
-on a multi-GPU node. Do not use a multi-rank/one-GPU run as GPU-aware MPI
-validation.
+| Ranks / GPUs | Job | Runtime tasks | Evidence pairs | Result |
+| ---: | --- | ---: | ---: | --- |
+| 1 / 1 A100 | `20926287` | 44/44 | 38/38 | Passed |
+| 2 / 2 A100 | `20926262` | 11/11 | 12/12 | Passed |
+| 4 / 4 A100 | `20926263` | 2/2 | 1/1 | Passed |
+
+Delta also passed all 18 restart comparisons (`20926284`), both DYN_TN
+model gates, and the non-Level-Set isolation checkpoint (`20926285`). The
+RH96 stack was NVHPC 26.5, CUDA 13.2, Cray MPICH 9.1.0, and FFTW 3.3.10.11.
+It compiled the unchanged batched Level Set source in under one minute per
+parallel build job. The previous production stack's NVHPC 25.3 front end had
+stalled while compiling the large batched OpenACC smoothing routines; no
+unbatched source fallback or optimization-level reduction was retained.
+
+Delta applies Slurm GPU cgroups for the one-rank-per-GPU launch. Cray MPI 9.1
+documents that these cgroups can prevent peer IPC handles from opening, so the
+multi-GPU validation retained `--gpus-per-task=1 --gpu-bind=single:1` and set
+`MPICH_GPU_IPC_ENABLED=0`. The `USE_GPU_AWARE_MPI=ON` LESGO code path still
+passes device buffers to MPI, while Cray MPI uses its documented two-copy
+intra-node fallback instead of GPU peer IPC. This is a transport constraint of
+the Delta launch environment, not a solver-source change.
+
+These small matrices are correctness tests, not production performance or
+scaling benchmarks. They intentionally include checkpoint snapshots and
+diagnostics that would distort a timestep-performance claim.
+
+## Numerical Behavior Changes
+
+CPU-reference behavior changes are reported separately from GPU-port
+roundoff:
+
+- model-4 beta modification now honors the runtime switch instead of a local
+  constant and uses global physical z distance on every MPI rank;
+- stress extrapolation now uses a source-stable snapshot;
+- the CPU Level Set SOR smoother uses deterministic multicolor ordering: two
+  colors for even periodic extents and three for odd extents.
+
+The old/new one-step CPU comparison measured a relative change of about
+`2.7e-10` in global mean kinetic energy and about `9e-9` in integrated
+streamwise IBM force. These are CPU algorithm corrections, not evidence of a
+CPU/GPU mismatch.
 
 ## Acceptance Rule
 

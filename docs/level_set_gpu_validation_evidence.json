@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "branch": "lvlset-gpu-port-20260807",
+  "base_commit": "2705e7c9f3be3c10c222ffc8e3852fea2a6ce892",
+  "solver_source_commit": "6db7d00",
+  "evidence_tool_commit": "0480afe02b327b94e2ae0b299873bcf63c0e671b",
+  "matrix": {
+    "grid": [64, 64, 32],
+    "strict_steps": 2,
+    "dyn_init": 1,
+    "cs_count": 2,
+    "runtime_tasks": 57,
+    "comparison_pairs": 51,
+    "rank_splits": {
+      "1": {"tasks": 44, "pairs": 38},
+      "2": {"tasks": 11, "pairs": 12},
+      "4": {"tasks": 2, "pairs": 1}
+    }
+  },
+  "comparison": {
+    "rtol": 1e-6,
+    "atol": 1e-8,
+    "coefficient_rtol": 2e-5,
+    "beta_rtol": 5e-6,
+    "acceptance": "finite and sentinel-consistent, plus elementwise tolerance or whole-field RMS tolerance",
+    "negative_control": "retained 20-step SGS-3 CPU/GPU regression fails the field-norm gate"
+  },
+  "clusters": {
+    "derecho": {
+      "status": "passed",
+      "modules": [
+        "nvhpc/25.9",
+        "cuda/12.9.0",
+        "cray-mpich/8.1.32",
+        "fftw/3.3.10"
+      ],
+      "root": "/glade/work/wchen/lesgo_versions/benchmarks/12_lvlset_gpu_review_ac1f135_20260807",
+      "matrix_jobs": [
+        {"job_id": "7045326.desched1", "ranks": 1, "gpus": 1, "tasks_passed": 44, "tasks_total": 44, "pairs_passed": 38, "pairs_total": 38},
+        {"job_id": "7045327.desched1", "ranks": 2, "gpus": 2, "tasks_passed": 11, "tasks_total": 11, "pairs_passed": 12, "pairs_total": 12},
+        {"job_id": "7045328.desched1", "ranks": 4, "gpus": 4, "tasks_passed": 2, "tasks_total": 2, "pairs_passed": 1, "pairs_total": 1}
+      ],
+      "restart": {"job_id": "7045350.desched1", "status": "passed", "comparisons_passed": 18, "comparisons_total": 18},
+      "extra_gates": {"job_id": "7045351.desched1", "status": "passed", "checks": ["USE_DYN_TN model 4", "USE_DYN_TN model 5", "non-Level-Set isolation"]}
+    },
+    "delta": {
+      "status": "passed",
+      "environment": "RH96",
+      "login_node": "dt-login04.delta.ncsa.illinois.edu",
+      "reservation": "RH96",
+      "modules": [
+        "PrgEnv-nvidia/8.7.0",
+        "nvidia/26.5",
+        "cudatoolkit/26.5_13.2",
+        "cray-mpich/9.1.0",
+        "cray-fftw/3.3.10.11",
+        "cmake/3.31.8"
+      ],
+      "root": "/work/hdd/bfth/wchen30/lesgo_versions/benchmarks/12_lvlset_gpu_review_ac1f135_20260807",
+      "source_commit": "0480afe02b327b94e2ae0b299873bcf63c0e671b",
+      "build_jobs": [
+        {
+          "job_id": "20926221",
+          "status": "passed",
+          "elapsed": "00:00:50",
+          "profiles": ["gpu_mpi_staged", "gpu_mpi_aware"]
+        },
+        {
+          "job_id": "20926216",
+          "status": "passed",
+          "elapsed": "00:00:47",
+          "profiles": [
+            "cpu_mpi",
+            "bridge_mpi",
+            "cpu_nompi",
+            "gpu_nompi",
+            "gpu_mpi_dyn_tn",
+            "cpu_mpi_nonlvl",
+            "gpu_mpi_nonlvl"
+          ]
+        },
+        {
+          "job_id": "20926283",
+          "status": "passed",
+          "elapsed": "00:00:22",
+          "profiles": ["cpu_mpi_dyn_tn"]
+        }
+      ],
+      "matrix_jobs": [
+        {"job_id": "20926287", "ranks": 1, "gpus": 1, "tasks_passed": 44, "tasks_total": 44, "pairs_passed": 38, "pairs_total": 38},
+        {"job_id": "20926262", "ranks": 2, "gpus": 2, "tasks_passed": 11, "tasks_total": 11, "pairs_passed": 12, "pairs_total": 12},
+        {"job_id": "20926263", "ranks": 4, "gpus": 4, "tasks_passed": 2, "tasks_total": 2, "pairs_passed": 1, "pairs_total": 1}
+      ],
+      "restart": {"job_id": "20926284", "status": "passed", "comparisons_passed": 18, "comparisons_total": 18},
+      "extra_gates": {"job_id": "20926285", "status": "passed", "checks": ["USE_DYN_TN model 4", "USE_DYN_TN model 5", "non-Level-Set isolation"]},
+      "runtime_environment": {
+        "MPICH_GPU_SUPPORT_ENABLED": "1",
+        "MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED": "1",
+        "MPICH_GPU_IPC_ENABLED": "0",
+        "launcher": "srun --mpi=cray_shasta -n {nproc} --ntasks-per-node={nproc} --gpus-per-task=1 --gpu-bind=single:1",
+        "ipc_reason": "Cray MPI 9.1 documents disabling peer IPC when Slurm GPU cgroups hide peer devices; the GPU-buffer MPI path remains enabled."
+      },
+      "validation_commands": [
+        "sbatch --reservation=RH96 submit_delta_rh96_original_build.slurm",
+        "sbatch --reservation=RH96 --export=ALL,TARGET_NPROC={1,2,4} submit_delta_rh96_matrix.slurm",
+        "sbatch --reservation=RH96 submit_delta_rh96_restart.slurm",
+        "sbatch --reservation=RH96 submit_delta_rh96_extra_gates.slurm"
+      ],
+      "diagnostics": [
+        {
+          "environment": "production NVHPC 25.3 / Cray MPICH 8.1.32",
+          "job_id": "20924237",
+          "status": "failed",
+          "reason": "NVHPC 25.3 compiler front end stalled on the large batched OpenACC Level Set smoothing routines."
+        },
+        {
+          "job_ids": ["20926229", "20926230"],
+          "status": "cancelled and replaced",
+          "reason": "Cray MPI peer IPC could not open handles through Slurm per-task GPU cgroups; reruns used the documented MPICH_GPU_IPC_ENABLED=0 setting."
+        }
+      ]
+    }
+  },
+  "cpu_numerical_changes": {
+    "global_mean_kinetic_energy_relative_change": 2.7e-10,
+    "streamwise_integrated_ibm_force_relative_change": 9e-9,
+    "classification": "CPU algorithm corrections; not GPU roundoff"
+  },
+  "scope_limits": {
+    "backend": "uniform-grid",
+    "amr": "descriptor and lifecycle contract only; no AMR flux, projection, or composite-grid algorithms",
+    "performance": "correctness matrix only; no production scaling claim"
+  }
+}

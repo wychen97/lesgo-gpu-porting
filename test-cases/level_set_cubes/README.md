@@ -53,7 +53,10 @@ python3 tools/prepare_level_set_validation.py \
 
 The generated manifest fixes `DYN_init=1` and `cs_count=2`, covers SGS off and
 models 1-5, optional Level Set modes, model-4 beta/lower-wall variants,
-MPI/non-MPI builds, and sphere/tilted geometries crossing a rank boundary.
+MPI/non-MPI builds, and spherical geometries crossing a rank boundary. Strict
+checkpoint variants use two timesteps so an active dynamic-SGS update is
+compared before long-horizon chaotic amplification can obscure implementation
+parity; the checked-in standalone case remains a 20-step smoke test.
 `tools/run_level_set_validation.py` runs tasks inside an existing scheduler
 allocation. `LESGO_LVLSET_VALIDATION_SNAPSHOT=ON` writes the additional fields
 consumed by `tools/compare_level_set_checkpoints.py`.

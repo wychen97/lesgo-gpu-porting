@@ -30,6 +30,7 @@ docs/architecture_performance_review_20260727.md
 docs/fortran_broad_import_audit.md
 docs/restart_state_contract.md
 docs/level_set_gpu_port.md
+docs/level_set_gpu_validation_evidence.json
 CONTRIBUTING.md
 tools/README.md
 ```

@@ -118,6 +118,11 @@ solver code.
    - SGS and optional-path validation matrix;
    - build flags, restrictions, and measured correctness/performance evidence.
 
+24. `level_set_gpu_validation_evidence.json`
+   - machine-readable Derecho and Delta build/runtime evidence;
+   - exact module stacks, scheduler jobs, rank/GPU counts, and result paths;
+   - separates CPU numerical corrections from CPU/GPU implementation parity.
+
 ## Historical References
 
 - `gpu_port_refactor_history.md`: historical architecture plan that informed
