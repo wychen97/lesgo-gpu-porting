@@ -42,7 +42,9 @@ BUILD_PROFILES = {
 
 
 BASE_SETTINGS = {
-    "nsteps": "20",
+    # Two steps include the cs_count=2 dynamic update while keeping strict
+    # checkpoint comparisons ahead of chaotic SGS roundoff amplification.
+    "nsteps": "2",
     "dyn_init": "1",
     "cs_count": "2",
     "vel_BC": ".false.",
@@ -77,7 +79,12 @@ VARIANTS = [
         for model in range(1, 6)
     ],
     variant("model4_beta_off_lbc0", sgs=".true.", sgs_model="4", lag_dyn_modify_beta=".false."),
-    variant("model4_beta_on_lbc1", sgs=".true.", sgs_model="4", lbc_mom="1"),
+    # The tree trunks start at z=0 and overlap the lower wall.  Use an immersed
+    # sphere away from that wall so this case isolates the lbc_mom=1/beta path.
+    variant(
+        "model4_beta_on_lbc1", geometry="sphere", sgs=".true.",
+        sgs_model="4", lbc_mom="1", inflow_type="1",
+    ),
     variant("extrap_tau_log", sgs=".true.", sgs_model="2", use_extrap_tau_log=".true."),
     variant("legacy_extrapolation", sgs=".true.", sgs_model="2", use_extrap_tau_simple=".false."),
     variant("modify_dutdn", sgs=".true.", sgs_model="2", use_modify_dutdn=".true."),
@@ -152,7 +159,9 @@ def write_record(path: Path, values: array.array) -> None:
     path.write_bytes(marker + payload + marker)
 
 
-def generate_geometry(case_dir: Path, conf: str, kind: str, nproc: int) -> None:
+def generate_geometry(
+    case_dir: Path, conf: str, kind: str, nproc: int, *, use_mpi: bool,
+) -> None:
     nx = int(read_setting(conf, "Nx"))
     ny = int(read_setting(conf, "Ny"))
     nz_total_cells = int(read_setting(conf, "Nz"))
@@ -191,7 +200,7 @@ def generate_geometry(case_dir: Path, conf: str, kind: str, nproc: int) -> None:
                     else:
                         raise ValueError(f"unknown geometry {kind}")
                     values.append(phi)
-        name = "phi.out" if nproc == 1 else f"phi.out.c{rank}"
+        name = f"phi.out.c{rank}" if use_mpi else "phi.out"
         write_record(case_dir / name, values)
 
 
@@ -202,13 +211,14 @@ def profiles_for_variant(name: str, nproc: int) -> list[str]:
         return ["cpu_nompi", "gpu_nompi"]
     if name == "sphere_rank_crossing_4rank":
         return ["gpu_mpi_staged", "gpu_mpi_aware"]
-    if name == "sgs_model_4":
-        return ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"]
     if name == "sgs_model_5":
-        return ["cpu_mpi", "gpu_mpi_staged", "cpu_nompi", "gpu_nompi"]
+        return [
+            "cpu_mpi", "bridge_mpi", "gpu_mpi_staged",
+            "cpu_nompi", "gpu_nompi",
+        ]
     if nproc > 1:
-        return ["cpu_mpi", "gpu_mpi_staged", "gpu_mpi_aware"]
-    return ["cpu_mpi", "gpu_mpi_staged"]
+        return ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged", "gpu_mpi_aware"]
+    return ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"]
 
 
 def main() -> int:
@@ -238,7 +248,10 @@ def main() -> int:
                 shutil.copy2(base / "trees.conf", case_dir / "trees.conf")
             else:
                 conf = replace_setting(conf, "use_trees", ".false.")
-                generate_geometry(case_dir, conf, str(item["geometry"]), int(item["nproc"]))
+                generate_geometry(
+                    case_dir, conf, str(item["geometry"]), int(item["nproc"]),
+                    use_mpi=BUILD_PROFILES[profile]["USE_MPI"] == "ON",
+                )
             (case_dir / "lesgo.conf").write_text(conf, encoding="utf-8")
             tasks.append(
                 {
