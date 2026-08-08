@@ -33,8 +33,13 @@ def positive_int(value: str) -> int:
 
 
 def rank_file(root: Path, basename: str, rank: int, nproc: int) -> Path:
-    suffix = f".c{rank}" if nproc > 1 else ""
-    return root / f"{basename}{suffix}"
+    suffixed = root / f"{basename}.c{rank}"
+    plain = root / basename
+    if suffixed.is_file():
+        return suffixed
+    if rank == 0 and plain.is_file():
+        return plain
+    return suffixed if nproc > 1 else plain
 
 
 def record_layout(path: Path) -> tuple[str, int]:
