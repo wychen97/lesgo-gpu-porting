@@ -9,6 +9,8 @@ This case exercises immersed-surface Level Set treatment on a
 - `lesgo.conf`: 20-step Level Set input with SGS model 5.
 - `trees.conf`: four deterministic geometry primitives used to generate
   `phi.out` at startup.
+- `validation_variants.json`: checked-in definitions for every generated
+  CPU, bridge, GPU, MPI, optional-mode, and expected-rejection matrix case.
 - `compile_derecho.sh`: compile-only CPU/GPU example.
 - `submit_derecho.pbs`: run-only Derecho PBS example.
 
@@ -51,12 +53,16 @@ python3 tools/prepare_level_set_validation.py \
   --out /path/to/lvlset-matrix
 ```
 
-The generated manifest fixes `DYN_init=1` and `cs_count=2`, covers SGS off and
-models 1-5, optional Level Set modes, model-4 beta/lower-wall variants,
-MPI/non-MPI builds, and spherical geometries crossing a rank boundary. Strict
-checkpoint variants use two timesteps so an active dynamic-SGS update is
-compared before long-horizon chaotic amplification can obscure implementation
-parity; the checked-in standalone case remains a 20-step smoke test.
+The generator reads `validation_variants.json`; case settings and profile
+selection are therefore reviewable without executing Python. The generated
+manifest fixes `DYN_init=1` and `cs_count=2`, covers SGS off and models 1-5,
+optional Level Set modes, model-4 beta/lower-wall variants, MPI/non-MPI builds,
+and spherical geometries crossing a rank boundary. Strict checkpoint variants
+use two timesteps so an active dynamic-SGS update is compared before
+long-horizon chaotic amplification can obscure implementation parity; the
+checked-in standalone case remains a 20-step smoke test.
+The `model4_beta_on_lbc1` variant uses an immersed sphere away from the lower
+wall because the tree geometry starts at that wall and would mix two effects.
 `tools/run_level_set_validation.py` runs tasks inside an existing scheduler
 allocation. `LESGO_LVLSET_VALIDATION_SNAPSHOT=ON` writes the additional fields
 consumed by `tools/compare_level_set_checkpoints.py`.

@@ -41,106 +41,77 @@ BUILD_PROFILES = {
 }
 
 
-BASE_SETTINGS = {
-    # Two steps include the cs_count=2 dynamic update while keeping strict
-    # checkpoint comparisons ahead of chaotic SGS roundoff amplification.
-    "nsteps": "2",
-    "dyn_init": "1",
-    "cs_count": "2",
-    "vel_BC": ".false.",
-    "use_log_profile": ".false.",
-    "use_enforce_un": ".false.",
-    "use_extrap_tau_log": ".false.",
-    "use_extrap_tau_simple": ".true.",
-    "use_modify_dutdn": ".false.",
-    "lag_dyn_modify_beta": ".true.",
-    "smooth_mode": "'xy'",
-    "lbc_mom": "0",
-}
+def load_variants(path: Path) -> list[dict[str, object]]:
+    """Load and validate the checked-in Level Set case definitions."""
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if raw.get("schema_version") != 1:
+        raise ValueError(f"{path}: schema_version must be 1")
+    base_settings = raw.get("base_settings")
+    raw_variants = raw.get("variants")
+    if not isinstance(base_settings, dict) or not base_settings:
+        raise ValueError(f"{path}: base_settings must be a non-empty object")
+    if not isinstance(raw_variants, list) or not raw_variants:
+        raise ValueError(f"{path}: variants must be a non-empty array")
+    if any(not isinstance(key, str) or not isinstance(value, str)
+           for key, value in base_settings.items()):
+        raise ValueError(f"{path}: base_settings keys and values must be strings")
+    if base_settings.get("dyn_init") != "1" or base_settings.get("cs_count") != "2":
+        raise ValueError(f"{path}: dyn_init=1 and cs_count=2 are required")
 
+    variants: list[dict[str, object]] = []
+    names: set[str] = set()
+    for index, item in enumerate(raw_variants):
+        context = f"{path}: variants[{index}]"
+        if not isinstance(item, dict):
+            raise ValueError(f"{context} must be an object")
+        name = item.get("name")
+        if not isinstance(name, str) or not name:
+            raise ValueError(f"{context}.name must be a non-empty string")
+        if name in names:
+            raise ValueError(f"{context}.name duplicates {name!r}")
+        names.add(name)
 
-def variant(
-    name: str, *, nproc: int = 1, geometry: str = "trees",
-    expected_error: str | None = None, **settings: str,
-) -> dict[str, object]:
-    merged = dict(BASE_SETTINGS)
-    merged.update(settings)
-    merged["nproc"] = str(nproc)
-    return {
-        "name": name, "nproc": nproc, "geometry": geometry,
-        "settings": merged, "expected_error": expected_error,
-    }
+        nproc = item.get("nproc")
+        if not isinstance(nproc, int) or isinstance(nproc, bool) or nproc < 1:
+            raise ValueError(f"{context}.nproc must be a positive integer")
+        geometry = item.get("geometry")
+        if geometry not in {"trees", "sphere", "tilted"}:
+            raise ValueError(f"{context}.geometry is not supported")
+        profiles = item.get("profiles")
+        if not isinstance(profiles, list) or not profiles:
+            raise ValueError(f"{context}.profiles must be a non-empty array")
+        if any(not isinstance(profile, str) or not profile for profile in profiles):
+            raise ValueError(f"{context}.profiles entries must be non-empty strings")
+        if len(set(profiles)) != len(profiles):
+            raise ValueError(f"{context}.profiles contains duplicates")
+        unknown_profiles = [profile for profile in profiles if profile not in BUILD_PROFILES]
+        if unknown_profiles:
+            raise ValueError(f"{context}.profiles contains unknown entries: {unknown_profiles}")
+        if nproc > 1 and any(BUILD_PROFILES[profile]["USE_MPI"] != "ON"
+                             for profile in profiles):
+            raise ValueError(f"{context}: multi-rank variants require MPI profiles")
 
-
-VARIANTS = [
-    variant("sgs_off", sgs=".false.", sgs_model="1"),
-    *[
-        variant(f"sgs_model_{model}", sgs=".true.", sgs_model=str(model))
-        for model in range(1, 6)
-    ],
-    variant("model4_beta_off_lbc0", sgs=".true.", sgs_model="4", lag_dyn_modify_beta=".false."),
-    # The tree trunks start at z=0 and overlap the lower wall.  Use an immersed
-    # sphere away from that wall so this case isolates the lbc_mom=1/beta path.
-    variant(
-        "model4_beta_on_lbc1", geometry="sphere", sgs=".true.",
-        sgs_model="4", lbc_mom="1", inflow_type="1",
-    ),
-    variant("extrap_tau_log", sgs=".true.", sgs_model="2", use_extrap_tau_log=".true."),
-    variant("legacy_extrapolation", sgs=".true.", sgs_model="2", use_extrap_tau_simple=".false."),
-    variant("modify_dutdn", sgs=".true.", sgs_model="2", use_modify_dutdn=".true."),
-    variant(
-        "desired_log_velocity", sgs=".true.", sgs_model="2", vel_BC=".true.",
-        use_log_profile=".true.",
-    ),
-    variant("smooth_3d", sgs=".true.", sgs_model="2", smooth_mode="'3d'"),
-    variant("sphere_rank_crossing", nproc=2, geometry="sphere", sgs=".true.", sgs_model="4"),
-    variant(
-        "sphere_rank_crossing_model5", nproc=2, geometry="sphere",
-        sgs=".true.", sgs_model="5",
-    ),
-    variant(
-        "sphere_rank_crossing_4rank", nproc=4, geometry="sphere",
-        sgs=".true.", sgs_model="5",
-    ),
-    variant(
-        "reject_invalid_smooth_mode", smooth_mode="'bogus'",
-        expected_error='smooth_mode must be exactly "xy" or "3d"',
-    ),
-    variant(
-        "reject_smooth_3d_mpi", smooth_mode="'3d'",
-        expected_error='smooth_mode="3d" requires a non-MPI build',
-    ),
-    variant(
-        "reject_nonpositive_log_roughness", use_extrap_tau_log=".true.",
-        zo_level_set="0.0",
-        expected_error="active Level Set log-law paths require zo_level_set > 0",
-    ),
-    variant(
-        "reject_nonpositive_direct_log_roughness", use_log_profile=".true.",
-        zo_level_set="0.0",
-        expected_error="active Level Set log-law paths require zo_level_set > 0",
-    ),
-    variant(
-        "reject_nonpositive_global_ca_skip", global_CA_calc=".true.",
-        global_CA_nskip="0",
-        expected_error="global_CA_nskip must be positive",
-    ),
-    variant(
-        "reject_multirank_log_extrapolation", nproc=2, geometry="sphere",
-        use_extrap_tau_log=".true.",
-        expected_error="use_extrap_tau_log requires a single-rank run",
-    ),
-    variant(
-        "reject_multirank_legacy_extrapolation", nproc=2, geometry="sphere",
-        use_extrap_tau_simple=".false.",
-        expected_error="legacy stress extrapolation requires a single-rank run",
-    ),
-    variant(
-        "reject_multirank_modify_dutdn", nproc=2, geometry="sphere",
-        use_modify_dutdn=".true.",
-        expected_error="use_modify_dutdn requires a single-rank run",
-    ),
-]
+        overrides = item.get("settings", {})
+        if not isinstance(overrides, dict) or any(
+            not isinstance(key, str) or not isinstance(value, str)
+            for key, value in overrides.items()
+        ):
+            raise ValueError(f"{context}.settings keys and values must be strings")
+        settings = dict(base_settings)
+        settings.update(overrides)
+        settings["nproc"] = str(nproc)
+        expected_error = item.get("expected_error")
+        if expected_error is not None and not isinstance(expected_error, str):
+            raise ValueError(f"{context}.expected_error must be a string or null")
+        variants.append({
+            "name": name,
+            "nproc": nproc,
+            "geometry": geometry,
+            "profiles": list(profiles),
+            "settings": settings,
+            "expected_error": expected_error,
+        })
+    return variants
 
 
 def replace_setting(text: str, key: str, value: str) -> str:
@@ -209,30 +180,22 @@ def generate_geometry(
         write_record(case_dir / name, values)
 
 
-def profiles_for_variant(name: str, nproc: int) -> list[str]:
-    if name.startswith("reject_"):
-        return ["cpu_mpi"]
-    if name == "smooth_3d":
-        return ["cpu_nompi", "gpu_nompi"]
-    if name == "sphere_rank_crossing_4rank":
-        return ["gpu_mpi_staged", "gpu_mpi_aware"]
-    if name == "sgs_model_5":
-        return [
-            "cpu_mpi", "bridge_mpi", "gpu_mpi_staged",
-            "cpu_nompi", "gpu_nompi",
-        ]
-    if nproc > 1:
-        return ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged", "gpu_mpi_aware"]
-    return ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"]
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-case", type=Path, default=Path("test-cases/level_set_cubes"))
+    parser.add_argument(
+        "--variants", type=Path,
+        help="checked-in variant JSON (default: BASE_CASE/validation_variants.json)",
+    )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     base = args.base_case.resolve()
+    variants_path = (
+        args.variants.resolve() if args.variants is not None
+        else base / "validation_variants.json"
+    )
+    variants = load_variants(variants_path)
     output = args.out.resolve()
     if output.exists():
         if not args.force:
@@ -241,8 +204,8 @@ def main() -> int:
     output.mkdir(parents=True)
     base_conf = (base / "lesgo.conf").read_text(encoding="utf-8")
     tasks: list[dict[str, object]] = []
-    for item in VARIANTS:
-        for profile in profiles_for_variant(str(item["name"]), int(item["nproc"])):
+    for item in variants:
+        for profile in item["profiles"]:
             task_id = f"{item['name']}__{profile}"
             case_dir = output / "cases" / task_id
             case_dir.mkdir(parents=True)
@@ -277,6 +240,7 @@ def main() -> int:
     manifest = {
         "schema_version": 1,
         "purpose": "Level Set CPU, host-bridge, full-GPU, MPI, and non-MPI validation",
+        "variant_source": str(variants_path),
         "required_runtime_settings": {"dyn_init": 1, "cs_count": 2},
         "build_profiles": BUILD_PROFILES,
         "tasks": tasks,

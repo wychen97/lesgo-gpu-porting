@@ -51,6 +51,7 @@ PYTHON_CHECKS = [
     ("GPU comment labels", "tools/check_gpu_comment_labels.py"),
     ("GPU file headers", "tools/check_gpu_headers.py"),
     ("GPU contract source groups", "tools/check_gpu_contract_source_groups.py"),
+    ("Level Set validation variants", "tools/check_level_set_validation_variants.py"),
     ("GPU validation matrix", "tools/check_gpu_validation_matrix.py"),
     ("GPU benchmark manifest", "tools/check_gpu_benchmark_manifest.py"),
     ("GPU validation run plan", "tools/check_gpu_validation_plan.py"),

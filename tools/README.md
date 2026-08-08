@@ -70,6 +70,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/check_lesgo_conf_coverage_docs.py` | Verifies the GPU coverage audit tracks non-LVLSET `lesgo.conf` parser keys. |
 | `tools/check_lesgo_conf_key_validation_report.py` | Verifies the generated key-level `lesgo.conf` validation coverage report is current. |
 | `tools/check_lesgo_conf_validation_map.py` | Verifies parsed `lesgo.conf` groups are mapped to GPU validation rows. |
+| `tools/check_level_set_validation_variants.py` | Verifies the checked-in Level Set variants retain the required 58-task CPU/bridge/GPU, MPI/non-MPI, optional-path, rejection, and rank-crossing coverage. |
 | `tools/check_mpi_sync_guard_hygiene.py` | Verifies raw MPI imports and LESGO MPI sync wrappers are guarded out of serial compile paths. |
 | `tools/check_navigation_maps.py` | Verifies large active Fortran modules have a header-level navigation map. |
 | `tools/check_p0_archived_evidence_importer.py` | Smoke-tests importing archived public p0 CPU/GPU logs into a temporary validation evidence ledger. |
@@ -107,7 +108,7 @@ python3 tools/check_branch_readiness.py --with-hit-cmake-configure
 | `tools/collect_level_set_evidence.py` | Collects prepared Level Set CPU/bridge/GPU pairs into a cluster- and commit-stamped evidence JSON file. |
 | `tools/prepare_sgs_matrix_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for `sgs=false`, `sgs_model=1..5`, and optional `USE_DYN_TN=ON` validation. |
 | `tools/prepare_scalar_cases.py` | Creates isolated compact CPU/GPU channel-flow case directories for passive and active scalar validation. |
-| `tools/prepare_level_set_validation.py` | Creates the Level Set SGS, optional-mode, geometry, MPI/non-MPI, bridge, and GPU-aware validation matrix. |
+| `tools/prepare_level_set_validation.py` | Validates the checked-in `test-cases/level_set_cubes/validation_variants.json` definitions and creates the Level Set SGS, optional-mode, geometry, MPI/non-MPI, bridge, and GPU-aware validation matrix. |
 | `tools/readiness_manifest.py` | Shared parser for the readiness wrapper's `PYTHON_CHECKS` manifest. |
 | `tools/repo_paths.py` | Shared repository-root path helpers for tools that must work outside the caller's current directory. |
 | `tools/report_lesgo_conf_key_validation.py` | Generates the key-level `lesgo.conf` validation coverage report from source parser keys and evidence state. |

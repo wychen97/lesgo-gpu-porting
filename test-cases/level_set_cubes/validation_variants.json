@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "base_settings": {
+    "nsteps": "2",
+    "dyn_init": "1",
+    "cs_count": "2",
+    "vel_BC": ".false.",
+    "use_log_profile": ".false.",
+    "use_enforce_un": ".false.",
+    "use_extrap_tau_log": ".false.",
+    "use_extrap_tau_simple": ".true.",
+    "use_modify_dutdn": ".false.",
+    "lag_dyn_modify_beta": ".true.",
+    "smooth_mode": "'xy'",
+    "lbc_mom": "0"
+  },
+  "variants": [
+    {
+      "name": "sgs_off",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {"sgs": ".false.", "sgs_model": "1"}
+    },
+    {
+      "name": "sgs_model_1",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {"sgs": ".true.", "sgs_model": "1"}
+    },
+    {
+      "name": "sgs_model_2",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {"sgs": ".true.", "sgs_model": "2"}
+    },
+    {
+      "name": "sgs_model_3",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {"sgs": ".true.", "sgs_model": "3"}
+    },
+    {
+      "name": "sgs_model_4",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {"sgs": ".true.", "sgs_model": "4"}
+    },
+    {
+      "name": "sgs_model_5",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged", "cpu_nompi", "gpu_nompi"],
+      "settings": {"sgs": ".true.", "sgs_model": "5"}
+    },
+    {
+      "name": "model4_beta_off_lbc0",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {
+        "sgs": ".true.",
+        "sgs_model": "4",
+        "lag_dyn_modify_beta": ".false."
+      }
+    },
+    {
+      "name": "model4_beta_on_lbc1",
+      "nproc": 1,
+      "geometry": "sphere",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {
+        "sgs": ".true.",
+        "sgs_model": "4",
+        "lbc_mom": "1",
+        "inflow_type": "1"
+      }
+    },
+    {
+      "name": "extrap_tau_log",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {
+        "sgs": ".true.",
+        "sgs_model": "2",
+        "use_extrap_tau_log": ".true."
+      }
+    },
+    {
+      "name": "legacy_extrapolation",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {
+        "sgs": ".true.",
+        "sgs_model": "2",
+        "use_extrap_tau_simple": ".false."
+      }
+    },
+    {
+      "name": "modify_dutdn",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {
+        "sgs": ".true.",
+        "sgs_model": "2",
+        "use_modify_dutdn": ".true."
+      }
+    },
+    {
+      "name": "desired_log_velocity",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged"],
+      "settings": {
+        "sgs": ".true.",
+        "sgs_model": "2",
+        "vel_BC": ".true.",
+        "use_log_profile": ".true."
+      }
+    },
+    {
+      "name": "smooth_3d",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_nompi", "gpu_nompi"],
+      "settings": {
+        "sgs": ".true.",
+        "sgs_model": "2",
+        "smooth_mode": "'3d'"
+      }
+    },
+    {
+      "name": "sphere_rank_crossing",
+      "nproc": 2,
+      "geometry": "sphere",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged", "gpu_mpi_aware"],
+      "settings": {"sgs": ".true.", "sgs_model": "4"}
+    },
+    {
+      "name": "sphere_rank_crossing_model5",
+      "nproc": 2,
+      "geometry": "sphere",
+      "profiles": ["cpu_mpi", "bridge_mpi", "gpu_mpi_staged", "gpu_mpi_aware"],
+      "settings": {"sgs": ".true.", "sgs_model": "5"}
+    },
+    {
+      "name": "sphere_rank_crossing_4rank",
+      "nproc": 4,
+      "geometry": "sphere",
+      "profiles": ["gpu_mpi_staged", "gpu_mpi_aware"],
+      "settings": {"sgs": ".true.", "sgs_model": "5"}
+    },
+    {
+      "name": "reject_invalid_smooth_mode",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi"],
+      "settings": {"smooth_mode": "'bogus'"},
+      "expected_error": "smooth_mode must be exactly \"xy\" or \"3d\""
+    },
+    {
+      "name": "reject_smooth_3d_mpi",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi"],
+      "settings": {"smooth_mode": "'3d'"},
+      "expected_error": "smooth_mode=\"3d\" requires a non-MPI build"
+    },
+    {
+      "name": "reject_nonpositive_log_roughness",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi"],
+      "settings": {"use_extrap_tau_log": ".true.", "zo_level_set": "0.0"},
+      "expected_error": "active Level Set log-law paths require zo_level_set > 0"
+    },
+    {
+      "name": "reject_nonpositive_direct_log_roughness",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi"],
+      "settings": {"use_log_profile": ".true.", "zo_level_set": "0.0"},
+      "expected_error": "active Level Set log-law paths require zo_level_set > 0"
+    },
+    {
+      "name": "reject_nonpositive_global_ca_skip",
+      "nproc": 1,
+      "geometry": "trees",
+      "profiles": ["cpu_mpi"],
+      "settings": {"global_CA_calc": ".true.", "global_CA_nskip": "0"},
+      "expected_error": "global_CA_nskip must be positive"
+    },
+    {
+      "name": "reject_multirank_log_extrapolation",
+      "nproc": 2,
+      "geometry": "sphere",
+      "profiles": ["cpu_mpi"],
+      "settings": {"use_extrap_tau_log": ".true."},
+      "expected_error": "use_extrap_tau_log requires a single-rank run"
+    },
+    {
+      "name": "reject_multirank_legacy_extrapolation",
+      "nproc": 2,
+      "geometry": "sphere",
+      "profiles": ["cpu_mpi"],
+      "settings": {"use_extrap_tau_simple": ".false."},
+      "expected_error": "legacy stress extrapolation requires a single-rank run"
+    },
+    {
+      "name": "reject_multirank_modify_dutdn",
+      "nproc": 2,
+      "geometry": "sphere",
+      "profiles": ["cpu_mpi"],
+      "settings": {"use_modify_dutdn": ".true."},
+      "expected_error": "use_modify_dutdn requires a single-rank run"
+    }
+  ]
+}

@@ -169,6 +169,7 @@ python3 tools/check_atm_structure_packed_paths.py
 python3 tools/check_gpu_comment_labels.py
 python3 tools/check_gpu_headers.py
 python3 tools/check_gpu_contract_source_groups.py
+python3 tools/check_level_set_validation_variants.py
 python3 tools/check_gpu_validation_matrix.py
 python3 tools/check_gpu_benchmark_manifest.py
 python3 tools/check_gpu_validation_plan.py
