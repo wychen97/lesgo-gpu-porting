@@ -51,7 +51,7 @@ cd "${CASE_DIR}"
 # On another cluster, replace these modules with that site's compiler, CUDA,
 # MPI, FFTW, and CMake modules.
 module reset
-module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
+module load nvhpc/26.1 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
 
 # Cray MPICH needs these for GPU-aware MPI and managed-memory device buffers.
 # If your MPI is not Cray MPICH, check the site documentation before keeping

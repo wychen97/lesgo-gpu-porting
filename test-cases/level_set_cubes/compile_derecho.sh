@@ -40,7 +40,7 @@ case "${BUILD_PROFILE}" in
 esac
 
 module reset
-module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
+module load nvhpc/26.1 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
 
 # These variables are required by Cray MPICH when the GPU profile passes
 # device buffers directly to MPI. Other MPI implementations use site-specific

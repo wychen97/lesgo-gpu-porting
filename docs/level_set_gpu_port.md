@@ -185,6 +185,16 @@ Derecho also passed 18 continuous-versus-split restart comparisons for models
 Cray MPICH 8.1.32, and FFTW 3.3.10. The detailed machine-readable record is
 `docs/level_set_gpu_validation_evidence.json`.
 
+A follow-up compiler-compatibility smoke used Derecho's newer NVHPC 26.1 with
+CUDA 12.9.0, Cray MPICH 8.1.32, FFTW 3.3.10, and CMake 3.31.8. Build job
+`7051966.desched1` compiled CPU-MPI, host-staged full-GPU, and GPU-aware
+full-GPU profiles. Runtime job `7051975.desched1` passed both a one-rank
+model-5 CPU/GPU comparison and a two-rank spherical interface comparison.
+This limited smoke validates compiler compatibility; the 58-task release
+matrix above remains the broader correctness evidence. Cray MPICH 9.0.0 was
+not selected because Derecho labels that module functional-only pre-release
+and unsuitable for performance measurements.
+
 Delta RH96 independently passed the same 58 tasks and 51 evidence pairs from
 the same exact source archive. Build jobs `20926782`, `20926783`, and
 `20926784` compiled the same ten profiles:

@@ -43,7 +43,7 @@ Run this from one of the case directories, for example
 
 ```bash
 module reset
-module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10
+module load nvhpc/26.1 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
 export MPICH_GPU_SUPPORT_ENABLED=1
 export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
 
@@ -69,6 +69,12 @@ FC=ftn cmake -S "$SRC" -B "$BUILD" \
 
 cmake --build "$BUILD" -j 8
 ```
+
+`cray-mpich/8.1.32` remains the supported Derecho MPI module. The available
+`cray-mpich/9.0.0` module identifies itself as functional-only pre-release
+software and must not be used for benchmark or production results. CMake
+recognizes the `NCAR_ROOT_FFTW` path exported by Derecho's NVHPC 26.1 FFTW
+module, so the inactive legacy `ncarcompilers` wrapper is not required.
 
 `BUILD=$CASE/builds/channel_gpu240` is just a shell variable naming the
 out-of-source CMake build directory. It was not part of the original LESGO

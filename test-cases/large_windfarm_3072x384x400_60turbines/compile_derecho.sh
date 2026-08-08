@@ -52,9 +52,9 @@ cd "${CASE_DIR}"
 # MPI, FFTW, and CMake modules.
 module reset
 if [[ "${BUILD_PROFILE}" == "gpu" ]]; then
-  module load nvhpc/25.9 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
+  module load nvhpc/26.1 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
 else
-  module load nvhpc/25.9 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
+  module load nvhpc/26.1 cray-mpich/8.1.32 fftw/3.3.10 cmake/3.31.8
 fi
 
 # Cray MPICH needs these for GPU-aware MPI and managed-memory device buffers.
