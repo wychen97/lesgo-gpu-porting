@@ -13,7 +13,7 @@ structure, but they should be split only when a clean ownership boundary exists.
 | 1 | `actuator_turbine_model.f90` | 134,875 bytes | Separate structural-solver controls, induced-velocity method selection, diagnostics, restart state, and turbine output writing. |
 | 2 | `atm_lesgo_interface.f90` | 101,248 bytes | Separate timing, optional sampling bridges, gather helpers, and LESGO force application after the active ownership boundary remains stable. |
 | 3 | `lagrange_Sdep_gpu.f90` | 94,070 bytes | Isolate batched Lagrangian update kernels from setup/validation code. |
-| 4 | `level_set_gpu.f90` | 72,757 bytes | Keep workspace ownership, stress treatment, smoothing, SGS, and packed-halo sections navigable; split only with the dedicated Level Set matrix in place. |
+| 4 | `level_set_gpu.f90` | 73,278 bytes | Keep workspace ownership, stress treatment, smoothing, SGS, and packed-halo sections navigable; split only with the dedicated Level Set matrix in place. |
 | 5 | `io.f90` | 64,458 bytes | Separate checkpoint, instantaneous output, and restart metadata helpers. |
 | 6 | `scalars.f90` | 63,405 bytes | Separate scalar transport, halo handling, and timing diagnostics. |
 | 7 | `atm_input_util.f90` | 57,365 bytes | Separate turbine/airfoil parsing from validation and defaulting logic. |

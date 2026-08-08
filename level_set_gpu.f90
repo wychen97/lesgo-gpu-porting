@@ -3,7 +3,7 @@
 !!
 #if defined(PPLVLSET) && defined(PPLVLSET_GPU)
 #define LS_GRID_ARGS ld,nx,ny,nz,lbz,dx,dy,dz,L_x,L_y
-#define LS_HALO_GRID_ARGS ld,nx,ny,nz,dx,dy,dz,L_x,L_y
+#define LS_HALO_GRID_ARGS ld,nx,ny,nz,dx,dy,dz,L_x,L_y,coord,nproc
 module level_set_gpu_m
 ! Navigation map:
 !   1. Persistent workspace and interpolation startup validation
@@ -264,16 +264,16 @@ observed(4)=ls_interp_field(a1,1.2_rprec*tdx-2._rprec*tlx,                &
     tdx,tdy,tdz,tlx,tly)
 observed(5)=ls_interp_field_halo(a0,bot0,top0,nhalo,nhalo,0,              &
     0.8_rprec*tdx,0.6_rprec*tdy,-0.75_rprec*tdz,.false.,tld,tnx,tny,tnz,&
-    tdx,tdy,tdz,tlx,tly)
+    tdx,tdy,tdz,tlx,tly,0,1)
 observed(6)=ls_interp_field_halo(a0,bot0,top0,nhalo,nhalo,0,              &
     1.3_rprec*tdx,0.2_rprec*tdy,(real(tnz,rprec)-0.25_rprec)*tdz,.false.,&
-    tld,tnx,tny,tnz,tdx,tdy,tdz,tlx,tly)
+    tld,tnx,tny,tnz,tdx,tdy,tdz,tlx,tly,0,1)
 observed(7)=ls_interp_field_halo(a1,bot1,top1,nhalo,nhalo,1,              &
     0.6_rprec*tdx,0.7_rprec*tdy,-0.25_rprec*tdz,.true.,tld,tnx,tny,tnz, &
-    tdx,tdy,tdz,tlx,tly)
+    tdx,tdy,tdz,tlx,tly,0,1)
 observed(8)=ls_interp_field_halo(a1,bot1,top1,nhalo,nhalo,1,              &
     1.1_rprec*tdx,0.4_rprec*tdy,(real(tnz,rprec)-0.5_rprec)*tdz,.true.,  &
-    tld,tnx,tny,tnz,tdx,tdy,tdz,tlx,tly)
+    tld,tnx,tny,tnz,tdx,tdy,tdz,tlx,tly,0,1)
 observed(9)=ls_interp_field(a0,-0.25_rprec*tdx,-0.2_rprec*tdy,            &
     1.2_rprec*tdz,.false.,tld,tnx,tny,tnz,0,tdx,tdy,tdz,tlx,tly)
 observed(10)=ls_interp_field(a0,tlx-0.25_rprec*tdx,                       &
@@ -283,7 +283,7 @@ observed(10)=ls_interp_field(a0,tlx-0.25_rprec*tdx,                       &
 ! The guard must return BOGUS rather than reading before bot0.
 observed(11)=ls_interp_field_halo(a0,bot0,top0,1,nhalo,0,                 &
     0.8_rprec*tdx,0.6_rprec*tdy,-1.75_rprec*tdz,.false.,tld,tnx,tny,tnz,&
-    tdx,tdy,tdz,tlx,tly)
+    tdx,tdy,tdz,tlx,tly,0,1)
 !$acc end serial
 !$acc end data
 interp_selftest_active=.false.
@@ -379,16 +379,16 @@ end function ls_interp_field
 
 !*******************************************************************************
 real(rprec) function ls_halo_value(a,abot,atop,nbot,ntop,albzv,k,i,j,       &
-    ldim,nyv,nzv) result(value)
+    ldim,nyv,nzv,coordv,nprocv) result(value)
 !$acc routine seq
 !*******************************************************************************
 real(rprec), intent(in) :: a(*), abot(*), atop(*)
-integer, intent(in) :: nbot,ntop,albzv,k,i,j,ldim,nyv,nzv
+integer, intent(in) :: nbot,ntop,albzv,k,i,j,ldim,nyv,nzv,coordv,nprocv
 integer :: kb, q
 
 if (.not. interp_selftest_active) then
-  if ((coord == 0 .and. k < 1) .or.                                  &
-      (coord == nproc-1 .and. k > nzv)) then
+  if ((coordv == 0 .and. k < 1) .or.                                 &
+      (coordv == nprocv-1 .and. k > nzv)) then
     call ls_record_interp_oob()
     value=BOGUS
     return
@@ -421,13 +421,14 @@ end function ls_halo_value
 
 !*******************************************************************************
 real(rprec) function ls_interp_field_halo(a,abot,atop,nbot,ntop,albzv,     &
-    x,y,z,w_node,ldim,nxv,nyv,nzv,dxv,dyv,dzv,lxv,lyv) result(value)
+    x,y,z,w_node,ldim,nxv,nyv,nzv,dxv,dyv,dzv,lxv,lyv,coordv,nprocv)      &
+    result(value)
 !$acc routine seq
 !*******************************************************************************
 ! Trilinear interpolation using the local field plus compact lower/upper-rank
 ! overlap arrays. z is expressed in the current rank's local coordinates.
 real(rprec), intent(in) :: a(*), abot(*), atop(*)
-integer, intent(in) :: nbot,ntop,albzv,ldim,nxv,nyv,nzv
+integer, intent(in) :: nbot,ntop,albzv,ldim,nxv,nyv,nzv,coordv,nprocv
 real(rprec), intent(in) :: x,y,z,dxv,dyv,dzv,lxv,lyv
 logical, intent(in) :: w_node
 integer :: i0,i1,j0,j1,k0,k1
@@ -451,14 +452,22 @@ k0=int(floor(z/dzv+s))
 k1=k0+1
 az=z/dzv-(floor(z/dzv+s)-s)
 
-f000=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k0,i0,j0,ldim,nyv,nzv)
-f100=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k0,i1,j0,ldim,nyv,nzv)
-f010=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k0,i0,j1,ldim,nyv,nzv)
-f110=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k0,i1,j1,ldim,nyv,nzv)
-f001=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i0,j0,ldim,nyv,nzv)
-f101=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i1,j0,ldim,nyv,nzv)
-f011=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i0,j1,ldim,nyv,nzv)
-f111=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i1,j1,ldim,nyv,nzv)
+f000=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k0,i0,j0,ldim,nyv,nzv, &
+                   coordv,nprocv)
+f100=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k0,i1,j0,ldim,nyv,nzv, &
+                   coordv,nprocv)
+f010=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k0,i0,j1,ldim,nyv,nzv, &
+                   coordv,nprocv)
+f110=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k0,i1,j1,ldim,nyv,nzv, &
+                   coordv,nprocv)
+f001=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i0,j0,ldim,nyv,nzv, &
+                   coordv,nprocv)
+f101=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i1,j0,ldim,nyv,nzv, &
+                   coordv,nprocv)
+f011=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i0,j1,ldim,nyv,nzv, &
+                   coordv,nprocv)
+f111=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i1,j1,ldim,nyv,nzv, &
+                   coordv,nprocv)
 if (max(abs(f000),abs(f100),abs(f010),abs(f110),abs(f001),abs(f101),     &
         abs(f011),abs(f111)) >= 0.5_rprec*abs(BOGUS)) then
   value=BOGUS
@@ -621,13 +630,13 @@ do k = 1, nz - 1
             if (nproc > 1) then
               ux=ls_interp_field_halo(u,ubot,utop,nvelbot,nveltop,lbz,      &
                                       xv,yv,zv,.false.,ld,nx,ny,nz,         &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
               uy=ls_interp_field_halo(v,vbot,vtop,nvelbot,nveltop,lbz,      &
                                       xv,yv,zv,.false.,ld,nx,ny,nz,         &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
               uz=ls_interp_field_halo(w,wbot,wtop,nvelbot,nveltop,lbz,      &
                                       xv,yv,zv,.true.,ld,nx,ny,nz,          &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
             else
 #endif
               ux=ls_interp_field(u,xv,yv,zv,.false.,LS_GRID_ARGS)
@@ -709,13 +718,13 @@ do k = kmin, nz - 1
             if (nproc > 1) then
               ux=ls_interp_field_halo(u,ubot,utop,nvelbot,nveltop,lbz,      &
                                       xv,yv,zv,.false.,ld,nx,ny,nz,         &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
               uy=ls_interp_field_halo(v,vbot,vtop,nvelbot,nveltop,lbz,      &
                                       xv,yv,zv,.false.,ld,nx,ny,nz,         &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
               uz=ls_interp_field_halo(w,wbot,wtop,nvelbot,nveltop,lbz,      &
                                       xv,yv,zv,.true.,ld,nx,ny,nz,          &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
             else
 #endif
               ux=ls_interp_field(u,xv,yv,zv,.false.,LS_GRID_ARGS)
@@ -1389,7 +1398,7 @@ do k=kmin,nz-1
           if (nproc > 1) then
             phi1=ls_interp_field_halo(phi,phibot,phitop,nphibot,nphitop,   &
                                       lbz,x1,y1,z1,.false.,ld,nx,ny,nz,    &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
           else
 #endif
             phi1=ls_interp_field(phi,x1,y1,z1,.false.,LS_GRID_ARGS)
@@ -1405,7 +1414,7 @@ do k=kmin,nz-1
             if (nproc > 1) then
               phi1=ls_interp_field_halo(phi,phibot,phitop,nphibot,nphitop,&
                                         lbz,x1,y1,z1,.false.,ld,nx,ny,nz,  &
-                                        dx,dy,dz,L_x,L_y)
+                                        dx,dy,dz,L_x,L_y,coord,nproc)
             else
 #endif
               phi1=ls_interp_field(phi,x1,y1,z1,.false.,LS_GRID_ARGS)
@@ -1423,10 +1432,10 @@ do k=kmin,nz-1
             if (nproc > 1) then
               a1=ls_interp_field_halo(tau_source,abot,atop,ntaubot,ntautop,&
                                       lbz,x1,y1,z1,w_node,ld,nx,ny,nz,      &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
               a2=ls_interp_field_halo(tau_source,abot,atop,ntaubot,ntautop,&
                                       lbz,x2,y2,z2,w_node,ld,nx,ny,nz,      &
-                                      dx,dy,dz,L_x,L_y)
+                                      dx,dy,dz,L_x,L_y,coord,nproc)
             else
 #endif
               a1=ls_interp_field(tau_source,x1,y1,z1,w_node,LS_GRID_ARGS)
@@ -1876,7 +1885,7 @@ do k=1,nz-1
           F_MM(i,j,k)=ls_interp_field_halo(fmm_source,FMMbot,FMMtop,        &
                                            nFMMbot,nFMMtop,1,xp,yp,zp,      &
                                            .true.,ld,nx,ny,nz,              &
-                                           dx,dy,dz,L_x,L_y)
+                                           dx,dy,dz,L_x,L_y,coord,nproc)
         else
 #endif
           F_MM(i,j,k)=ls_interp_field(fmm_source,xp,yp,zp,.true.,           &
