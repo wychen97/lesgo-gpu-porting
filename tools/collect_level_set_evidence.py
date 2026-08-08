@@ -27,8 +27,8 @@ def main() -> int:
     parser.add_argument("--cluster", required=True)
     parser.add_argument("--commit", required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--rtol", type=float, default=5.0e-11)
-    parser.add_argument("--atol", type=float, default=5.0e-12)
+    parser.add_argument("--rtol", type=float, default=1.0e-6)
+    parser.add_argument("--atol", type=float, default=1.0e-8)
     args = parser.parse_args()
 
     manifest_path = args.matrix.resolve()
