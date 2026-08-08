@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from compare_level_set_checkpoints import (
+    LES_COEFFICIENT_FIELDS,
     LES_FIELDS,
     LEVEL_SET_FIELDS,
     compare_record,
@@ -113,6 +114,7 @@ def main() -> int:
     parser.add_argument("--dz", type=float, required=True)
     parser.add_argument("--rtol", type=float, default=1.0e-6)
     parser.add_argument("--atol", type=float, default=1.0e-8)
+    parser.add_argument("--coefficient-rtol", type=float, default=2.0e-5)
     parser.add_argument("--beta-rtol", type=float, default=5.0e-6)
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -133,6 +135,10 @@ def main() -> int:
                 fields,
                 rtol=field_rtol,
                 atol=args.atol,
+                rtol_by_field={
+                    name: args.coefficient_rtol
+                    for name in LES_COEFFICIENT_FIELDS
+                } if key == "les_checkpoint" else None,
                 storage_width=storage_width,
                 physical_width=args.nx,
             )

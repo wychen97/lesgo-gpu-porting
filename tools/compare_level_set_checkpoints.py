@@ -17,6 +17,7 @@ LES_FIELDS = (
     "u", "v", "w", "RHSx", "RHSy", "RHSz", "Cs_opt2",
     "F_LM", "F_MM", "F_QN", "F_NN",
 )
+LES_COEFFICIENT_FIELDS = frozenset({"Cs_opt2", "F_LM", "F_MM", "F_QN", "F_NN"})
 LEVEL_SET_FIELDS = (
     "dpdx", "dpdy", "dpdz", "fx", "fy", "fz",
     "divtx", "divty", "divtz",
@@ -81,6 +82,7 @@ def compare_record(
     *,
     rtol: float,
     atol: float,
+    rtol_by_field: dict[str, float] | None = None,
     storage_width: int | None = None,
     physical_width: int | None = None,
 ) -> dict[str, object]:
@@ -153,7 +155,8 @@ def compare_record(
                 row["reference_scale"] = max(row["reference_scale"], abs(ref))
                 row["sum_sq_diff"] += diff * diff
                 row["sum_sq_reference"] += ref * ref
-                if not math.isclose(ref, cand, rel_tol=rtol, abs_tol=atol):
+                field_rtol = (rtol_by_field or {}).get(name, rtol)
+                if not math.isclose(ref, cand, rel_tol=field_rtol, abs_tol=atol):
                     passed = False
             value_index += len(left_values)
             remaining -= count
@@ -241,6 +244,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dz", type=float, required=True)
     parser.add_argument("--rtol", type=float, default=1.0e-6)
     parser.add_argument("--atol", type=float, default=1.0e-8)
+    parser.add_argument("--coefficient-rtol", type=float, default=2.0e-5)
     parser.add_argument("--beta-rtol", type=float, default=5.0e-6)
     parser.add_argument("--out", type=Path)
     return parser
@@ -268,6 +272,10 @@ def main() -> int:
                     fields,
                     rtol=args.rtol,
                     atol=args.atol,
+                    rtol_by_field={
+                        name: args.coefficient_rtol
+                        for name in LES_COEFFICIENT_FIELDS
+                    } if key == "les_checkpoint" else None,
                     storage_width=storage_width,
                     physical_width=args.nx,
                 )

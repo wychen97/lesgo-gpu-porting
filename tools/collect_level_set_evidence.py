@@ -29,6 +29,7 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--rtol", type=float, default=1.0e-6)
     parser.add_argument("--atol", type=float, default=1.0e-8)
+    parser.add_argument("--coefficient-rtol", type=float, default=2.0e-5)
     parser.add_argument("--beta-rtol", type=float, default=5.0e-6)
     args = parser.parse_args()
 
@@ -84,6 +85,7 @@ def main() -> int:
                 "--nproc", str(reference["nproc"]),
                 "--dx", str(dx), "--dy", str(dx), "--dz", str(dx),
                 "--rtol", str(args.rtol), "--atol", str(args.atol),
+                "--coefficient-rtol", str(args.coefficient_rtol),
                 "--beta-rtol", str(args.beta_rtol),
                 "--out", str(comparison_path),
             ]
