@@ -33,16 +33,77 @@ real(rprec), allocatable, save :: tau_source(:,:,:)
 real(rprec), allocatable, save :: fmm_source(:,:,:)
 integer, save :: workspace_ld=0, workspace_ny=0, workspace_nz=0
 integer, save :: workspace_lbz=0
+integer, save :: interp_oob_count=0
+logical, save :: interp_bounds_check_enabled=.false.
+logical, save :: interp_selftest_active=.false.
+!$acc declare create(interp_oob_count,interp_bounds_check_enabled,            &
+!$acc                interp_selftest_active)
 
 public :: level_set_bc_gpu_core, level_set_gpu_interp_selftest,             &
           level_set_gpu_workspace_init,                                     &
           level_set_gpu_workspace_finalize,                                 &
           level_set_gpu_workspace_bytes,                                    &
+          level_set_gpu_interp_bounds_configure,                             &
+          level_set_gpu_interp_bounds_begin,                                 &
+          level_set_gpu_interp_bounds_end,                                   &
           interp_tau_gpu, extrap_tau_simple_gpu, smooth_field_gpu,           &
           smooth_tau_gpu, level_set_lag_dyn_gpu_core,                        &
           level_set_desired_velocity_gpu
 
 contains
+
+!*******************************************************************************
+subroutine level_set_gpu_interp_bounds_configure()
+!*******************************************************************************
+character(32) :: setting
+integer :: stat
+
+interp_bounds_check_enabled=.false.
+call get_environment_variable('LESGO_LVLSET_INTERP_BOUNDS_CHECK',setting,  &
+                              status=stat)
+if (stat == 0) then
+  select case(trim(adjustl(setting)))
+    case('1','true','TRUE','True','on','ON','On','yes','YES','Yes')
+      interp_bounds_check_enabled=.true.
+  end select
+end if
+interp_oob_count=0
+interp_selftest_active=.false.
+!$acc update device(interp_oob_count,interp_bounds_check_enabled,             &
+!$acc               interp_selftest_active)
+end subroutine level_set_gpu_interp_bounds_configure
+
+!*******************************************************************************
+subroutine level_set_gpu_interp_bounds_begin()
+!*******************************************************************************
+if (.not. interp_bounds_check_enabled) return
+interp_oob_count=0
+!$acc update device(interp_oob_count)
+end subroutine level_set_gpu_interp_bounds_begin
+
+!*******************************************************************************
+subroutine level_set_gpu_interp_bounds_end(context)
+!*******************************************************************************
+character(*), intent(in) :: context
+if (.not. interp_bounds_check_enabled) return
+!$acc wait(1)
+!$acc update self(interp_oob_count)
+if (interp_oob_count > 0) then
+  call error('level_set_gpu_m.' // trim(context),                         &
+      'GPU interpolation requested data outside the local/halo contract',&
+      interp_oob_count)
+end if
+end subroutine level_set_gpu_interp_bounds_end
+
+!*******************************************************************************
+subroutine ls_record_interp_oob()
+!$acc routine seq
+!*******************************************************************************
+if (interp_bounds_check_enabled) then
+  !$acc atomic update
+  interp_oob_count=interp_oob_count+1
+end if
+end subroutine ls_record_interp_oob
 
 !*******************************************************************************
 subroutine level_set_gpu_workspace_init(need_tau_source,need_fmm_source)
@@ -122,7 +183,8 @@ subroutine level_set_gpu_interp_selftest(max_error, invalid_count, failed)
 real(rprec), intent(out) :: max_error
 integer, intent(out) :: invalid_count
 logical, intent(out) :: failed
-integer, parameter :: tnx=4, tny=3, tnz=4, tld=tnx+1, nhalo=2, nsample=10
+integer, parameter :: tnx=4, tny=3, tnz=4, tld=tnx+1, nhalo=2
+integer, parameter :: nvalid=10, nsample=11
 real(rprec), parameter :: tdx=0.75_rprec, tdy=1.25_rprec, tdz=0.5_rprec
 real(rprec), parameter :: tlx=real(tnx,rprec)*tdx
 real(rprec), parameter :: tly=real(tny,rprec)*tdy
@@ -131,7 +193,8 @@ real(rprec), parameter :: cy=-0.75_rprec, cz=1.1_rprec
 real(rprec), allocatable :: a0(:,:,:), a1(:,:,:)
 real(rprec), allocatable :: bot0(:,:,:), top0(:,:,:)
 real(rprec), allocatable :: bot1(:,:,:), top1(:,:,:)
-real(rprec) :: observed(nsample), expected(nsample), reference_scale
+real(rprec) :: observed(nsample), expected(nvalid), reference_scale
+logical :: bounds_guard_failed
 integer :: i, j, k, kb, n
 
 allocate(a0(tld,tny,0:tnz), a1(tld,tny,1:tnz))
@@ -186,6 +249,8 @@ expected(8)=affine_value(1.1_rprec*tdx,0.4_rprec*tdy,                       &
 expected(9)=affine_value(0.75_rprec*tdx,0.4_rprec*tdy,1.2_rprec*tdz)
 expected(10)=expected(9)
 
+interp_selftest_active=.true.
+!$acc update device(interp_selftest_active)
 !$acc data copyin(a0,a1,bot0,top0,bot1,top1) copyout(observed)
 !$acc serial default(present)
 observed(1)=ls_interp_field(a0,0.37_rprec*tdx,0.42_rprec*tdy,              &
@@ -214,12 +279,20 @@ observed(9)=ls_interp_field(a0,-0.25_rprec*tdx,-0.2_rprec*tdy,            &
 observed(10)=ls_interp_field(a0,tlx-0.25_rprec*tdx,                       &
     tly-0.2_rprec*tdy,1.2_rprec*tdz,.false.,tld,tnx,tny,tnz,0,           &
     tdx,tdy,tdz,tlx,tly)
+! Deliberately provide one lower halo plane for a request that needs two.
+! The guard must return BOGUS rather than reading before bot0.
+observed(11)=ls_interp_field_halo(a0,bot0,top0,1,nhalo,0,                 &
+    0.8_rprec*tdx,0.6_rprec*tdy,-1.75_rprec*tdz,.false.,tld,tnx,tny,tnz,&
+    tdx,tdy,tdz,tlx,tly)
 !$acc end serial
 !$acc end data
+interp_selftest_active=.false.
+interp_oob_count=0
+!$acc update device(interp_selftest_active,interp_oob_count)
 
 max_error=0._rprec
 invalid_count=0
-do n=1,nsample
+do n=1,nvalid
   if (.not. ieee_is_finite(observed(n)) .or.                              &
       abs(observed(n)) >= 0.5_rprec*abs(BOGUS)) then
     invalid_count=invalid_count+1
@@ -227,9 +300,12 @@ do n=1,nsample
     max_error=max(max_error,abs(observed(n)-expected(n)))
   end if
 end do
+bounds_guard_failed=.not. ieee_is_finite(observed(nsample)) .or.          &
+    abs(observed(nsample)) < 0.5_rprec*abs(BOGUS)
 reference_scale=max(1._rprec,maxval(abs(expected)))
 failed=invalid_count > 0 .or.                                               &
-       max_error > 5000._rprec*epsilon(1._rprec)*reference_scale
+       max_error > 5000._rprec*epsilon(1._rprec)*reference_scale .or.       &
+       bounds_guard_failed
 
 deallocate(a0,a1,bot0,top0,bot1,top1)
 
@@ -277,6 +353,14 @@ else
 end if
 k1 = k0 + 1
 
+! Non-halo interpolation is used at physical boundaries and in non-MPI runs.
+! Match the CPU contract instead of flattening an out-of-range array index.
+if (k0 < max(1,lbzv) .or. k1 > nzv) then
+  call ls_record_interp_oob()
+  value=BOGUS
+  return
+end if
+
 w00 = (1._rprec - ax) * (1._rprec - ay)
 w10 = ax * (1._rprec - ay)
 w01 = (1._rprec - ax) * ay
@@ -302,12 +386,31 @@ real(rprec), intent(in) :: a(*), abot(*), atop(*)
 integer, intent(in) :: nbot,ntop,albzv,k,i,j,ldim,nyv,nzv
 integer :: kb, q
 
+if (.not. interp_selftest_active) then
+  if ((coord == 0 .and. k < 1) .or.                                  &
+      (coord == nproc-1 .and. k > nzv)) then
+    call ls_record_interp_oob()
+    value=BOGUS
+    return
+  end if
+end if
+
 if (k < albzv) then
   kb=nbot+k+1-albzv
+  if (kb < 1 .or. kb > nbot) then
+    call ls_record_interp_oob()
+    value=BOGUS
+    return
+  end if
   q=i+(j-1)*ldim+(kb-1)*ldim*nyv
   value=abot(q)
 else if (k > nzv) then
   kb=k-nzv
+  if (kb < 1 .or. kb > ntop) then
+    call ls_record_interp_oob()
+    value=BOGUS
+    return
+  end if
   q=i+(j-1)*ldim+(kb-1)*ldim*nyv
   value=atop(q)
 else
@@ -356,6 +459,11 @@ f001=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i0,j0,ldim,nyv,nzv)
 f101=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i1,j0,ldim,nyv,nzv)
 f011=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i0,j1,ldim,nyv,nzv)
 f111=ls_halo_value(a,abot,atop,nbot,ntop,albzv,k1,i1,j1,ldim,nyv,nzv)
+if (max(abs(f000),abs(f100),abs(f010),abs(f110),abs(f001),abs(f101),     &
+        abs(f011),abs(f111)) >= 0.5_rprec*abs(BOGUS)) then
+  value=BOGUS
+  return
+end if
 w00=(1._rprec-ax)*(1._rprec-ay)
 w10=ax*(1._rprec-ay)
 w01=(1._rprec-ax)*ay

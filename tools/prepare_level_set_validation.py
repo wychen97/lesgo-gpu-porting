@@ -269,6 +269,7 @@ def main() -> int:
                     "expected_error": item["expected_error"],
                     "environment": {
                         "LESGO_LVLSET_VALIDATION_SNAPSHOT": "ON",
+                        "LESGO_LVLSET_INTERP_BOUNDS_CHECK": "ON",
                         "LESGO_RANDOM_SEED": "20260807",
                     },
                 }

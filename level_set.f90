@@ -440,6 +440,7 @@ subroutine level_set_gpu_data_init()
 ! buffers. Geometry is generated/read on the host once during startup and is
 ! immutable during the time loop.
 use level_set_gpu_m, only : level_set_gpu_interp_selftest,                   &
+                            level_set_gpu_interp_bounds_configure,           &
                             level_set_gpu_workspace_init,                    &
                             level_set_gpu_workspace_bytes
 use param, only : sgs,sgs_model
@@ -493,6 +494,7 @@ need_fmm_source=sgs .and. (sgs_model == SGS_MODEL_LAGRANGE_SIMILARITY .or. &
     sgs_model == SGS_MODEL_LAGRANGE_SCALE_DEP)
 call level_set_gpu_workspace_init(need_tau_source,need_fmm_source)
 
+call level_set_gpu_interp_bounds_configure()
 call level_set_gpu_interp_selftest(interp_error,interp_invalid_count,       &
                                    interp_failed)
 if (coord == 0) write(*,'(a,es12.5,a,i0)')                                &
@@ -819,11 +821,14 @@ end subroutine level_set_lag_dyn
 !**********************************************************************
 subroutine level_set_lag_dyn_gpu(S11,S12,S13,S22,S23,S33)
 !**********************************************************************
-use level_set_gpu_m, only : level_set_lag_dyn_gpu_core
+use level_set_gpu_m, only : level_set_lag_dyn_gpu_core,                     &
+                            level_set_gpu_interp_bounds_begin,              &
+                            level_set_gpu_interp_bounds_end
 implicit none
 real(rp), intent(inout) :: S11(ld,ny,nz), S12(ld,ny,nz), S13(ld,ny,nz),    &
                            S22(ld,ny,nz), S23(ld,ny,nz), S33(ld,ny,nz)
 
+call level_set_gpu_interp_bounds_begin()
 #ifdef PPMPI
 if (nproc > 1) call mpi_sync_lag_dyn_gpu(.true.)
 #endif
@@ -832,6 +837,7 @@ call level_set_lag_dyn_gpu_core(S11,S12,S13,S22,S23,S33,norm,             &
 #ifdef PPMPI
 if (nproc > 1) call mpi_sync_lag_dyn_gpu(.false.)
 #endif
+call level_set_gpu_interp_bounds_end('level_set_lag_dyn_gpu')
 end subroutine level_set_lag_dyn_gpu
 #endif
 
@@ -4011,7 +4017,9 @@ subroutine level_set_BC_gpu()
 ! supported for one rank; configurations that the CPU implementation also
 ! cannot communicate are rejected explicitly for multiple ranks.
 use sim_param, only : u, v, w, txx, txy, txz, tyy, tyz, tzz
-use level_set_gpu_m, only : level_set_bc_gpu_core
+use level_set_gpu_m, only : level_set_bc_gpu_core,                          &
+                            level_set_gpu_interp_bounds_begin,              &
+                            level_set_gpu_interp_bounds_end
 implicit none
 character(*), parameter :: sub_name=mod_name // '.level_set_BC_gpu'
 
@@ -4036,7 +4044,9 @@ if (nproc > 1) then
 end if
 #endif
 
+call level_set_gpu_interp_bounds_begin()
 call level_set_bc_gpu_core(phi_cutoff, phi_0, norm)
+call level_set_gpu_interp_bounds_end('level_set_BC_gpu')
 end subroutine level_set_BC_gpu
 #endif
 
@@ -4772,7 +4782,9 @@ use param, only : tadv1, dt, BOGUS, dx  !--in addition to param vars above
 use sim_param
 use sim_param, only : fx, fy, fz
 #ifdef PPLVLSET_GPU
-use level_set_gpu_m, only : level_set_desired_velocity_gpu
+use level_set_gpu_m, only : level_set_desired_velocity_gpu,                 &
+                            level_set_gpu_interp_bounds_begin,              &
+                            level_set_gpu_interp_bounds_end
 #endif
 
 implicit none
@@ -4790,9 +4802,11 @@ real (rp) :: Rx, Ry, Rz
 !--this is experimental
 if (vel_BC) then
 #ifdef PPLVLSET_GPU
+  call level_set_gpu_interp_bounds_begin()
   call level_set_desired_velocity_gpu(phi_0,phi_cutoff,norm,                  &
                                       use_enforce_un,use_log_profile,        &
                                       udes,vdes,wdes)
+  call level_set_gpu_interp_bounds_end('level_set_forcing')
 #else
   if (use_enforce_un) call enforce_un ()
   if (use_log_profile) call enforce_log_profile ()

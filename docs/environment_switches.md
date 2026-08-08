@@ -30,6 +30,7 @@ This file lists solver `LESGO_*` environment-variable controls that are still pr
 | `LESGO_SCALAR_STAGE_TIMING` | `scalars.f90` | Enables scalar transport stage timing. |
 | `LESGO_LVLSET_BRIDGE_TIMING` | `forcing.f90` | Enables LVLSET bridge timing; LVLSET is not production in this branch. |
 | `LESGO_LVLSET_VALIDATION_SNAPSHOT` | `io.f90` | Writes final Level Set pressure-gradient, force, stress-divergence, and optional `Beta` validation sidecars. |
+| `LESGO_LVLSET_INTERP_BOUNDS_CHECK` | `level_set_gpu.f90` | Enables synchronized Level Set GPU interpolation bounds diagnostics for validation/debug runs; production always avoids out-of-range reads but omits the diagnostic synchronization unless this is enabled. |
 | `LESGO_ATM_STRUCTURE_TIMING` | `actuator_turbine_model.f90` | Enables structural solver timing report. |
 | `LESGO_ATM_STRUCTURE_DIAG` | `actuator_turbine_model.f90` | Enables structural diagnostics. |
 | `LESGO_ATM_POWER_STDOUT` | `actuator_turbine_model.f90` | Prints turbine power to stdout; turbine power files are still the authoritative output. |

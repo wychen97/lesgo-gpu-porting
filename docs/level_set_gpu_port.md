@@ -105,6 +105,15 @@ The GPU implementation covers:
 Tree construction, file I/O, and normal construction are intentionally left on
 the host because they execute once at startup and are not timestep hot paths.
 
+Vertical interpolation never clamps a request to the nearest resident plane.
+An insufficient local or halo request returns the Level Set sentinel instead
+of accessing memory outside the allocation. Validation jobs set
+`LESGO_LVLSET_INTERP_BOUNDS_CHECK=ON`; this enables a device error counter and
+a synchronized failure at the end of each interpolation-bearing operation.
+Production runs omit that diagnostic synchronization while retaining the
+memory-safety guard. The startup interpolation self-test includes a deliberate
+insufficient-halo request to verify this behavior.
+
 ## MPI Communication
 
 The CPU implementation issued separate messages for individual velocity and
