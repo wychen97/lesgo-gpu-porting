@@ -27,7 +27,6 @@ subroutine trees_pre_ls
 use types, only : rprec
 use param, only : path
 use param, only : nx, ny, nz, BOGUS, nproc
-use input_util, only : read_input_conf
 use trees_base_ls, only : grid_initialize, pt_of_grid
 use trees_setup_ls, only : fill_tree_array, sdistfcn_tree_array
 use trees_io_ls, only : draw_tree_array
@@ -65,8 +64,10 @@ real (rprec) :: x, y, z
 
 !---------------------------------------------------------------------
 
-! Now load the lesgo case information from lesgo.conf
-call read_input_conf()
+! The top-level initializer has already read and validated lesgo.conf before
+! entering the Level Set setup.  Reading it again here would overwrite
+! restart metadata restored by io.openfiles(), including the previous CFL
+! timestep needed by variable-step Adams-Bashforth integration.
 fdraw_out = path // 'draw_tree_array.dat'
 fphi_out = path // 'phi.dat'
 fphi_raw_out = path // 'phi.out'
