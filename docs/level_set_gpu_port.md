@@ -139,18 +139,20 @@ The following CPU restrictions are preserved:
 
 ## Validation Results
 
-The release gate uses generated variants of `test-cases/level_set_cubes` on a
-`64 x 64 x 32` uniform grid. Strict checkpoint comparisons run for two
-timesteps with `DYN_init=1` and `cs_count=2`, so the dynamic-SGS update is
+The release gate uses the checked-in declarative variants in
+`test-cases/level_set_cubes/validation_variants.json`, expanded from the base
+case onto a `64 x 64 x 32` uniform grid. Strict checkpoint comparisons run for
+two timesteps with `DYN_init=1` and `cs_count=2`, so the dynamic-SGS update is
 active while the comparison still isolates implementation differences from
-long-horizon chaotic amplification. The checked-in base case remains a
-20-step smoke case.
+long-horizon chaotic amplification. The checked-in base case remains a 20-step
+smoke case.
 
-The matrix contains 57 runtime tasks:
+The matrix contains 58 runtime tasks:
 
-- 44 one-rank tasks covering SGS disabled and models 1-5, MPI and non-MPI,
+- 45 one-rank tasks covering SGS disabled and models 1-5, MPI and non-MPI,
   CPU reference, LES-GPU/CPU-Level-Set bridge, full Level Set GPU, and every
-  supported stress and velocity-boundary option;
+  supported stress and velocity-boundary option, plus centralized invalid-input
+  rejection cases;
 - 11 two-rank tasks covering CPU, bridge, host-staged GPU, GPU-aware MPI, and
   model-4/5 spherical interfaces crossing the z-rank boundary;
 - two four-rank tasks covering host-staged and GPU-aware MPI with one rank per
@@ -165,31 +167,36 @@ letting a handful of near-zero values dominate a physically negligible field
 comparison; a retained 20-step SGS-3 regression still fails the norm gate and
 therefore confirms that the criterion remains discriminating.
 
-Derecho passed all 57 runtime tasks and all 51 CPU/bridge/GPU evidence pairs:
+Derecho passed all 58 runtime tasks and all 51 CPU/bridge/GPU evidence pairs
+from the exact source archive at `084f71b605c66a0c50f54eebafed6c0b0dd7239f`.
+Build job `7051629.desched1` compiled all ten required CPU, bridge, full-GPU,
+MPI/non-MPI, staged/GPU-aware, DYN_TN, and non-Level-Set profiles:
 
 | Ranks / GPUs | Job | Runtime tasks | Evidence pairs | Result |
 | ---: | --- | ---: | ---: | --- |
-| 1 / 1 A100 | `7045326.desched1` | 44/44 | 38/38 | Passed |
-| 2 / 2 A100 | `7045327.desched1` | 11/11 | 12/12 | Passed |
-| 4 / 4 A100 | `7045328.desched1` | 2/2 | 1/1 | Passed |
+| 1 / 1 A100 | `7051694.desched1` | 45/45 | 38/38 | Passed |
+| 2 / 2 A100 | `7051695.desched1` | 11/11 | 12/12 | Passed |
+| 4 / 4 A100 | `7051696.desched1` | 2/2 | 1/1 | Passed |
 
 Derecho also passed 18 continuous-versus-split restart comparisons for models
-4 and 5 at seams 1, 2, and 3 (`7045350.desched1`). Both model-4 and model-5
+4 and 5 at seams 1, 2, and 3 (`7051697.desched1`). Both model-4 and model-5
 `USE_DYN_TN=ON` gates and the non-Level-Set isolation checkpoint passed
-(`7045351.desched1`). The compiler stack was NVHPC 25.9, CUDA 12.9.0,
+(`7051698.desched1`). The compiler stack was NVHPC 25.9, CUDA 12.9.0,
 Cray MPICH 8.1.32, and FFTW 3.3.10. The detailed machine-readable record is
 `docs/level_set_gpu_validation_evidence.json`.
 
-Delta RH96 independently passed the same 57 tasks and 51 evidence pairs:
+Delta RH96 independently passed the same 58 tasks and 51 evidence pairs from
+the same exact source archive. Build jobs `20926782`, `20926783`, and
+`20926784` compiled the same ten profiles:
 
 | Ranks / GPUs | Job | Runtime tasks | Evidence pairs | Result |
 | ---: | --- | ---: | ---: | --- |
-| 1 / 1 A100 | `20926287` | 44/44 | 38/38 | Passed |
-| 2 / 2 A100 | `20926262` | 11/11 | 12/12 | Passed |
-| 4 / 4 A100 | `20926263` | 2/2 | 1/1 | Passed |
+| 1 / 1 A100 | `20926787` | 45/45 | 38/38 | Passed |
+| 2 / 2 A100 | `20926788` | 11/11 | 12/12 | Passed |
+| 4 / 4 A100 | `20926789` | 2/2 | 1/1 | Passed |
 
-Delta also passed all 18 restart comparisons (`20926284`), both DYN_TN
-model gates, and the non-Level-Set isolation checkpoint (`20926285`). The
+Delta also passed all 18 restart comparisons (`20926790`), both DYN_TN
+model gates, and the non-Level-Set isolation checkpoint (`20926791`). The
 RH96 stack was NVHPC 26.5, CUDA 13.2, Cray MPICH 9.1.0, and FFTW 3.3.10.11.
 It compiled the unchanged batched Level Set source in under one minute per
 parallel build job. The previous production stack's NVHPC 25.3 front end had
@@ -213,6 +220,10 @@ diagnostics that would distort a timestep-performance claim.
 CPU-reference behavior changes are reported separately from GPU-port
 roundoff:
 
+- the bottom `RHSz` history correction and `rtnewt` admissibility correction
+  were already present in the required starting commit `2705e7c`; this review
+  branch does not rewrite that supplied base commit, so they are separated in
+  numerical reporting rather than retroactively split in Git history;
 - model-4 beta modification now honors the runtime switch instead of a local
   constant and uses global physical z distance on every MPI rank;
 - stress extrapolation now uses a source-stable snapshot;

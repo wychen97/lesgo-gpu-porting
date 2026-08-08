@@ -2,17 +2,18 @@
   "schema_version": 1,
   "branch": "lvlset-gpu-port-20260807",
   "base_commit": "2705e7c9f3be3c10c222ffc8e3852fea2a6ce892",
-  "solver_source_commit": "6db7d00",
-  "evidence_tool_commit": "0480afe02b327b94e2ae0b299873bcf63c0e671b",
+  "solver_source_commit": "9955acc8b4c20788f22b300f164be96b75535f97",
+  "evidence_tool_commit": "084f71b605c66a0c50f54eebafed6c0b0dd7239f",
+  "validation_source_commit": "084f71b605c66a0c50f54eebafed6c0b0dd7239f",
   "matrix": {
     "grid": [64, 64, 32],
     "strict_steps": 2,
     "dyn_init": 1,
     "cs_count": 2,
-    "runtime_tasks": 57,
+    "runtime_tasks": 58,
     "comparison_pairs": 51,
     "rank_splits": {
-      "1": {"tasks": 44, "pairs": 38},
+      "1": {"tasks": 45, "pairs": 38},
       "2": {"tasks": 11, "pairs": 12},
       "4": {"tasks": 2, "pairs": 1}
     }
@@ -34,14 +35,48 @@
         "cray-mpich/8.1.32",
         "fftw/3.3.10"
       ],
-      "root": "/glade/work/wchen/lesgo_versions/benchmarks/12_lvlset_gpu_review_ac1f135_20260807",
-      "matrix_jobs": [
-        {"job_id": "7045326.desched1", "ranks": 1, "gpus": 1, "tasks_passed": 44, "tasks_total": 44, "pairs_passed": 38, "pairs_total": 38},
-        {"job_id": "7045327.desched1", "ranks": 2, "gpus": 2, "tasks_passed": 11, "tasks_total": 11, "pairs_passed": 12, "pairs_total": 12},
-        {"job_id": "7045328.desched1", "ranks": 4, "gpus": 4, "tasks_passed": 2, "tasks_total": 2, "pairs_passed": 1, "pairs_total": 1}
+      "root": "/glade/work/wchen/lesgo_versions/benchmarks/15_lvlset_gpu_review_084f71b_20260808",
+      "source_commit": "084f71b605c66a0c50f54eebafed6c0b0dd7239f",
+      "build_jobs": [
+        {
+          "job_id": "7051629.desched1",
+          "status": "passed",
+          "elapsed": "00:02:45",
+          "profiles": [
+            "cpu_mpi",
+            "bridge_mpi",
+            "gpu_mpi_staged",
+            "gpu_mpi_aware",
+            "cpu_nompi",
+            "gpu_nompi",
+            "gpu_mpi_dyn_tn",
+            "cpu_mpi_dyn_tn",
+            "cpu_mpi_nonlvl",
+            "gpu_mpi_nonlvl"
+          ]
+        }
       ],
-      "restart": {"job_id": "7045350.desched1", "status": "passed", "comparisons_passed": 18, "comparisons_total": 18},
-      "extra_gates": {"job_id": "7045351.desched1", "status": "passed", "checks": ["USE_DYN_TN model 4", "USE_DYN_TN model 5", "non-Level-Set isolation"]}
+      "matrix_jobs": [
+        {"job_id": "7051694.desched1", "ranks": 1, "gpus": 1, "elapsed": "00:05:52", "tasks_passed": 45, "tasks_total": 45, "pairs_passed": 38, "pairs_total": 38},
+        {"job_id": "7051695.desched1", "ranks": 2, "gpus": 2, "elapsed": "00:01:42", "tasks_passed": 11, "tasks_total": 11, "pairs_passed": 12, "pairs_total": 12},
+        {"job_id": "7051696.desched1", "ranks": 4, "gpus": 4, "elapsed": "00:00:23", "tasks_passed": 2, "tasks_total": 2, "pairs_passed": 1, "pairs_total": 1}
+      ],
+      "restart": {"job_id": "7051697.desched1", "status": "passed", "elapsed": "00:04:34", "comparisons_passed": 18, "comparisons_total": 18},
+      "extra_gates": {"job_id": "7051698.desched1", "status": "passed", "elapsed": "00:00:48", "checks": ["USE_DYN_TN model 4", "USE_DYN_TN model 5", "non-Level-Set isolation"]},
+      "runtime_environment": {
+        "MPICH_GPU_SUPPORT_ENABLED": "1",
+        "MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED": "1",
+        "launcher": "mpiexec -n {nproc} -ppn {nproc} bash -c 'export CUDA_VISIBLE_DEVICES=${PALS_LOCAL_RANKID:-0}; exec \"$0\"'",
+        "placement": "one MPI rank per A100 on shared develop-queue nodes"
+      },
+      "validation_commands": [
+        "qsub build_derecho_final.pbs",
+        "qsub -N lvlset_084_x1 -v TARGET_NPROC=1 run_derecho_matrix.pbs",
+        "qsub -N lvlset_084_x2 -v TARGET_NPROC=2 -l select=1:ncpus=16:mpiprocs=2:ngpus=2:mem=120gb:gpu_type=a100 -l place=pack:shared run_derecho_matrix.pbs",
+        "qsub -N lvlset_084_x4 -v TARGET_NPROC=4 -l select=1:ncpus=32:mpiprocs=4:ngpus=4:mem=200gb:gpu_type=a100 -l place=pack:shared run_derecho_matrix.pbs",
+        "qsub run_derecho_restart.pbs",
+        "qsub run_derecho_extra_gates.pbs"
+      ]
     },
     "delta": {
       "status": "passed",
@@ -56,19 +91,19 @@
         "cray-fftw/3.3.10.11",
         "cmake/3.31.8"
       ],
-      "root": "/work/hdd/bfth/wchen30/lesgo_versions/benchmarks/12_lvlset_gpu_review_ac1f135_20260807",
-      "source_commit": "0480afe02b327b94e2ae0b299873bcf63c0e671b",
+      "root": "/work/hdd/bfth/wchen30/lesgo_versions/benchmarks/15_lvlset_gpu_review_084f71b_20260808",
+      "source_commit": "084f71b605c66a0c50f54eebafed6c0b0dd7239f",
       "build_jobs": [
         {
-          "job_id": "20926221",
+          "job_id": "20926782",
           "status": "passed",
-          "elapsed": "00:00:50",
+          "elapsed": "00:00:53",
           "profiles": ["gpu_mpi_staged", "gpu_mpi_aware"]
         },
         {
-          "job_id": "20926216",
+          "job_id": "20926783",
           "status": "passed",
-          "elapsed": "00:00:47",
+          "elapsed": "00:00:53",
           "profiles": [
             "cpu_mpi",
             "bridge_mpi",
@@ -80,19 +115,19 @@
           ]
         },
         {
-          "job_id": "20926283",
+          "job_id": "20926784",
           "status": "passed",
-          "elapsed": "00:00:22",
+          "elapsed": "00:00:23",
           "profiles": ["cpu_mpi_dyn_tn"]
         }
       ],
       "matrix_jobs": [
-        {"job_id": "20926287", "ranks": 1, "gpus": 1, "tasks_passed": 44, "tasks_total": 44, "pairs_passed": 38, "pairs_total": 38},
-        {"job_id": "20926262", "ranks": 2, "gpus": 2, "tasks_passed": 11, "tasks_total": 11, "pairs_passed": 12, "pairs_total": 12},
-        {"job_id": "20926263", "ranks": 4, "gpus": 4, "tasks_passed": 2, "tasks_total": 2, "pairs_passed": 1, "pairs_total": 1}
+        {"job_id": "20926787", "ranks": 1, "gpus": 1, "elapsed": "00:06:24", "tasks_passed": 45, "tasks_total": 45, "pairs_passed": 38, "pairs_total": 38},
+        {"job_id": "20926788", "ranks": 2, "gpus": 2, "elapsed": "00:01:55", "tasks_passed": 11, "tasks_total": 11, "pairs_passed": 12, "pairs_total": 12},
+        {"job_id": "20926789", "ranks": 4, "gpus": 4, "elapsed": "00:00:27", "tasks_passed": 2, "tasks_total": 2, "pairs_passed": 1, "pairs_total": 1}
       ],
-      "restart": {"job_id": "20926284", "status": "passed", "comparisons_passed": 18, "comparisons_total": 18},
-      "extra_gates": {"job_id": "20926285", "status": "passed", "checks": ["USE_DYN_TN model 4", "USE_DYN_TN model 5", "non-Level-Set isolation"]},
+      "restart": {"job_id": "20926790", "status": "passed", "elapsed": "00:05:07", "comparisons_passed": 18, "comparisons_total": 18},
+      "extra_gates": {"job_id": "20926791", "status": "passed", "elapsed": "00:00:58", "checks": ["USE_DYN_TN model 4", "USE_DYN_TN model 5", "non-Level-Set isolation"]},
       "runtime_environment": {
         "MPICH_GPU_SUPPORT_ENABLED": "1",
         "MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED": "1",
