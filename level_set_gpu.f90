@@ -1338,15 +1338,13 @@ end subroutine extrap_tau_field_gpu
 !*******************************************************************************
 subroutine smooth_tau_gpu(phi_limit)
 !*******************************************************************************
-! Preserve the CPU lexicographic SOR dependency order with anti-diagonal
-! wavefronts. One gang owns each independent z-plane; all iterations and
-! diagonals execute inside one persistent kernel while points on a diagonal
-! are vectorized. This removes hundreds of host-side launches without
-! changing the established five-iteration smoother.
+! Match the CPU multi-color SOR smoother. Each color is independent and runs
+! in one full-domain kernel, avoiding both wavefront races and launch-heavy
+! per-diagonal synchronization.
 real(rprec), intent(in) :: phi_limit
 integer, parameter :: niter=5
 real(rprec), parameter :: omega=1.5_rprec
-integer :: iter,diagonal,ilo,ihi,i,j,k,im1,ip1,jm1,jp1
+integer :: iter,color,ncolors,point_color,cx,cy,i,j,k,im1,ip1,jm1,jp1
 real(rprec) :: phi_uv,phi_w,update
 
 if (trim(smooth_mode) /= 'xy') then
@@ -1359,18 +1357,26 @@ if (trim(smooth_mode) /= 'xy') then
   return
 end if
 
-! Each z-plane gang advances its own SOR wavefront. Keep the nested loop
-! controls gang-private so planes cannot race through shared diagonal bounds.
-!$acc parallel loop gang present(phi,txx,txy,txz,tyy,tyz,tzz) async(1)     &
-!$acc private(iter,diagonal,ilo,ihi)
-do k=1,nz
-  do iter=1,niter
-    do diagonal=2,nx+ny
-      ilo=max(1,diagonal-ny)
-      ihi=min(nx,diagonal-1)
-      !$acc loop vector private(j,im1,ip1,jm1,jp1,phi_uv,phi_w,update)
-      do i=ilo,ihi
-        j=diagonal-i
+ncolors=2
+if (modulo(nx,2) /= 0 .or. modulo(ny,2) /= 0) ncolors=3
+do iter=1,niter
+  do color=0,ncolors-1
+    !$acc parallel loop collapse(3) default(present) async(1)               &
+    !$acc firstprivate(color,ncolors)                                       &
+    !$acc private(point_color,cx,cy,im1,ip1,jm1,jp1,phi_uv,phi_w,update)
+    do k=1,nz
+      do j=1,ny
+        do i=1,nx
+        if (ncolors == 2) then
+          point_color=modulo(i+j,2)
+        else
+          cx=modulo(i-1,2)
+          cy=modulo(j-1,2)
+          if (modulo(nx,2) /= 0 .and. i == nx) cx=2
+          if (modulo(ny,2) /= 0 .and. j == ny) cy=2
+          point_color=modulo(cx+cy,3)
+        end if
+        if (point_color == color) then
         im1=i-1
         if (im1 < 1) im1=nx
         ip1=i+1
@@ -1403,6 +1409,8 @@ do k=1,nz
           update=(tyz(im1,j,k)+tyz(ip1,j,k)+tyz(i,jm1,k)+tyz(i,jp1,k))/4._rprec
           tyz(i,j,k)=(1._rprec-omega)*tyz(i,j,k)+omega*update
         end if
+        end if
+        end do
       end do
     end do
   end do
@@ -1418,65 +1426,51 @@ logical, intent(in) :: w_node
 real(rprec), intent(in) :: phi_limit
 integer, parameter :: niter=5
 real(rprec), parameter :: omega=1.5_rprec
-integer :: iter,diagonal,ilo,ihi,i,j,k,im1,ip1,jm1,jp1,kmin,kmax,shift
+integer :: iter,color,ncolors,point_color,cx,cy,i,j,k
+integer :: im1,ip1,jm1,jp1,kmin,kmax,shift
 real(rprec) :: phiv,update
+logical :: smooth_3d
 
 shift=0
 if (w_node) shift=1
 
 if (trim(smooth_mode) == 'xy') then
-  !$acc parallel loop gang present(phi,a) async(1)                         &
-  !$acc private(iter,diagonal,ilo,ihi)
-  do k=1,nz
-    do iter=1,niter
-      do diagonal=2,nx+ny
-        ilo=max(1,diagonal-ny)
-        ihi=min(nx,diagonal-1)
-        !$acc loop vector private(j,im1,ip1,jm1,jp1,phiv,update)
-        do i=ilo,ihi
-          j=diagonal-i
-          im1=i-1
-          if (im1 < 1) im1=nx
-          ip1=i+1
-          if (ip1 > nx) ip1=1
-          jm1=j-1
-          if (jm1 < 1) jm1=ny
-          jp1=j+1
-          if (jp1 > ny) jp1=1
-          if (coord == 0 .and. k == shift) then
-            phiv=phi(i,j,k)
-          else
-            phiv=0.5_rprec*(phi(i,j,k)+phi(i,j,k-shift))
-          end if
-          if (phiv < phi_limit) then
-            update=(a(im1,j,k)+a(ip1,j,k)+a(i,jm1,k)+a(i,jp1,k))/4._rprec
-            a(i,j,k)=(1._rprec-omega)*a(i,j,k)+omega*update
-          end if
-        end do
-      end do
-    end do
-  end do
-  return
+  kmin=1
+  kmax=nz
+  smooth_3d=.false.
 else if (trim(smooth_mode) == '3d') then
   kmin=2
   kmax=nz-1
+  smooth_3d=.true.
 else
   call error('level_set_gpu_m.smooth_field_gpu',                           &
       'smooth_mode must be exactly "xy" or "3d": ' // trim(smooth_mode))
 end if
-! A lexicographic (k,j,i) Gauss-Seidel sweep is equivalent to ascending
-! i+j+k wavefronts: minus-direction neighbors are already updated and
-! plus-direction neighbors are still from the previous sweep. Periodic x/y
-! endpoints retain that ordering as well. Kernels share async queue 1, which
-! supplies the required global barrier between consecutive diagonals.
+
+ncolors=2
+if (modulo(nx,2) /= 0 .or. modulo(ny,2) /= 0) ncolors=3
 do iter=1,niter
-  do diagonal=kmin+2,kmax+nx+ny
-    !$acc parallel loop collapse(2) default(present) async(1)                &
-    !$acc private(i,im1,ip1,jm1,jp1,phiv,update)
+  do color=0,ncolors-1
+    !$acc parallel loop collapse(3) default(present) async(1)               &
+    !$acc firstprivate(color,ncolors,smooth_3d,kmin)                         &
+    !$acc private(point_color,cx,cy,im1,ip1,jm1,jp1,phiv,update)
     do k=kmin,kmax
       do j=1,ny
-        i=diagonal-j-k
-        if (i >= 1 .and. i <= nx) then
+        do i=1,nx
+          if (ncolors == 2) then
+            point_color=modulo(i+j,2)
+            if (smooth_3d) point_color=modulo(point_color+k,2)
+          else
+            cx=modulo(i-1,2)
+            cy=modulo(j-1,2)
+            if (modulo(nx,2) /= 0 .and. i == nx) cx=2
+            if (modulo(ny,2) /= 0 .and. j == ny) cy=2
+            point_color=modulo(cx+cy,3)
+            if (smooth_3d) then
+              point_color=modulo(point_color+modulo(k-kmin,2),3)
+            end if
+          end if
+          if (point_color == color) then
           if (coord == 0 .and. k == shift) then
             phiv=phi(i,j,k)
           else
@@ -1491,11 +1485,17 @@ do iter=1,niter
             if (jm1 < 1) jm1=ny
             jp1=j+1
             if (jp1 > ny) jp1=1
-            update=(a(im1,j,k)+a(ip1,j,k)+a(i,jm1,k)+a(i,jp1,k) +         &
-                    a(i,j,k-1)+a(i,j,k+1))/6._rprec
+            if (smooth_3d) then
+              update=(a(im1,j,k)+a(ip1,j,k)+a(i,jm1,k)+a(i,jp1,k) +       &
+                      a(i,j,k-1)+a(i,j,k+1))/6._rprec
+            else
+              update=(a(im1,j,k)+a(ip1,j,k)+a(i,jm1,k)+a(i,jp1,k)) /     &
+                      4._rprec
+            end if
             a(i,j,k)=(1._rprec-omega)*a(i,j,k)+omega*update
           end if
-        end if
+          end if
+        end do
       end do
     end do
   end do

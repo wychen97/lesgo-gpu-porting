@@ -3031,8 +3031,9 @@ real (rp), parameter :: omega = 1.5_rp  !--SOR parameter
 integer :: i, j, k
 integer :: s  !--shift for u/w node selection
 integer :: nnbr  !--number of neighbors
-integer :: iter
+integer :: iter, color, ncolors, point_color, cx, cy
 integer :: kmin, kmax
+logical :: smooth_3d
 
 integer, pointer, dimension(:) :: autowrap_i, autowrap_j
 
@@ -3068,9 +3069,11 @@ select case (smooth_mode)
   case ('xy')
     kmin = 1
     kmax = nz
+    smooth_3d = .false.
   case ('3d')
     kmin = 2  !--this is not MPI-enabled
     kmax = nz - 1
+    smooth_3d = .true.
 #ifdef PPMPI
     call error (sub_name, 'smooth_mode 3d not MPI compliant')
 #endif
@@ -3078,11 +3081,30 @@ select case (smooth_mode)
     call error (sub_name, 'invalid smooth_mode =' // smooth_mode)
 end select
 
+ncolors = 2
+if (modulo(nx, 2) /= 0 .or. modulo(ny, 2) /= 0) ncolors = 3
+
 do iter = 1, niter
 
-  do k = kmin, kmax
-    do j = 1, ny
-      do i = 1, nx
+  do color = 0, ncolors - 1
+    do k = kmin, kmax
+      do j = 1, ny
+        do i = 1, nx
+
+          if (ncolors == 2) then
+            point_color = modulo(i + j, 2)
+            if (smooth_3d) point_color = modulo(point_color + k, 2)
+          else
+            cx = modulo(i - 1, 2)
+            cy = modulo(j - 1, 2)
+            if (modulo(nx, 2) /= 0 .and. i == nx) cx = 2
+            if (modulo(ny, 2) /= 0 .and. j == ny) cy = 2
+            point_color = modulo(cx + cy, 3)
+            if (smooth_3d) then
+              point_color = modulo(point_color + modulo(k - kmin, 2), 3)
+            end if
+          end if
+          if (point_color /= color) cycle
 
         if ( (coord == 0) .and. (k == s) ) then
           !--avoid phi(0)
@@ -3117,6 +3139,7 @@ do iter = 1, niter
 
         end if
 
+        end do
       end do
     end do
   end do
