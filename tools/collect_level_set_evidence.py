@@ -54,21 +54,28 @@ def main() -> int:
     overall = "passed"
     comparator = Path(__file__).with_name("compare_level_set_checkpoints.py")
     for variant, tasks in sorted(grouped.items()):
-        for candidate_profile, candidate in sorted(tasks.items()):
-            if candidate_profile.startswith("cpu_"):
-                continue
-            cpu_profile = "cpu_nompi" if candidate_profile.endswith("nompi") else "cpu_mpi"
-            reference = tasks.get(cpu_profile)
-            reference_profile = cpu_profile
-            if reference is None and candidate_profile == "gpu_mpi_aware":
-                reference_profile = "gpu_mpi_staged"
-                reference = tasks.get(reference_profile)
-            if not reference:
-                continue
+        comparisons: list[tuple[str, str, str]] = []
+
+        def add_pair(kind: str, reference: str, candidate: str) -> None:
+            if reference in tasks and candidate in tasks:
+                comparisons.append((kind, reference, candidate))
+
+        add_pair("cpu_to_bridge", "cpu_mpi", "bridge_mpi")
+        add_pair("cpu_to_full_gpu", "cpu_mpi", "gpu_mpi_staged")
+        add_pair("level_set_gpu_isolation", "bridge_mpi", "gpu_mpi_staged")
+        add_pair("cpu_to_full_gpu", "cpu_nompi", "gpu_nompi")
+        add_pair("cpu_to_full_gpu_aware", "cpu_mpi", "gpu_mpi_aware")
+        add_pair("level_set_gpu_isolation_aware", "bridge_mpi", "gpu_mpi_aware")
+        add_pair("gpu_aware_transport_isolation", "gpu_mpi_staged", "gpu_mpi_aware")
+
+        for comparison_kind, reference_profile, candidate_profile in comparisons:
+            reference = tasks[reference_profile]
+            candidate = tasks[candidate_profile]
             reference_status = status["tasks"].get(reference["id"], {}).get("status")
             candidate_status = status["tasks"].get(candidate["id"], {}).get("status")
             row: dict[str, object] = {
                 "variant": variant,
+                "comparison_kind": comparison_kind,
                 "reference_profile": reference_profile,
                 "candidate_profile": candidate_profile,
                 "reference_run_status": reference_status,
@@ -87,7 +94,9 @@ def main() -> int:
             nz = int(conf_value(conf, "Nz"))
             lx = conf_value(conf, "Lx")
             dx = lx / nx
-            comparison_path = root / "comparisons" / f"{variant}__{candidate_profile}.json"
+            comparison_path = root / "comparisons" / (
+                f"{variant}__{reference_profile}__to__{candidate_profile}.json"
+            )
             command = [
                 sys.executable, str(comparator),
                 "--reference", str(reference_dir),
