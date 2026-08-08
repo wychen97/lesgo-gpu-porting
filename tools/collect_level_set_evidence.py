@@ -31,6 +31,10 @@ def main() -> int:
     parser.add_argument("--atol", type=float, default=1.0e-8)
     parser.add_argument("--coefficient-rtol", type=float, default=2.0e-5)
     parser.add_argument("--beta-rtol", type=float, default=5.0e-6)
+    parser.add_argument(
+        "--nproc", type=int, action="append", default=[],
+        help="collect only tasks with this rank count; may be repeated",
+    )
     args = parser.parse_args()
 
     manifest_path = args.matrix.resolve()
@@ -38,7 +42,12 @@ def main() -> int:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     status = json.loads((root / "run_status.json").read_text(encoding="utf-8"))
     grouped: dict[str, dict[str, dict[str, object]]] = {}
+    selected_nproc = set(args.nproc)
+    if any(value <= 0 for value in selected_nproc):
+        raise SystemExit("--nproc values must be positive")
     for task in manifest["tasks"]:
+        if selected_nproc and task["nproc"] not in selected_nproc:
+            continue
         grouped.setdefault(task["variant"], {})[task["profile"]] = task
 
     pairs: list[dict[str, object]] = []
@@ -50,13 +59,17 @@ def main() -> int:
                 continue
             cpu_profile = "cpu_nompi" if candidate_profile.endswith("nompi") else "cpu_mpi"
             reference = tasks.get(cpu_profile)
+            reference_profile = cpu_profile
+            if reference is None and candidate_profile == "gpu_mpi_aware":
+                reference_profile = "gpu_mpi_staged"
+                reference = tasks.get(reference_profile)
             if not reference:
                 continue
             reference_status = status["tasks"].get(reference["id"], {}).get("status")
             candidate_status = status["tasks"].get(candidate["id"], {}).get("status")
             row: dict[str, object] = {
                 "variant": variant,
-                "reference_profile": cpu_profile,
+                "reference_profile": reference_profile,
                 "candidate_profile": candidate_profile,
                 "reference_run_status": reference_status,
                 "candidate_run_status": candidate_status,
@@ -102,6 +115,7 @@ def main() -> int:
         "cluster": args.cluster,
         "commit": args.commit,
         "matrix": str(manifest_path),
+        "nproc": sorted(selected_nproc),
         "status": overall,
         "pairs": pairs,
     }
