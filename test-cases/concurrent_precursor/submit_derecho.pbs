@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+
+# Run a two-domain concurrent precursor example on Derecho.
+#
+# Velocity exchange (default):
+#   qsub submit_derecho.pbs
+#
+# Velocity plus scalar exchange:
+#   qsub -v CASE_VARIANT=scalar submit_derecho.pbs
+#
+# Shared-node CPU example after ./compile_derecho.sh cpu velocity:
+#   qsub -q develop -N cps_cpu \
+#     -v RUN_PROFILE=cpu,CASE_VARIANT=velocity \
+#     -l select=1:ncpus=4:mpiprocs=2:mem=32gb \
+#     -l place=pack \
+#     submit_derecho.pbs
+# The command-line queue and resource request override the GPU defaults below.
+#
+# This compact job uses two MPI ranks. Each red/blue domain has one local rank,
+# so nproc=1 in both LESGO inputs even though the MPI world contains two ranks.
+
+#PBS -A ujhb0028
+#PBS -N cps_gpu
+#PBS -q main
+#PBS -l select=1:ncpus=32:mpiprocs=2:ngpus=2:mem=120gb:gpu_type=a100
+#PBS -l walltime=00:20:00
+#PBS -l place=scatter
+#PBS -j oe
+
+set -euo pipefail
+
+CASE_DIR="${PBS_O_WORKDIR}"
+RUN_PROFILE="${RUN_PROFILE:-gpu}"
+CASE_VARIANT="${CASE_VARIANT:-velocity}"
+
+case "${RUN_PROFILE}" in
+  gpu|cpu) ;;
+  *)
+    echo "ERROR: RUN_PROFILE must be gpu or cpu, got ${RUN_PROFILE}" >&2
+    exit 2
+    ;;
+esac
+
+case "${CASE_VARIANT}" in
+  velocity)
+    RED_CONFIG="${CASE_DIR}/lesgo.conf"
+    BLUE_CONFIG="${CASE_DIR}/lesgo_blue.conf"
+    ;;
+  scalar)
+    RED_CONFIG="${CASE_DIR}/lesgo_scalar.conf"
+    BLUE_CONFIG="${CASE_DIR}/lesgo_scalar_blue.conf"
+    ;;
+  *)
+    echo "ERROR: CASE_VARIANT must be velocity or scalar" >&2
+    exit 2
+    ;;
+esac
+
+RUN_EXE="${CASE_DIR}/lesgo-run-exe-${RUN_PROFILE}-${CASE_VARIANT}"
+if [[ ! -x "${RUN_EXE}" ]]; then
+  echo "ERROR: ${RUN_EXE} is missing; compile this profile and variant first" >&2
+  exit 2
+fi
+
+module reset
+if [[ "${RUN_PROFILE}" == "gpu" ]]; then
+  module load nvhpc/26.1 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10
+  export MPICH_GPU_SUPPORT_ENABLED=1
+  export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
+else
+  module load nvhpc/26.1 cray-mpich/8.1.32 fftw/3.3.10
+  unset MPICH_GPU_SUPPORT_ENABLED MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED || true
+fi
+
+export LESGO_CPS_STAGE_TIMING="${LESGO_CPS_STAGE_TIMING:-1}"
+export LESGO_RANDOM_SEED="${LESGO_RANDOM_SEED:-13579}"
+if [[ "${CASE_VARIANT}" == "scalar" ]]; then
+  export LESGO_SCALAR_STAGE_TIMING="${LESGO_SCALAR_STAGE_TIMING:-1}"
+fi
+
+RUN_DIR="${CASE_DIR}/runs/${RUN_PROFILE}-${CASE_VARIANT}"
+RED_DIR="${RUN_DIR}/red"
+BLUE_DIR="${RUN_DIR}/blue"
+rm -rf "${RUN_DIR}"
+mkdir -p "${RED_DIR}" "${BLUE_DIR}"
+cp "${RED_CONFIG}" "${RED_DIR}/lesgo.conf"
+cp "${BLUE_CONFIG}" "${BLUE_DIR}/lesgo.conf"
+
+echo "Running concurrent_precursor profile=${RUN_PROFILE} variant=${CASE_VARIANT}"
+set +e
+if [[ "${RUN_PROFILE}" == "gpu" ]] && command -v set_gpu_rank >/dev/null 2>&1; then
+  mpiexec -n 1 -wdir "${RED_DIR}" set_gpu_rank "${RUN_EXE}" \
+    : -n 1 -wdir "${BLUE_DIR}" set_gpu_rank "${RUN_EXE}" \
+    2>&1 | tee "${RUN_DIR}/lesgo.log"
+  MPI_STATUS=${PIPESTATUS[0]}
+else
+  mpiexec -n 1 -wdir "${RED_DIR}" "${RUN_EXE}" \
+    : -n 1 -wdir "${BLUE_DIR}" "${RUN_EXE}" \
+    2>&1 | tee "${RUN_DIR}/lesgo.log"
+  MPI_STATUS=${PIPESTATUS[0]}
+fi
+set -e
+
+echo "MPI_EXIT_STATUS=${MPI_STATUS}" | tee -a "${RUN_DIR}/lesgo.log"
+if [[ "${MPI_STATUS}" -ne 0 ]]; then
+  exit "${MPI_STATUS}"
+fi
+test -f "${RED_DIR}/vel.out.c0"
+test -f "${BLUE_DIR}/vel.out.c0"
+if [[ "${CASE_VARIANT}" == "scalar" ]]; then
+  test -f "${RED_DIR}/scal.out.c0"
+  test -f "${BLUE_DIR}/scal.out.c0"
+fi
+echo "Simulation finished; results are in ${RUN_DIR}"

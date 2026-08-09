@@ -6,6 +6,23 @@ the line-model ATM path disabled with `USE_ATM=OFF`.
 The ADM parameters are read from the `TURBINES` block in `lesgo.conf`; this
 case does not use `inputATM/`.
 
+## Dynamic ADM Controls
+
+The same ADM case can isolate optional disk controls without adding more case
+directories. Add the relevant key to the `TURBINES` block and enable one
+control at a time:
+
+| Function | Input key |
+| --- | --- |
+| Dynamic horizontal yaw | `dyn_theta1` |
+| Dynamic vertical tilt | `dyn_theta2` |
+| Dynamic thrust coefficient | `dyn_Ct_prime` |
+| Rotating disk forcing | `use_rotation` and `tip_speed_ratio` |
+| ADM correction model | `adm_correction`, `alpha1`, and `alpha2` |
+
+The default case keeps these controls off so it remains the simplest actuator
+disk example.
+
 ## Files
 
 - `lesgo.conf`: ADM input settings.

@@ -241,7 +241,10 @@ integer :: tavg_nstart = 1, tavg_nend = 50000, tavg_nskip = 100
 ! turns instantaneous velocity recording on or off
 logical :: point_calc = .false.
 integer :: point_nstart=1, point_nend=50000, point_nskip=10
-integer :: point_nloc=1
+! Location arrays are optional while the corresponding output is disabled.
+! Start their counts at zero so parameter reporting never dereferences an
+! unallocated default array.
+integer :: point_nloc=0
 type(point3D_t), allocatable, dimension(:) :: point_loc
 
 ! domain instantaneous output
@@ -251,19 +254,19 @@ integer :: domain_nstart=10000, domain_nend=50000, domain_nskip=10000
 ! x-plane instantaneous output
 logical :: xplane_calc=.false.
 integer :: xplane_nstart=10000, xplane_nend=50000, xplane_nskip=10000
-integer :: xplane_nloc=1
+integer :: xplane_nloc=0
 real(rprec), allocatable, dimension(:) :: xplane_loc
 
 ! y-plane instantaneous output
 logical :: yplane_calc=.false.
 integer :: yplane_nstart=10000, yplane_nend=50000, yplane_nskip=10000
-integer :: yplane_nloc=1
+integer :: yplane_nloc=0
 real(rprec), allocatable, dimension(:) :: yplane_loc
 
 ! z-plane instantaneous output
 logical :: zplane_calc=.false.
 integer :: zplane_nstart=10000, zplane_nend=50000, zplane_nskip=10000
-integer :: zplane_nloc=1
+integer :: zplane_nloc=0
 real(rprec), allocatable, dimension(:) :: zplane_loc
 
 end module param

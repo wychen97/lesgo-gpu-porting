@@ -33,6 +33,7 @@ norm.dat*
 global_fmask.out*
 turbineOutput/
 lesgo-run-exe
+lesgo-run-exe-*
 lesgo-mpi*
 
 # Local porting / handoff scratch files

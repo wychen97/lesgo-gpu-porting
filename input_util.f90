@@ -680,6 +680,18 @@ do
                     // block_name // ' block: ' // buff(1:equal_pos-1)
         end select
     elseif (block_exit_pos == 1 ) then
+        if (point_calc .and. .not. allocated(point_loc)) then
+            call error(sub_name, 'POINT_CALC requires POINT_LOC in OUTPUT')
+        endif
+        if (xplane_calc .and. .not. allocated(xplane_loc)) then
+            call error(sub_name, 'XPLANE_CALC requires XPLANE_LOC in OUTPUT')
+        endif
+        if (yplane_calc .and. .not. allocated(yplane_loc)) then
+            call error(sub_name, 'YPLANE_CALC requires YPLANE_LOC in OUTPUT')
+        endif
+        if (zplane_calc .and. .not. allocated(zplane_loc)) then
+            call error(sub_name, 'ZPLANE_CALC requires ZPLANE_LOC in OUTPUT')
+        endif
         return
     else
         call error( sub_name, block_name //                                    &

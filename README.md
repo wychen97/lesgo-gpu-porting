@@ -7,13 +7,17 @@ the upstream JHU LESGO layout:
 - reusable documentation lives under `docs/`;
 - runnable examples live under `test-cases/`.
 
-The public test-case suite is intentionally small. It contains only the four
-representative cases used for the current validation/progression discussion:
+The public test-case suite keeps four progression cases and four compact
+optional-physics examples:
 
 1. `test-cases/channel_flow` - LES core, no turbine model.
 2. `test-cases/adm_disk` - actuator disk model.
 3. `test-cases/atm_line` - actuator line / 5 MW turbine model.
 4. `test-cases/large_windfarm_3072x384x400_60turbines` - 60-turbine large case.
+5. `test-cases/level_set_cubes` - immersed-surface Level Set example.
+6. `test-cases/scalar_transport` - passive and active scalar transport.
+7. `test-cases/concurrent_precursor` - velocity/scalar concurrent precursor.
+8. `test-cases/inflow_and_forcing` - HIT, shifted inflow, Coriolis, and sponge.
 
 Generated output, queue logs, local monitor files, and compiled binaries are
 excluded. Each case has two Derecho example files:
@@ -23,17 +27,19 @@ compile_derecho.sh
 submit_derecho.pbs
 ```
 
-`compile_derecho.sh` only compiles. It installs one case-local executable:
+`compile_derecho.sh` only compiles. It installs a case-local profile
+executable, normally one of:
 
 ```text
-lesgo-run-exe
+lesgo-run-exe-cpu
+lesgo-run-exe-gpu
 ```
 
 `submit_derecho.pbs` only submits/runs the already-built executable. The two
 steps are intentionally separate so users can inspect and modify compilation
 settings independently from queue settings.
 
-`lesgo-run-exe` is intentionally ignored by git because it is specific to the
+Case-local executables are intentionally ignored by git because they are specific to the
 compiler, GPU architecture, MPI stack, and cluster.
 
 ## Minimal GPU Build Example
@@ -90,8 +96,8 @@ CMake design; it is the standard CMake `-B` build-tree location.
 - `USE_SCALARS=ON` and `USE_SCALARS_GPU=ON`: enable scalar transport and the
   optimized scalar GPU path.
 - `USE_CPS=ON`: enables concurrent precursor simulation.
-- `USE_LVLSET=ON`: enables level-set physics. This path is kept in source but
-  is not part of the current optimized public test suite.
+- `USE_LVLSET=ON` and `USE_LVLSET_GPU=ON`: enable level-set physics and its
+  optimized GPU implementation; see `test-cases/level_set_cubes`.
 
 ## What To Change On Another Cluster
 

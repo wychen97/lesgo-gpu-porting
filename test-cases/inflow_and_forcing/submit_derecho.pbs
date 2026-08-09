@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+
+# Run one compact inflow/forcing variant on Derecho.
+#
+# Available variants:
+#   hit                Homogeneous isotropic turbulence inflow (default)
+#   coriolis_sponge    Uniform inflow plus Coriolis and top sponge forcing
+#   shifted            Shifted-periodic inflow
+#
+# Examples:
+#   qsub submit_derecho.pbs
+#   qsub -v CASE_VARIANT=coriolis_sponge submit_derecho.pbs
+#   qsub -v CASE_VARIANT=shifted submit_derecho.pbs
+#
+# Shared-node CPU example after ./compile_derecho.sh cpu:
+#   qsub -q develop -N inflow_cpu \
+#     -v RUN_PROFILE=cpu,CASE_VARIANT=hit \
+#     -l select=1:ncpus=4:mpiprocs=1:mem=16gb \
+#     -l place=pack \
+#     submit_derecho.pbs
+# The command-line queue and resource request override the GPU defaults below.
+
+#PBS -A ujhb0028
+#PBS -N inflow_gpu
+#PBS -q main
+#PBS -l select=1:ncpus=32:mpiprocs=1:ngpus=1:mem=120gb:gpu_type=a100
+#PBS -l walltime=00:20:00
+#PBS -l place=scatter
+#PBS -j oe
+
+set -euo pipefail
+
+CASE_DIR="${PBS_O_WORKDIR}"
+RUN_PROFILE="${RUN_PROFILE:-gpu}"
+CASE_VARIANT="${CASE_VARIANT:-hit}"
+export LESGO_RANDOM_SEED="${LESGO_RANDOM_SEED:-13579}"
+
+case "${RUN_PROFILE}" in
+  gpu|cpu) ;;
+  *)
+    echo "ERROR: RUN_PROFILE must be gpu or cpu, got ${RUN_PROFILE}" >&2
+    exit 2
+    ;;
+esac
+
+case "${CASE_VARIANT}" in
+  hit)             CONFIG_FILE="${CASE_DIR}/lesgo.conf" ;;
+  coriolis_sponge) CONFIG_FILE="${CASE_DIR}/lesgo_coriolis_sponge.conf" ;;
+  shifted)         CONFIG_FILE="${CASE_DIR}/lesgo_shifted.conf" ;;
+  *)
+    echo "ERROR: CASE_VARIANT must be hit, coriolis_sponge, or shifted" >&2
+    exit 2
+    ;;
+esac
+
+RUN_EXE="${CASE_DIR}/lesgo-run-exe-${RUN_PROFILE}"
+if [[ ! -x "${RUN_EXE}" ]]; then
+  echo "ERROR: ${RUN_EXE} is missing; compile ${RUN_PROFILE} first" >&2
+  exit 2
+fi
+
+module reset
+if [[ "${RUN_PROFILE}" == "gpu" ]]; then
+  module load nvhpc/26.1 cuda/12.9.0 cray-mpich/8.1.32 fftw/3.3.10
+  export MPICH_GPU_SUPPORT_ENABLED=1
+  export MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED=1
+else
+  module load nvhpc/26.1 cray-mpich/8.1.32 fftw/3.3.10
+  unset MPICH_GPU_SUPPORT_ENABLED MPICH_GPU_MANAGED_MEMORY_SUPPORT_ENABLED || true
+fi
+
+RUN_DIR="${CASE_DIR}/runs/${RUN_PROFILE}-${CASE_VARIANT}"
+rm -rf "${RUN_DIR}"
+mkdir -p "${RUN_DIR}"
+cp "${CONFIG_FILE}" "${RUN_DIR}/lesgo.conf"
+if [[ "${CASE_VARIANT}" == "hit" ]]; then
+  mkdir -p "${RUN_DIR}/HITData"
+  for source_file in "${CASE_DIR}"/HITData/*.gz; do
+    target_name="$(basename "${source_file}" .gz)"
+    gzip -dc "${source_file}" > "${RUN_DIR}/HITData/${target_name}"
+  done
+fi
+cd "${RUN_DIR}"
+
+echo "Running inflow_and_forcing profile=${RUN_PROFILE} variant=${CASE_VARIANT}"
+set +e
+if [[ "${RUN_PROFILE}" == "gpu" ]] && command -v set_gpu_rank >/dev/null 2>&1; then
+  mpiexec -n 1 -ppn 1 set_gpu_rank "${RUN_EXE}" 2>&1 | tee lesgo.log
+  MPI_STATUS=${PIPESTATUS[0]}
+else
+  mpiexec -n 1 -ppn 1 "${RUN_EXE}" 2>&1 | tee lesgo.log
+  MPI_STATUS=${PIPESTATUS[0]}
+fi
+set -e
+
+echo "MPI_EXIT_STATUS=${MPI_STATUS}" | tee -a lesgo.log
+if [[ "${MPI_STATUS}" -ne 0 ]]; then
+  exit "${MPI_STATUS}"
+fi
+test -f vel.out.c0
+if [[ "${CASE_VARIANT}" == "hit" ]]; then
+  test -f restartHIT.dat
+fi
+echo "Simulation finished; results are in ${RUN_DIR}"

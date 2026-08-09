@@ -3,6 +3,27 @@
 This case isolates the optimized LES core on a 240 x 240 x 240 grid with no
 turbine, precursor, scalar, HIT, CGNS, or level-set modules enabled.
 
+## Additional Core Variants
+
+The channel case is also the smallest base case for numerical-model and
+restart experiments. These are runtime variants rather than separate case
+directories:
+
+| Function | Configuration change |
+| --- | --- |
+| SGS disabled | Set `sgs=.false.` in `MODEL`. |
+| SGS models | Set `sgs_model=1` through `5`; models 4 and 5 exercise Lagrangian averaging. |
+| Dynamic Taylor timescale | Configure with `USE_DYN_TN=ON` and use SGS model 4 or 5. |
+| Stress-free wall | Set `lbc_mom=0`. |
+| DNS wall | Set `lbc_mom=1`. |
+| Equilibrium wall model | Set `lbc_mom=2`. |
+| Integral wall model | Set `lbc_mom=3`; no separate `iwm_active` switch exists. |
+| Restart | Set `checkpoint_data=.true.` and choose `checkpoint_nskip`. |
+| Time averages | Set `tavg_calc=.true.` and configure its start, end, and sampling interval. |
+
+For CPU/GPU comparisons, change only one row at a time and keep the grid,
+timestep, initialization, and output cadence identical.
+
 ## Files
 
 - `lesgo.conf`: channel-flow input settings.

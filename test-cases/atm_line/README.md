@@ -5,6 +5,26 @@ disables the actuator disk model with `USE_TURBINES=OFF`.
 
 The required NREL 5 MW and airfoil inputs are included in `inputATM/`.
 
+## Structural Solver And Restart
+
+The executable contains both rigid and structural ATM paths. Structure is a
+runtime selection, not a separate GPU build:
+
+```bash
+# Rigid turbine (default)
+qsub -v RUN_PROFILE=gpu,RUN_LABEL=structure_off submit_derecho.pbs
+
+# Flexible turbine structure
+qsub -v RUN_PROFILE=gpu,RUN_LABEL=structure_on,LESGO_ATM_STRUCTURE=1 \
+  submit_derecho.pbs
+```
+
+When structure is enabled, LESGO advances blade/tower structural state and
+feeds displacement, velocity, and aerodynamic history back into the turbine
+model. Restart validation should compare an uninterrupted run with a split run
+and check both velocity checkpoints and ATM restart files. See
+`docs/restart_state_contract.md` for the complete state contract.
+
 ## Files
 
 - `lesgo.conf`: ATM input settings.

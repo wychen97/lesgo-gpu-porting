@@ -39,3 +39,4 @@ test-cases/**/inputATM/** text eol=lf
 *.jpeg binary
 *.pdf binary
 *.pptx binary
+*.gz binary

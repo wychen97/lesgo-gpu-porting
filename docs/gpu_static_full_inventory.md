@@ -203,13 +203,13 @@ claims.
 | `input_util.f90:388` | `time_block` | `host-boundary` |  |  |
 | `input_util.f90:446` | `flow_cond_block` | `host-boundary` |  |  |
 | `input_util.f90:582` | `output_block` | `host-boundary` |  |  |
-| `input_util.f90:694` | `level_set_block` | `host-boundary` |  |  |
-| `input_util.f90:777` | `turbines_block` | `host-boundary` |  |  |
-| `input_util.f90:860` | `scalars_block` | `host-boundary` |  |  |
-| `input_util.f90:924` | `checkentry` | `host-boundary` |  |  |
-| `input_util.f90:939` | `readline` | `host-boundary` |  |  |
-| `input_util.f90:980` | `parse_vector_real` | `host-boundary` |  |  |
-| `input_util.f90:1015` | `parse_vector_point3D` | `host-boundary` |  |  |
+| `input_util.f90:706` | `level_set_block` | `host-boundary` |  |  |
+| `input_util.f90:789` | `turbines_block` | `host-boundary` |  |  |
+| `input_util.f90:872` | `scalars_block` | `host-boundary` |  |  |
+| `input_util.f90:936` | `checkentry` | `host-boundary` |  |  |
+| `input_util.f90:951` | `readline` | `host-boundary` |  |  |
+| `input_util.f90:992` | `parse_vector_real` | `host-boundary` |  |  |
+| `input_util.f90:1027` | `parse_vector_point3D` | `host-boundary` |  |  |
 | `interpolag_Sdep.f90:21` | `interpolag_Sdep` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `interpolag_Ssim.f90:21` | `interpolag_Ssim` | `unmarked-runtime-candidate` | `cpu-fallback-compat` | `les_core_channel`, `hit_inflow` |
 | `io.f90:70` | `openfiles` | `host-boundary` |  |  |
