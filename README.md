@@ -7,6 +7,23 @@ the upstream JHU LESGO layout:
 - reusable documentation lives under `docs/`;
 - runnable examples live under `test-cases/`.
 
+## Documentation
+
+The maintained documentation website is:
+
+**[LESGO GPU Porting Guide](https://wychen97.github.io/lesgo-gpu-docs/)**
+
+Start with these pages:
+
+- [Public Test Cases](https://wychen97.github.io/lesgo-gpu-docs/gpu/test-cases/)
+- [Build and Runtime](https://wychen97.github.io/lesgo-gpu-docs/gpu/build-runtime/)
+- [GPU Architecture](https://wychen97.github.io/lesgo-gpu-docs/gpu/architecture/)
+- [Validation and Performance](https://wychen97.github.io/lesgo-gpu-docs/gpu/validation-performance/)
+
+The website explains the current release and normal user workflow. Detailed
+source audits and validation evidence remain versioned with the code under
+`docs/`.
+
 The public test-case suite keeps four progression cases and four compact
 optional-physics examples:
 
